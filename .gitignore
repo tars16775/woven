@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Reference material (large binaries; keep local unless deliberately committed)
+*.docx
+*.pptx
+Screenshot*.png
+
+# Editors
+.vscode/
+.idea/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Reference mockups and deck (copies used by the site live in apps/web/public/media)
+files/
+
+# machine-specific pnpm store location
+.npmrc
