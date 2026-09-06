@@ -28,6 +28,8 @@ const logFile = join(dir, "crossings.log");
 
 type State = { state: "open" | "closed"; changedAt: string | null; changedBy: string | null };
 const allowList = env.WOVEN_GATE_ALLOW.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+/** "api.example.com" matches itself; "*.hf.co" matches any subdomain (content mirrors move around). */
+const allowed = (host: string) => allowList.some((a) => (a.startsWith("*.") ? host === a.slice(2) || host.endsWith(a.slice(1)) : host === a));
 let state: State = { state: "open", changedAt: null, changedBy: null };
 let crossingsToday = 0;
 let bytesOutToday = 0;
@@ -91,7 +93,7 @@ app.post("/cross", async (req, reply) => {
     await record({ kind: "refused", actionId: c.actionId, host, reason: "gate closed" });
     return reply.status(423).send({ error: "The Gate is closed. Nothing crosses until it is opened." });
   }
-  if (!allowList.includes(host)) {
+  if (!allowed(host)) {
     await record({ kind: "refused", actionId: c.actionId, host, reason: "not on the allow list" });
     return reply.status(403).send({ error: `${host} is not on the Gate's allow list.` });
   }
@@ -118,6 +120,83 @@ app.post("/cross", async (req, reply) => {
     return reply.status(502).send({ error: `The crossing to ${host} failed: ${err instanceof Error ? err.message : String(err)}` });
   } finally {
     clearTimeout(timer);
+  }
+});
+
+/**
+ * A large download (a model, an update) streamed straight to a file the
+ * core named, never through JSON. Redirects are followed by hand so every
+ * hop is checked against the allow list; the file's hash comes back so the
+ * core can pin it.
+ */
+const Fetch = z.object({ actionId: z.string(), url: z.url(), dest: z.string().min(1), maxBytes: z.number().int().positive().default(4 * 1024 ** 3) });
+
+app.post("/fetch", async (req, reply) => {
+  const parsed = Fetch.safeParse(req.body);
+  if (!parsed.success) return reply.status(400).send({ error: "Bad fetch request." });
+  const f = parsed.data;
+  if (!f.dest.startsWith(env.WOVEN_DATA + "/")) return reply.status(400).send({ error: "Downloads land inside the data root only." });
+  if (state.state === "closed") {
+    await record({ kind: "refused", actionId: f.actionId, host: new URL(f.url).host, reason: "gate closed" });
+    return reply.status(423).send({ error: "The Gate is closed. Nothing crosses until it is opened." });
+  }
+  const started = Date.now();
+  let url = f.url;
+  const hops: string[] = [];
+  try {
+    let res: Response | null = null;
+    for (let i = 0; i < 6; i += 1) {
+      const host = new URL(url).host.toLowerCase();
+      if (!allowed(host)) {
+        await record({ kind: "refused", actionId: f.actionId, host, reason: "not on the allow list" });
+        return reply.status(403).send({ error: `${host} is not on the Gate's allow list.` });
+      }
+      hops.push(host);
+      res = await fetch(url, { redirect: "manual", headers: { "user-agent": "WovenGate/0.1" } });
+      if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {
+        url = new URL(res.headers.get("location")!, url).toString();
+        continue;
+      }
+      break;
+    }
+    if (!res || !res.ok || !res.body) {
+      await record({ kind: "failed", actionId: f.actionId, host: hops[0], reason: `HTTP ${res?.status ?? 0}` });
+      return reply.status(502).send({ error: `The download answered ${res?.status ?? "nothing"}.` });
+    }
+    const { createHash } = await import("node:crypto");
+    const { createWriteStream } = await import("node:fs");
+    const { mkdir: mk, rename, rm } = await import("node:fs/promises");
+    const { dirname } = await import("node:path");
+    await mk(dirname(f.dest), { recursive: true });
+    const tmp = `${f.dest}.part`;
+    const hash = createHash("sha256");
+    let bytesIn = 0;
+    const out = createWriteStream(tmp, { mode: 0o600 });
+    const reader = res.body.getReader();
+    for (;;) {
+      const chunk = (await reader.read()) as { done: boolean; value?: Uint8Array };
+      if (chunk.done || !chunk.value) break;
+      const value: Uint8Array = chunk.value;
+      bytesIn += value.byteLength;
+      if (bytesIn > f.maxBytes) {
+        await reader.cancel();
+        out.destroy();
+        await rm(tmp, { force: true });
+        await record({ kind: "failed", actionId: f.actionId, host: hops[0], reason: "too large" });
+        return reply.status(413).send({ error: "The download is larger than allowed." });
+      }
+      hash.update(value);
+      if (!out.write(value)) await new Promise<void>((r) => out.once("drain", () => r()));
+    }
+    await new Promise<void>((r, j) => out.end((e: Error | null | undefined) => (e ? j(e) : r())));
+    await rename(tmp, f.dest);
+    crossingsToday += 1;
+    const sha256 = hash.digest("hex");
+    await record({ kind: "fetched", actionId: f.actionId, host: hops[0], hops, bytesIn, sha256 });
+    return { status: res.status, bytesIn, sha256, hops, durationMs: Date.now() - started };
+  } catch (err) {
+    await record({ kind: "failed", actionId: f.actionId, host: hops[0] ?? new URL(f.url).host, reason: err instanceof Error ? err.message : String(err) });
+    return reply.status(502).send({ error: `The download failed: ${err instanceof Error ? err.message : String(err)}` });
   }
 });
 

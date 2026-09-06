@@ -5,7 +5,9 @@ import { Button, Card, Field, PageHeader, Pill, inputClass } from "@/components/
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { explainAction } from "@/lib/core/actions";
-import { photos as api, type Photo, type PhotoStats } from "@/lib/core/files";
+import { models as modelsApi, photos as api, type ModelView, type Photo, type PhotoStats } from "@/lib/core/files";
+import { actions, describe } from "@/lib/core/actions";
+import { Approvals } from "@/components/dashboard/approvals";
 import { useSession } from "@/lib/auth";
 
 const monthName = (ym: string) => new Date(`${ym}-01T00:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" });
@@ -26,15 +28,20 @@ export function LivePhotos() {
   const [folder, setFolder] = useState("");
   const [busy, setBusy] = useState(false);
   const [tick, setTick] = useState(0);
+  const [model, setModel] = useState<ModelView | null>(null);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<{ ready: boolean; results: (Photo & { score: number })[]; indexed: number; total: number } | null>(null);
+  const [asking, setAsking] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    Promise.all([api.timeline(), api.stats()])
-      .then(([t, s]) => {
+    Promise.all([api.timeline(), api.stats(), modelsApi.list().catch(() => [] as ModelView[])])
+      .then(([t, s, m]) => {
         if (!alive) return;
         setItems(t.photos);
         setCursor(t.cursor);
         setStats(s);
+        setModel(m.find((x) => x.name === "photo-search") ?? null);
       })
       .catch((err: unknown) => alive && say(explainAction(err)));
     return () => {
@@ -65,6 +72,35 @@ export function LivePhotos() {
     }
   };
 
+  const search = async (q: string) => {
+    setQuery(q);
+    if (!q.trim()) return setResults(null);
+    try {
+      setResults(await api.search(q.trim()));
+    } catch (err) {
+      say(explainAction(err));
+    }
+  };
+
+  const turnOnSearch = async () => {
+    if (asking) return;
+    setAsking(true);
+    try {
+      const prepared = await modelsApi.install("photo-search");
+      if (prepared.status === "prepared") {
+        // The owner approves the crossing; the download then runs on the box.
+        const approved = await actions.approve(prepared.id);
+        const done = approved.status === "approved" ? await actions.execute(prepared.id) : approved;
+        say(done.status === "succeeded" ? "Photo search is on. The box is reading your photos now." : describe(done));
+      } else say(describe(prepared));
+      setTick((t) => t + 1);
+    } catch (err) {
+      say(explainAction(err));
+    } finally {
+      setAsking(false);
+    }
+  };
+
   const byMonth = new Map<string, Photo[]>();
   for (const p of items) {
     const k = p.takenAt.slice(0, 7);
@@ -80,6 +116,58 @@ export function LivePhotos() {
         action={canImport ? <Button kind="primary" className="px-5 py-2" onClick={() => setImporting(true)}>Import a folder</Button> : undefined}
       />
 
+      <Approvals />
+
+      {model && !model.installed && canImport && stats && stats.total > 0 && (
+        <Card dark className="mb-4" title="Find photos by what is in them" action={<Pill tone="dark">On the box</Pill>}>
+          <p className="text-[14px] text-ash-2">
+            {model.purpose} The model is about {Math.round(model.approxBytes / 1024 / 1024)} MB and comes in once through the Gate; after that nothing about your photos ever leaves.
+          </p>
+          <div className="mt-3">
+            <Button kind="primary" onClick={turnOnSearch} disabled={asking} aria-busy={asking} data-testid="turn-on-search">
+              {asking ? "Asking the Gate…" : "Turn on photo search"}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {model?.installed && (
+        <div className="mb-4">
+          <label className="sr-only" htmlFor="photo-search">
+            Search photos
+          </label>
+          <input
+            id="photo-search"
+            className={`${inputClass} py-3 text-[15px]`}
+            placeholder="the lake trip, a red bicycle, snow…"
+            value={query}
+            onChange={(e) => void search(e.target.value)}
+            data-testid="photo-search"
+          />
+          {results && (
+            <p className="mt-2 text-[12px] text-ash">
+              {results.indexed} of {results.total} photos searchable{results.indexed < results.total ? " · the rest are being read" : ""}
+            </p>
+          )}
+        </div>
+      )}
+
+      {results && (
+        <section className="mt-2">
+          <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-[0.1em] text-ash">Best matches</h2>
+          <ul className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-6" data-testid="search-results">
+            {results.results.slice(0, 24).map((p) => (
+              <li key={p.id}>
+                <button type="button" onClick={() => setOpen(p)} className="block aspect-square w-full overflow-hidden rounded-[8px] bg-chassis" aria-label={p.name}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- served by the box */}
+                  <img src={api.thumbUrl(p.id)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {stats && stats.total === 0 && (
         <Card>
           <p className="text-[14px] text-ash" data-testid="no-photos">
@@ -88,7 +176,7 @@ export function LivePhotos() {
         </Card>
       )}
 
-      {[...byMonth.entries()].map(([month, list]) => (
+      {!results && [...byMonth.entries()].map(([month, list]) => (
         <section key={month} className="mt-6">
           <h2 className="mb-2 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.1em] text-ash">
             {monthName(month)} <Pill>{stats?.months.find((m) => m.month === month)?.count ?? list.length}</Pill>

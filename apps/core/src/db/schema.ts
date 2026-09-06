@@ -6,7 +6,7 @@
  * stored as text and validated by `@woven/schema` at the boundary, never
  * trusted on read.
  */
-import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { blob, index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const households = sqliteTable("households", {
   id: text("id").primaryKey(),
@@ -239,5 +239,17 @@ export const photos = sqliteTable(
     deletedAt: text("deleted_at"),
   },
   (t) => [uniqueIndex("photos_file_idx").on(t.fileId), index("photos_household_taken_idx").on(t.householdId, t.takenAt)],
+);
+
+/** Photo embeddings (phase 21): one vector per photo per model, float32 little-endian. */
+export const photoEmbeddings = sqliteTable(
+  "photo_embeddings",
+  {
+    photoId: text("photo_id").notNull().references(() => photos.id),
+    model: text("model").notNull(),
+    vector: blob("vector", { mode: "buffer" }).notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [uniqueIndex("photo_embeddings_idx").on(t.photoId, t.model)],
 );
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { FileEntry, FileListing, FilesSummary, Photo, PhotoStats, PhotoTimeline, type Namespace } from "@woven/schema";
+import { ActionRecord, FileEntry, FileListing, FilesSummary, Photo, PhotoStats, PhotoTimeline, type Namespace } from "@woven/schema";
 import { z } from "zod";
 import { CoreError } from "./client";
 import { NoCoreError } from "./identity";
@@ -67,6 +67,15 @@ export const photos = {
   previewUrl: (id: string) => `${base()}/v1/photos/${id}/preview`,
   importFolder: (folder: string) => call("/v1/photos/import", z.object({ files: z.number(), photos: z.number() }), post({ folder })),
   indexAll: () => call("/v1/photos/index", z.object({ indexed: z.number() }), post({})),
+  search: (q: string) => call(`/v1/photos/search?q=${encodeURIComponent(q)}`, z.object({ ready: z.boolean(), results: z.array(Photo.extend({ score: z.number() })), indexed: z.number(), total: z.number() })),
+};
+
+const ModelView = z.object({ name: z.string(), title: z.string(), purpose: z.string(), approxBytes: z.number(), installed: z.boolean(), bytes: z.number(), installedAt: z.string().nullable() });
+export type ModelView = z.infer<typeof ModelView>;
+export const models = {
+  list: () => call("/v1/models", z.object({ models: z.array(ModelView) })).then((r) => r.models),
+  /** Prepares the download as an action; the owner approves it (Waiting for a yes) and the box fetches it through the Gate. */
+  install: (name: string) => call(`/v1/models/${name}/install`, ActionRecord, post({})),
 };
 
 export function bytes(n: number): string {

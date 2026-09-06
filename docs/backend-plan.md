@@ -52,7 +52,8 @@ Honest limits of the Mac phase: no Thread or Zigbee without a Linux radio bridge
 | 18 Backup protocol | done · 2026-09-06 | chunked, resumable, content-addressed uploads with "already have it" by hash (`/v1/files/uploads`), per-person namespaces, `pnpm backup <folder> --owner` on the Mac; quotas are reported (usage per namespace and source), not yet enforced |
 | 19 Files dashboard | done · 2026-09-06 | browse by space and folder, upload, open or save, rename, move between spaces (a receipt), delete with object GC; namespace rules from the household |
 | 20 Photo ingest | done · 2026-09-06 | EXIF (date, camera, place) with exifr, 512 px thumbnails and 2048 px previews with sharp stored as objects, timeline by month, lightbox, import a folder on the box, uploaded images indexed on arrival; faces off |
-| 21 Photo index | next | on-device embeddings for "lake finds the lake trip" |
+| 21 Photo index | done · 2026-09-06 | CLIP (ViT-B/32, int8) on the box through transformers.js and the ONNX runtime; the model comes in as a class C crossing the owner approves, every file streamed through the Gate with per-hop allow-list checks and pinned by hash; embeddings per photo in their own table; `/v1/photos/search?q=`; faces stay off |
+| 22 Media | next | library scan, playback with range requests, ffmpeg where a device needs it |
 | 23 Integrity and restore | done · 2026-09-06 | nightly re-hash of objects (all, or a sample on a large store), snapshot mirrored to `WOVEN_SNAPSHOT_MIRROR`, a restore drill from the Core page that restores the newest snapshot into scratch, verifies chain and objects, and reports |
 | 15 The Gate | done · 2026-09-06 | separate process (child of the core on the Mac, Outside processor on the box), loopback + secret, allow list, open/close persisted, its own crossing log; the core's only egress is the Gate client (lint-enforced); closing makes an approved crossing fail with a receipt |
 

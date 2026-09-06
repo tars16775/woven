@@ -58,7 +58,7 @@ async function main() {
   logger.info({ gate: gate.client.cached().state, allow: config.gate.allow || "(nothing)" }, gate.client.cached().state === "absent" ? "no Gate running; crossings will fail" : "Gate attached");
 
   const startedAt = new Date();
-  const services = buildServices(data, config, gate.client);
+  const services = buildServices(data, config, gate.client, { logger });
   const app = await buildApp({ config, logger, hardware, data, services, ...(tls ? { tls } : {}), version, startedAt });
   const scheme = tls ? "https" : "http";
   // The same API in plain HTTP, reachable only from this machine. Loopback

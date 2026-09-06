@@ -16,6 +16,10 @@ import { InvitationService } from "./invitations.ts";
 import { RightsService } from "./rights.ts";
 import { FilesService } from "./files.ts";
 import { PhotoService } from "./photos.ts";
+import { ModelStore } from "./models.ts";
+import { PhotoIndex, loadClip, type Embedder } from "./photo-index.ts";
+import type { Logger } from "./logger.ts";
+import pino from "pino";
 import { join } from "node:path";
 
 /** A first passkey may be registered by whoever holds one of these (setup, invitations). */
@@ -36,9 +40,15 @@ export type Services = {
   rights: RightsService;
   files: FilesService;
   photos: PhotoService;
+  models: ModelStore;
+  photoIndex: PhotoIndex;
 };
 
-export function buildServices(data: Data, config: Config, gate: GateClient, home: HomeAdapter = new SimulatedAdapter()): Services {
+export type ServiceOptions = { home?: HomeAdapter; logger?: Logger; loadEmbedder?: (dir: string) => Promise<Embedder> };
+
+export function buildServices(data: Data, config: Config, gate: GateClient, opts: ServiceOptions = {}): Services {
+  const home = opts.home ?? new SimulatedAdapter();
+  const logger = opts.logger ?? (pino({ level: "silent" }));
   const { db } = data.database;
   const passkeys = new PasskeyService(db, config.origins);
   const presence = new Presence();
@@ -46,7 +56,16 @@ export function buildServices(data: Data, config: Config, gate: GateClient, home
   const rights = new RightsService(db, data.ledger, household, data.store, join(data.paths.root, "exports"));
   const files = new FilesService(db, data.ledger, data.store, household, data.paths.storeTmp);
   const photos = new PhotoService(db, data.ledger, data.store, household, files);
-  // An uploaded image becomes a photo as soon as it lands; a deleted file takes its photo with it.
+  const models = new ModelStore(join(data.paths.root, "models"), gate);
+  const photoIndex = new PhotoIndex(db, data.store, household, models, logger, opts.loadEmbedder ?? loadClip);
+  // An uploaded image becomes a photo as soon as it lands, then gets its search vector; a deleted file takes its photo with it.
+  let embedTimer: NodeJS.Timeout | null = null;
+  const embedSoon = () => {
+    if (embedTimer) clearTimeout(embedTimer);
+    embedTimer = setTimeout(() => void photoIndex.indexPending().catch(() => undefined), 1500);
+    embedTimer.unref();
+  };
+  photos.onIndexed = embedSoon;
   files.onAdded = (entry) => void photos.index(entry.id).catch(() => undefined);
   files.onRemoved = (fileId) => photos.forget(fileId);
   const actions = new ActionEngine({
@@ -61,6 +80,13 @@ export function buildServices(data: Data, config: Config, gate: GateClient, home
       return Number.isFinite(n) ? { autoApproveAmountUpTo: n } : defaultContext;
     },
     verifyAssertion: (key, credential) => passkeys.verifyAuthentication(key, credential as never),
+    installModel: async (model, actionId) => {
+      const spec = models.spec(model);
+      if (!spec) throw new Error(`no model called ${model}`);
+      const state = await models.install(model, actionId);
+      embedSoon();
+      return { bytes: state.bytes, files: spec.files.length };
+    },
     transferOwnership: (fromId, toId) => {
       const from = household.person(fromId);
       if (!from) throw new Error("no such person");
@@ -83,5 +109,7 @@ export function buildServices(data: Data, config: Config, gate: GateClient, home
     rights,
     files,
     photos,
+    models,
+    photoIndex,
   };
 }

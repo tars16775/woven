@@ -38,6 +38,8 @@ export type EngineDeps = {
   verifyAssertion: (key: string, credential: Record<string, unknown>) => Promise<string>;
   /** Class H household changes, run only after the approval above. */
   transferOwnership: (fromPersonId: string, toPersonId: string) => { from: string; to: string };
+  /** model.install: fetch every file through the Gate; resolves with what arrived. */
+  installModel?: (model: string, actionId: string) => Promise<{ bytes: number; files: number }>;
   now?: () => Date;
 };
 
@@ -222,6 +224,11 @@ export class ActionEngine {
           if (spec.name === "gate.set") {
             observed = await this.deps.gate.setOpen(Boolean(params.open), by.id);
             where = "inside";
+          } else if (spec.name === "model.install") {
+            if (!this.deps.installModel) throw new ActionError(409, "Models are not wired on this core.");
+            const r = await this.deps.installModel(String(params.model), id);
+            observed = { bytes: r.bytes, files: r.files };
+            sent = `A request for the ${String(params.model)} model files. Nothing about the household.`;
           } else if (spec.name === "gate.cross") {
             const r = await this.deps.gate.cross({ actionId: id, host: String(params.host), method: (params.method as "GET" | "POST") ?? "POST", path: typeof params.path === "string" ? params.path : "/", body: params.body as string | undefined });
             observed = { status: r.status, bytesOut: r.bytesOut, bytesIn: r.bytesIn, durationMs: r.durationMs };

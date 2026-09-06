@@ -38,6 +38,8 @@ export class PhotoService {
   ) {}
 
   private readonly inflight = new Map<string, Promise<Photo | null>>();
+  /** Called after a new photo row exists (the search index hangs off this). */
+  onIndexed: (() => void) | null = null;
 
   /** Index one file that is already in the store. Idempotent per file, and one at a time per file. */
   index(fileId: string): Promise<Photo | null> {
@@ -93,6 +95,7 @@ export class PhotoService {
       .values({ id, fileId, householdId: f.householdId, ownerId: f.ownerId, namespace: f.namespace, sha256: f.sha256, takenAt, width, height, camera, lat, lon, thumbSha: thumb.sha256, previewSha: preview.sha256, createdAt: new Date().toISOString() })
       .onConflictDoNothing()
       .run();
+    this.onIndexed?.();
     return this.toPhoto(this.db.select().from(photos).where(eq(photos.fileId, fileId)).get()!, f.name);
   }
 

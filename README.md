@@ -45,6 +45,8 @@ The Gate runs as a separate process the core starts (`WOVEN_GATE=spawn`, port 40
 
 The code on the box's screen lives at http://127.0.0.1:4002/v1/screen on the Mac itself (loopback only, so only someone at the machine can read it). Sign in on any device with your name and the six digits.
 
+Photo search runs on the box: the Photos page offers "Turn on photo search", which downloads a small CLIP model (about 160 MB) through the Gate once the owner approves the crossing. The Gate's default allow list (`WOVEN_GATE_ALLOW=huggingface.co,*.hf.co`) exists for that download and nothing else.
+
 Identity runs on the Core: `/signup` creates the household and the owner's first passkey (recovery codes are shown once), `/login` signs in with a passkey or a recovery code, and the session is an httpOnly cookie on the Core. Without a Core the pages fall back to the simulated preview.
 
 The dashboard looks for a Core at `https://woven.local:4000`, then this machine (`http://localhost:4002`, the core's loopback listener). Until one answers it shows preview data and a "Connect to your Core" card on the Core page. Build the marketing deploy with `NEXT_PUBLIC_WOVEN_LIVE=off` so it never looks.

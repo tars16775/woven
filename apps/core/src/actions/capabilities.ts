@@ -147,6 +147,17 @@ export const capabilities: readonly CapabilitySpec[] = [
     preview: (t, p) => `Send to ${p.host} for "${p.purpose}": ${p.sent}`,
   }),
   spec({
+    name: "model.install",
+    riskClass: "C",
+    idempotent: true,
+    latency: "background",
+    description: "Download a model onto the box through the Gate. Always asks first; the receipt says what came in.",
+    executor: "gate",
+    alwaysApprove: true,
+    params: z.object({ model: z.string().min(1).max(40), approxBytes: z.number().int().nonnegative().default(0) }),
+    preview: (_t, p) => `Download the ${p.model.replace(/-/g, " ")} model (about ${Math.round(p.approxBytes / 1024 / 1024)} MB) from huggingface.co through the Gate.`,
+  }),
+  spec({
     name: "gate.set",
     riskClass: "B",
     idempotent: true,

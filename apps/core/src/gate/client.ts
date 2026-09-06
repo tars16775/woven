@@ -3,6 +3,7 @@ import type { GateStatus } from "@woven/schema";
 
 export type CrossRequest = { actionId: string; host: string; method: "GET" | "POST"; path: string; body?: string | undefined };
 export type CrossResult = { status: number; bytesOut: number; bytesIn: number; durationMs: number; body: string };
+export type FetchResult = { status: number; bytesIn: number; sha256: string; hops: string[]; durationMs: number };
 
 export class GateError extends Error {
   constructor(
@@ -56,9 +57,15 @@ export class GateClient {
     return (await this.call("POST", "/cross", req)) as CrossResult;
   }
 
-  private async call(method: "GET" | "POST", path: string, body?: unknown): Promise<unknown> {
+  /** Stream a large file (a model, an update) to `dest` inside the data root. May take minutes. */
+  async download(req: { actionId: string; url: string; dest: string; maxBytes?: number }): Promise<FetchResult> {
+    if (!this.url) throw new GateError(503, "No Gate is running; nothing can cross.");
+    return (await this.call("POST", "/fetch", req, 60 * 60 * 1000)) as FetchResult;
+  }
+
+  private async call(method: "GET" | "POST", path: string, body?: unknown, timeoutMs = 30_000): Promise<unknown> {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 30_000);
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     try {
       const res = await fetch(`${this.url}${path}`, {
         method,
