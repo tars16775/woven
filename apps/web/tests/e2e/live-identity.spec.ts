@@ -44,7 +44,8 @@ test("recovery code, then a passkey on this device, then passkey sign-in", async
 
   // The Core agrees this device is signed in as the owner.
   const who = await page.evaluate(async () => {
-    const r = await fetch("http://localhost:4000/v1/auth/session", { credentials: "include" });
+    // Sessions are bound to the device (gap 3): the secret the page keeps goes along as a header.
+    const r = await fetch("http://localhost:4000/v1/auth/session", { credentials: "include", headers: { "x-woven-device": localStorage.getItem("woven:device") ?? "" } });
     return r.ok ? ((await r.json()) as { person: { role: string }; passkeys: number }) : null;
   });
   expect(who).toMatchObject({ person: { role: "owner" }, passkeys: 1 });
@@ -53,7 +54,7 @@ test("recovery code, then a passkey on this device, then passkey sign-in", async
 test("a stranger's passkey does not open the house, and a house cannot be set up twice", async ({ page }) => {
   await virtualAuthenticator(page);
   await page.goto("/login");
-  await expect(page.getByRole("tab", { name: "Recovery code" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("tab", { name: "I lost my devices" })).toBeVisible({ timeout: 30_000 });
   await page.getByLabel("Email").fill("nobody@example.com");
   await page.getByRole("button", { name: "Continue with passkey" }).click();
   await expect(page.getByRole("alert").filter({ hasText: /No one in this household/ })).toBeVisible();
@@ -66,7 +67,7 @@ test("invite a member by link, join with a passkey, sign in by the screen code, 
   await signInWithOwnCode(page);
   await page.goto("/dashboard/settings");
   await page.getByTestId("invite").click({ timeout: 30_000 });
-  await page.getByRole("textbox", { name: "Name" }).fill("Priya");
+  await page.getByRole("dialog").getByRole("textbox", { name: "Name" }).fill("Priya");
   await page.getByRole("textbox", { name: /Email/ }).fill("priya@example.com");
   await page.getByRole("button", { name: "Make an invitation link" }).click();
   const link = (await page.getByTestId("invite-link").textContent({ timeout: 15_000 }))!.trim();
@@ -88,7 +89,7 @@ test("invite a member by link, join with a passkey, sign in by the screen code, 
 
   // A child without email signs in with the code on the box's screen (read from loopback, as the screen itself would).
   await page.getByTestId("invite").click();
-  await page.getByRole("textbox", { name: "Name" }).fill("Sam Junior");
+  await page.getByRole("dialog").getByRole("textbox", { name: "Name" }).fill("Sam Junior");
   await page.getByRole("combobox").selectOption("child");
   await page.getByRole("button", { name: "Make an invitation link" }).click();
   await page.getByRole("button", { name: "Done" }).click();
@@ -100,7 +101,7 @@ test("invite a member by link, join with a passkey, sign in by the screen code, 
   const kidPage = await kid.newPage();
   await kidPage.goto("/login");
   await kidPage.getByRole("tab", { name: "Code on the screen" }).click({ timeout: 30_000 });
-  await expect(kidPage.getByRole("tab", { name: "Recovery code" })).toBeVisible({ timeout: 30_000 });
+  await expect(kidPage.getByRole("tab", { name: "I lost my devices" })).toBeVisible({ timeout: 30_000 });
   await kidPage.getByLabel("Your name").fill("Sam Junior");
   for (let i = 0; i < 6; i += 1) await kidPage.getByLabel(`Digit ${i + 1} of 6`).fill(code[i]!);
   await expect(kidPage).toHaveURL(/\/dashboard$/, { timeout: 20_000 });

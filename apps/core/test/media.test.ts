@@ -100,8 +100,13 @@ describe("media (phase 22)", () => {
     expect(audio.find((i) => i.fileId === tone.id)).toMatchObject({ kind: "audio", playable: true, codec: "flac" });
 
     const direct = await app.inject({ method: "GET", url: `/v1/media/${native.id}/stream`, headers: auth(owner) });
-    expect(direct.statusCode).toBe(307);
-    expect(direct.headers.location).toBe(`/v1/files/${native.id}/content`);
+    // Served in place with ranges, never a redirect: a player's signed address is bound to this path.
+    const part = await app.inject({ method: "GET", url: `/v1/media/${native.id}/stream`, headers: { ...auth(owner), range: "bytes=0-9" } });
+    expect(part.statusCode).toBe(206);
+    expect(part.headers["content-range"]).toMatch(/^bytes 0-9\//);
+    expect(direct.statusCode).toBe(200);
+    expect(direct.headers["content-type"]).toBe("video/mp4");
+    expect(direct.headers["accept-ranges"]).toBe("bytes");
 
     const transcoded = await app.inject({ method: "GET", url: `/v1/media/${old.id}/stream`, headers: auth(owner) });
     expect(transcoded.statusCode).toBe(200);

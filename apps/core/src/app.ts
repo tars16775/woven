@@ -83,7 +83,7 @@ export async function buildApp(deps: AppDeps) {
   const routeTable: RouteInfo[] = [];
   app.decorate("routeTable", routeTable);
   app.addHook("onRoute", (route) => {
-    const pre = ([] as unknown[]).concat((route.preHandler as unknown) ?? []);
+    const pre = ([] as unknown[]).concat(route.preHandler ?? []);
     const guarded = pre.some((h) => typeof h === "function" && (h === requireSession || h.name === "requireSession" || h.name === "requireRole"));
     const schema = route.schema as { response?: Record<string, unknown> } | undefined;
     for (const method of ([] as string[]).concat(route.method)) routeTable.push({ method, url: route.url, guarded, typed: !!schema?.response && Object.keys(schema.response).length > 0 });

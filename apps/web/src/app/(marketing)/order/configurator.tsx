@@ -243,11 +243,11 @@ export function Configurator() {
                   {cloudOpt.monthly > 0 && (
                     <Row label="Gate crossings, after first year" value={`${formatPrice(cloudOpt.monthly)}/mo`} muted />
                   )}
-                  <div className="hairline border-t pt-3">
-                    <Row label="Target total" value={formatPrice(total)} strong />
-                    <Row label="Due today" value="$0" />
-                    <Row label="Refundable deposit, when reservations open" value={formatPrice(deposit)} muted />
-                  </div>
+                </dl>
+                <dl className="hairline mt-3 space-y-2 border-t pt-3 text-[14px]">
+                  <Row label="Target total" value={formatPrice(total)} strong />
+                  <Row label="Due today" value="$0" />
+                  <Row label="Refundable deposit, when reservations open" value={formatPrice(deposit)} muted />
                 </dl>
 
                 {session && (
@@ -311,11 +311,11 @@ function Confirmation({ r, onAnother }: { r: Reservation; onAnother: () => void 
           value={cloudOpt && cloudOpt.monthly > 0 ? `${formatPrice(cloudOpt.monthly)}/mo after first year` : "Free"}
           muted
         />
-        <div className="hairline border-t pt-3">
-          <Row label="Target total" value={formatPrice(r.total)} strong />
-          <Row label="Estimated delivery" value={estimatedDelivery[r.tier]} />
-          <Row label="Refundable deposit, when reservations open" value={formatPrice(r.deposit)} muted />
-        </div>
+      </dl>
+      <dl className="hairline mt-3 space-y-2 border-t pt-3 text-[14px]">
+        <Row label="Target total" value={formatPrice(r.total)} strong />
+        <Row label="Estimated delivery" value={estimatedDelivery[r.tier]} />
+        <Row label="Refundable deposit, when reservations open" value={formatPrice(r.deposit)} muted />
       </dl>
 
       <div className="mt-5 rounded-[10px] bg-bone p-4 text-[13px]">

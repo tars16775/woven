@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireSession } from "../auth/guard.ts";
 import { FileError } from "../files.ts";
 import type { ZodTypeProvider } from "../zod.ts";
+import { serveObject } from "./serve.ts";
 
 /** The media library and a stream a browser or the TV can play (phase 22). */
 export const mediaRoutes: FastifyPluginAsync = async (raw) => {
@@ -37,7 +38,8 @@ export const mediaRoutes: FastifyPluginAsync = async (raw) => {
   app.get("/media/:id/stream", { preHandler: requireSession, schema: { params: z.object({ id: Ulid }) } }, async (req, reply) => {
     const found = services.media.get(req.session!.person, req.params.id);
     if (!found) throw new FileError(404, "No such media.");
-    if (found.item.playable) return reply.redirect(`/v1/files/${found.item.fileId}/content`, 307);
+    // Served here, not by redirect: a player fetches with a signed address bound to this path, and a redirect would lose it (gap 3).
+    if (found.item.playable) return serveObject(app.deps.data.store, req, reply, { sha256: found.sha256, size: found.size, mime: found.mime, name: found.item.name }, { disposition: "inline", cacheControl: "private, max-age=31536000, immutable" });
     const t = await services.media.transcode(found.sha256, found.item.kind);
     if (!t) throw new FileError(409, "This file needs transcoding and ffmpeg is not installed on the box.");
     req.raw.on("close", t.stop);

@@ -15,7 +15,7 @@
   --color-amber-2: #e8b85a;
   --color-local: #2f7a4c;
   --color-local-bg: #e7f2ea;
-  --color-ask: #b4841e;
+  --color-ask: #8a6414; /* amber ink: 4.7:1 on ask-bg, so approval badges read for everyone (gap 28) */
   --color-ask-bg: #fbf1dc;
 
   --font-display: var(--font-display), ui-sans-serif, system-ui, sans-serif;

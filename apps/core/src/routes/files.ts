@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireSession } from "../auth/guard.ts";
 import { FileError } from "../files.ts";
 import { QueryBool, type ZodTypeProvider } from "../zod.ts";
+import { serveObject } from "./serve.ts";
 
 const MAX_CHUNK = 4 * 1024 * 1024 + 1024;
 
@@ -37,29 +38,7 @@ export const fileRoutes: FastifyPluginAsync = async (raw) => {
 
   app.get("/files/:id/content", { preHandler: requireSession, schema: { params: z.object({ id: Ulid }), querystring: z.object({ download: QueryBool(false) }) } }, async (req, reply) => {
     const { entry } = services.files.open(req.session!.person, req.params.id);
-    const disposition = req.query.download ? "attachment" : "inline";
-    void reply
-      .type(entry.mime ?? "application/octet-stream")
-      .header("accept-ranges", "bytes")
-      .header("content-disposition", `${disposition}; filename*=UTF-8''${encodeURIComponent(entry.name)}`)
-      .header("cache-control", "private, max-age=31536000, immutable");
-    // Byte ranges so video and audio players can seek (phase 22).
-    const range = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range ?? ""));
-    if (range && entry.size > 0) {
-      let start = range[1] ? Number(range[1]) : NaN;
-      let end = range[2] ? Number(range[2]) : NaN;
-      if (Number.isNaN(start)) {
-        start = Math.max(0, entry.size - end);
-        end = entry.size - 1;
-      } else if (Number.isNaN(end) || end >= entry.size) end = entry.size - 1;
-      if (start > end || start >= entry.size) return reply.status(416).header("content-range", `bytes */${entry.size}`).send();
-      return reply
-        .status(206)
-        .header("content-range", `bytes ${start}-${end}/${entry.size}`)
-        .header("content-length", String(end - start + 1))
-        .send(app.deps.data.store.open(entry.sha256, { start, end }));
-    }
-    return reply.header("content-length", String(entry.size)).send(app.deps.data.store.open(entry.sha256));
+    return serveObject(app.deps.data.store, req, reply, entry, { disposition: req.query.download ? "attachment" : "inline", cacheControl: "private, max-age=31536000, immutable" });
   });
 
   app.post(

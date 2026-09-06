@@ -14,13 +14,13 @@ export function Footer() {
           </Link>
         ))}
       </nav>
-      <p className="mx-auto mt-6 max-w-[760px] text-center text-[11px] leading-relaxed text-ash-2">
+      <p className="mx-auto mt-6 max-w-[760px] text-center text-[11px] leading-relaxed text-ash">
         Prices, specifications and performance figures are engineering targets for a
         reference design and are not shipping specifications. Inside percentages describe
         supported requests and are measured, not promised. Voice, home and camera data never
         cross the Gate by default.
       </p>
-      <p className="mx-auto mt-2 max-w-[760px] text-center text-[11px] leading-relaxed text-ash-2">
+      <p className="mx-auto mt-2 max-w-[760px] text-center text-[11px] leading-relaxed text-ash">
         This site sets no cookies and runs no analytics.
       </p>
     </footer>
