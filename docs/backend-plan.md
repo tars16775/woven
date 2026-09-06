@@ -61,6 +61,7 @@ Honest limits of the Mac phase: no Thread or Zigbee without a Linux radio bridge
 | 47 Observability | first pass · 2026-09-06 | alerts raised and cleared by checks (disk, ledger, objects, mirror, certificate, Gate, snapshot age) every ten minutes and after the nightly job, shown on the screen and the Core page; metrics by route pattern and status class only; docs/runbooks.md for each alert |
 | Service packaging (toward 49 and 50) | done · 2026-09-06 | the core serves the built dashboard itself (static export, one process, one address); data defaults to the platform's app-data folder; `packaging/install.sh` installs Node and the newest release under ~/.woven as a launchd login service with a `woven` command (status, logs, config, update, uninstall); `packaging/release.sh` builds the tarball and the Release workflow publishes it on a v* tag; a `/mac` page on the site |
 | 43 Network, honestly | done · 2026-09-06 | the hardware layer reads the default route, SSID and ARP table (macOS and Linux parsers with fixtures); the core adds a short mDNS browse (HomeKit, Matter, Thread, Cast, AirPlay, printers) and guesses kinds from what devices announce; the Network page says "Observed on the Mac" and which parts arrive with the box; the Gate state is real |
+| The 30 gaps | built · 2026-09-06 | see "The 30 gaps" below: every gap from the audit has code, tests and a commit; the full end-to-end pass (core, web, Playwright with a live Core) runs at the end and fixes land together |
 | 45 Core management | done · 2026-09-06 | volume health from the hardware layer (space, filesystem, SMART where exposed), a restart that goes through a supervisor (tools/woven-core.sh, exit code 75) and waits for health, diagnostics bundles with a scrub filter (no emails, addresses, MACs or ids) written under exports/ |
 | 46 Security | first pass · 2026-09-06 | docs/threat-model.md; CI runs pnpm audit at high severity on production dependencies and a gitleaks secret scan; negative authorisation tests across identity, actions and files; pen test and rate limiting remain |
 | 15 The Gate | done · 2026-09-06 | separate process (child of the core on the Mac, Outside processor on the box), loopback + secret, allow list, open/close persisted, its own crossing log; the core's only egress is the Gate client (lint-enforced); closing makes an approved crossing fail with a receipt |
@@ -202,3 +203,26 @@ Each phase lists what gets built, when it is done, and what is needed from you. 
 ## Order of work
 
 Phases 1 to 6, then 7 to 8, then 12 to 15, then 6 again to switch the first screens to real data. That gives a dashboard that is genuinely live on your Mac: sign in with a passkey, see real machine state, take a real action, get a real receipt, with the Gate in front of everything. Everything after that fills in surfaces the site already shows.
+
+## The 30 gaps (audit of 2026-09-06)
+
+Built in phases, one commit each, tested at the end together.
+
+| Gap | What landed | Where |
+| --- | --- | --- |
+| 1 to 3, 7, 9 | reads need a session; rate limits; device-bound sessions and signed addresses; allow list as class H; pinned model hashes | `src/auth/*`, `src/actions/capabilities.ts`, `src/models.ts` |
+| 4 | rescue codes a trusted adult issues (class H, the one an adult may do); low-codes reminder | `src/auth/recovery.ts`, keys card |
+| 5, 6 | encryption at rest: database (ChaCha20), objects (AES-256-CTR), private keys (AES-256-GCM) under a household key in the Keychain; snapshots stay encrypted | `src/keystore.ts`, `src/store/index.ts`, `src/tls.ts` |
+| 8 | the public site's backend on Railway: reservations, applications, contact, opt-in pings; email through Resend when keyed | `apps/site-api` |
+| 10 to 15, 30 | Ask by rules on the box; honest Agents page; ledger-only privacy numbers; preview badge; lint against preview data on live screens; pilot numbers computed now | `src/ask.ts`, `src/privacy.ts`, `apps/web/scripts/check-live.mjs` |
+| 16, 17, 25 | service worker and manifest; Web Push on node:crypto through the Gate; urgent alerts to adults; opt-in health ping | `apps/web/public/sw.js`, `src/push/*` |
+| 18 to 20 | FTS5 search; expiring share links; device tokens and the `woven-backup` client | `src/search.ts`, `src/shares.ts`, `src/cli/woven-backup.ts` |
+| 21 | remote access: outbound tunnel to a relay, frames end-to-end encrypted, pairing at home only | `apps/relay`, `src/remote/*`, `apps/web/src/lib/core/remote.ts` |
+| 22, 26 | signed releases with a verifying installer, kept previous release, `woven update` with rollback, `woven rollback`; hosted installer carries the key | `packaging/sign.mjs`, `verify.mjs`, `keygen.mjs`, `install.sh`, `woven` |
+| 23 | second snapshot location set from the dashboard, absent-drive alert | `src/settings.ts`, backups card |
+| 24 | per-person storage quotas, enforced with a receipt | `src/files.ts`, household card |
+| 27 | coverage floor (v8, 70/70/60/70), property tests for the policy, a contract test over every route | `apps/core/vitest.config.ts`, `packages/policy/test/properties.test.ts`, `apps/core/test/contract.test.ts` |
+| 28 | axe in Playwright, reduced motion honoured everywhere | `apps/web/tests/e2e/a11y.spec.ts`, `globals.css` |
+| 29 | a language layer with English and a partial German, a picker in Settings | `apps/web/src/lib/i18n` |
+
+Still needed from you: run `node packaging/keygen.mjs` once and set the `WOVEN_RELEASE_KEY` secret (releases refuse to publish unsigned); a Railway token to deploy the site, the relay and the site API; a Resend key if confirmation emails should go out.
