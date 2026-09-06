@@ -31,3 +31,4 @@ Screenshot*.png
 node_modules/
 release/
 apps/web/out-build/
+apps/web/public/install.sh

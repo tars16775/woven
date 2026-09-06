@@ -20,7 +20,7 @@ mkdir -p "$WOVEN_HOME/bin" "$WOVEN_HOME/logs" "$WOVEN_HOME/releases" "$WOVEN_HOM
 
 # 1. Node, private to Woven, checked against the published hashes.
 if [ ! -x "$WOVEN_HOME/node/bin/node" ] || [ "$("$WOVEN_HOME/node/bin/node" -v 2>/dev/null)" != "v$NODE_VERSION" ]; then
-  say "Fetching Node $NODE_VERSION for $NODE_ARCH…"
+  say "Fetching Node $NODE_VERSION for $NODE_ARCH..."
   tarball="node-v$NODE_VERSION-$NODE_ARCH.tar.gz"
   curl -fsSL -o "$WOVEN_HOME/tmp/$tarball" "https://nodejs.org/dist/v$NODE_VERSION/$tarball"
   curl -fsSL -o "$WOVEN_HOME/tmp/SHASUMS256.txt" "https://nodejs.org/dist/v$NODE_VERSION/SHASUMS256.txt"
@@ -37,7 +37,7 @@ export PATH="$WOVEN_HOME/node/bin:$PATH"
 if [ -n "${WOVEN_RELEASE_FILE:-}" ]; then
   release="$WOVEN_RELEASE_FILE"
 else
-  say "Fetching the newest Woven release…"
+  say "Fetching the newest Woven release..."
   release="$WOVEN_HOME/tmp/woven-macos.tar.gz"
   url="${WOVEN_RELEASE_URL:-https://github.com/$REPO/releases/latest/download/woven-macos.tar.gz}"
   if ! curl -fsSL -o "$release" "$url"; then
@@ -59,7 +59,7 @@ if [ -d "$dest" ] && [ -f "$dest/.complete" ]; then
   say "Woven $version is already here."
 else
   rm -rf "$dest"; mv "$stage" "$dest"
-  say "Installing dependencies for Woven $version (native pieces build for this Mac)…"
+  say "Installing dependencies for Woven $version (native pieces build for this Mac)..."
   (cd "$dest" && npm install --omit=dev --no-audit --no-fund --loglevel=error >"$WOVEN_HOME/logs/install.log" 2>&1) || { echo "npm install failed; see $WOVEN_HOME/logs/install.log"; exit 1; }
   touch "$dest/.complete"
 fi

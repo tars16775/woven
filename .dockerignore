@@ -1,0 +1,9 @@
+**/node_modules
+**/.next
+**/out-build
+**/dist
+**/test-results
+**/playwright-report
+release
+files
+.git

@@ -8,7 +8,8 @@ import type { NextConfig } from "next";
 const isStatic = process.env.WOVEN_STATIC === "1";
 
 const nextConfig: NextConfig = {
-  ...(isStatic ? { output: "export" as const, distDir: "out-build", trailingSlash: false } : {}),
+  // The public site on Railway runs the standalone server; the box serves the static export.
+  ...(isStatic ? { output: "export" as const, distDir: "out-build", trailingSlash: false } : { output: "standalone" as const }),
   // Workspace packages ship TypeScript source; Next compiles them with the app.
   transpilePackages: ["@woven/schema"],
   images: {
