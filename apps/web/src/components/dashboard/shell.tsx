@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { signOut, useSession } from "@/lib/auth";
+import { signIn, signOut, useSession } from "@/lib/auth";
 import { Wordmark } from "@/components/wordmark";
 import { Clock } from "@/components/clock";
 import { household, core } from "@/lib/dashboard/data";
 import { startCore, useCore } from "@/lib/core/store";
-import { identity } from "@/lib/core/identity";
+import { identity, sessionRecord } from "@/lib/core/identity";
 import { memoryLabel, storageLabel, temperatureLabel, useLiveCore } from "@/lib/core/live";
 import { Dialog } from "./dialog";
 import { ToastProvider } from "./toast";
@@ -77,6 +77,21 @@ export function Shell({ children }: { children: ReactNode }) {
     signOut();
     router.replace("/login");
   };
+
+  // Away from home the tunnel's token is the session: reflect it locally so the shell knows who is here.
+  useEffect(() => {
+    if (connection.phase !== "connected" || !connection.remote || (session && !session.simulated)) return;
+    let alive = true;
+    identity
+      .session()
+      .then((s) => {
+        if (alive && s) signIn(sessionRecord(s, "remote"));
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [connection, session]);
 
   // A Core-issued session is only as real as the cookie on the Core: check it once we are connected.
   useEffect(() => {

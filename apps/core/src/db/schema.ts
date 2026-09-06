@@ -154,6 +154,23 @@ export const shares = sqliteTable(
   (t) => [uniqueIndex("shares_token_idx").on(t.tokenHash), index("shares_file_idx").on(t.fileId)],
 );
 
+/** Devices paired for remote access (gap 21): a sealed frame key and the session that signs them in. */
+export const remoteDevices = sqliteTable(
+  "remote_devices",
+  {
+    id: text("id").primaryKey(),
+    householdId: text("household_id").notNull().references(() => households.id),
+    personId: text("person_id").notNull().references(() => people.id),
+    label: text("label").notNull(),
+    keySealed: text("key_sealed").notNull(),
+    sessionId: text("session_id").notNull().references(() => sessions.id),
+    createdAt: text("created_at").notNull(),
+    lastSeenAt: text("last_seen_at"),
+    revokedAt: text("revoked_at"),
+  },
+  (t) => [index("remote_devices_person_idx").on(t.personId)],
+);
+
 export const uploads = sqliteTable("uploads", {
   id: text("id").primaryKey(),
   ownerId: text("owner_id").notNull().references(() => people.id),

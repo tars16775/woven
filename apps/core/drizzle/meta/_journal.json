@@ -85,6 +85,13 @@
       "when": 1788740000000,
       "tag": "0011_shares",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1788750000000,
+      "tag": "0012_remote_devices",
+      "breakpoints": true
     }
   ]
 }

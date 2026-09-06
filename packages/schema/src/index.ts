@@ -161,6 +161,8 @@ export const EventType = z.enum([
   "file.shared",
   "file.share_used",
   "file.share_revoked",
+  "remote.paired",
+  "remote.revoked",
   "core.started",
   "core.integrity_checked",
 ]);
@@ -435,6 +437,36 @@ export type SearchResult = z.infer<typeof SearchResult>;
 /** A device token as the Settings page lists it; the secret itself is shown once at creation. */
 export const DeviceToken = z.object({ id: Ulid, label: z.string().nullable(), createdAt: z.iso.datetime(), expiresAt: z.iso.datetime() });
 export type DeviceToken = z.infer<typeof DeviceToken>;
+
+/* Remote access through the relay (gap 21) ----------------------------------- */
+
+export const RemoteDevice = z.object({ id: Ulid, personId: Ulid, label: z.string(), createdAt: z.iso.datetime(), lastSeenAt: z.iso.datetime().nullable(), revokedAt: z.iso.datetime().nullable() });
+export type RemoteDevice = z.infer<typeof RemoteDevice>;
+
+export const RemoteStatus = z.object({
+  enabled: z.boolean(),
+  relay: z.string().nullable(),
+  coreId: z.string().nullable(),
+  connected: z.boolean(),
+  since: z.iso.datetime().nullable(),
+  lastError: z.string().nullable(),
+  devices: z.number().int().nonnegative(),
+});
+export type RemoteStatus = z.infer<typeof RemoteStatus>;
+
+/** Handed to a browser once, at home: everything it needs to reach this Core from anywhere. */
+export const RemotePairing = z.object({
+  deviceId: Ulid,
+  /** 32 bytes, base64: the frame key. Never leaves the browser and the Core. */
+  key: z.string(),
+  /** The bearer token that signs the device in inside the tunnel. */
+  token: z.string(),
+  relay: z.string(),
+  coreId: z.string(),
+  expiresAt: z.iso.datetime(),
+  household: z.string(),
+});
+export type RemotePairing = z.infer<typeof RemotePairing>;
 
 /* Files (phases 18 and 19) --------------------------------------------------- */
 

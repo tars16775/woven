@@ -8,6 +8,8 @@ import { loadConfig } from "./config.ts";
 import { createLogger } from "./logger.ts";
 import { CORE_HOUSEHOLD_ID, openData } from "./data.ts";
 import { derive, KeyStore } from "./keystore.ts";
+import { RelayClient } from "./remote/client.ts";
+import { relayIdentity } from "./remote/identity.ts";
 import { scheduleNightly } from "./maintenance.ts";
 import { buildServices } from "./services.ts";
 import { MediaService } from "./media.ts";
@@ -76,7 +78,30 @@ async function main() {
     logger.info("restarting at the owner's request");
     void stop("restart", 75);
   };
-  const app = await buildApp({ config, logger, hardware, data, services, ...(tls ? { tls } : {}), version, startedAt, logFile: join(paths.logs, "core.log"), restart });
+  // Remote access (gap 21): one outbound, authenticated connection to the relay; requests inside arrive here as if from the LAN.
+  let relay: RelayClient | undefined;
+  if (config.relay) {
+    const identity = await relayIdentity(paths.keys, derive(key, "keys"));
+    relay = new RelayClient({
+      url: config.relay,
+      identity,
+      devices: services.remoteDevices,
+      logger,
+      subscribe: (onRow) => {
+        data.ledger.on("appended", onRow);
+        return () => data.ledger.off("appended", onRow);
+      },
+      dispatch: async (req) => {
+        const res = await app.inject({ method: req.method as "GET", url: req.path, headers: req.headers, ...(req.body ? { payload: req.body } : {}) });
+        const headers: Record<string, string> = {};
+        for (const [k, v] of Object.entries(res.headers)) if (typeof v === "string") headers[k] = v;
+        return { status: res.statusCode, headers, body: res.rawPayload };
+      },
+    });
+    logger.info({ relay: config.relay, coreId: identity.coreId }, "remote access is on; connecting to the relay");
+  }
+  const app = await buildApp({ config, logger, hardware, data, services, ...(tls ? { tls } : {}), version, startedAt, logFile: join(paths.logs, "core.log"), restart, ...(relay ? { relay } : {}) });
+  relay?.start();
   const scheme = tls ? "https" : "http";
   // The same API in plain HTTP, reachable only from this machine. Loopback
   // cannot be sniffed from the network, so it needs no certificate, and the
@@ -136,6 +161,7 @@ async function main() {
     clearInterval(routineTimer);
     clearInterval(alertTimer);
     bonjour?.unpublishAll(() => bonjour.destroy());
+    relay?.stop();
     await Promise.all([app.close(), trust?.close(), local?.close()]);
     await gate.stop();
     data.close();

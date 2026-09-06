@@ -36,7 +36,7 @@ export function deriveLive(state: CoreState): LiveCore {
     return {
       connected: true,
       phase: state.phase,
-      host: hostOf(state.url),
+      host: state.remote ? "away, via the relay" : hostOf(state.url),
       version: `Woven Core ${status.version}`,
       model: status.hardware.model,
       cpu: status.hardware.cpu,

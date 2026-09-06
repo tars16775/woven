@@ -5,7 +5,8 @@ import { z } from "zod";
 import { CoreError } from "./client";
 import { NoCoreError } from "./identity";
 import { coreClient } from "./store";
-import { deviceHeaders, signedUrl } from "./device";
+import { signedUrl } from "./device";
+import { coreFetch } from "./transport";
 
 function base(): string {
   const c = coreClient();
@@ -13,7 +14,8 @@ function base(): string {
   return c.base;
 }
 async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${base()}${path}`, { ...init, credentials: "include", cache: "no-store", headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...deviceHeaders(), ...(init.headers ?? {}) } });
+  base();
+  const res = await coreFetch(path, { ...init, cache: "no-store", headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...(init.headers ?? {}) } });
   if (!res.ok) {
     let message = "";
     try {
@@ -51,7 +53,7 @@ export const files = {
       for (let i = 0; i < session.chunks; i += 1) {
         if (have.has(i)) continue;
         const chunk = file.slice(i * session.chunkSize, Math.min(file.size, (i + 1) * session.chunkSize));
-        const res = await fetch(`${base()}/v1/files/uploads/${session.id}/chunks/${i}`, { method: "PUT", credentials: "include", headers: { "content-type": "application/octet-stream", ...deviceHeaders() }, body: chunk });
+        const res = await coreFetch(`/v1/files/uploads/${session.id}/chunks/${i}`, { method: "PUT", headers: { "content-type": "application/octet-stream" }, body: chunk });
         if (!res.ok) throw new CoreError(res.status, `Chunk ${i + 1} of ${session.chunks} failed.`);
         opts.onProgress?.(Math.min(file.size, (i + 1) * session.chunkSize), file.size);
       }

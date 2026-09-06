@@ -7,6 +7,7 @@ import { useToast } from "@/components/dashboard/toast";
 import { explainAction } from "@/lib/core/actions";
 import { bytes, files, shares, type FileEntry, type FileListing, type FilesSummary, type Share } from "@/lib/core/files";
 import { useSession } from "@/lib/auth";
+import { isRemoteUrl, openCoreUrl } from "@/lib/core/transport";
 import type { Namespace } from "@woven/schema";
 
 const spaces: { id: Namespace; label: string; hint: string }[] = [
@@ -234,7 +235,18 @@ export function LiveFiles() {
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-bone font-mono text-[10px] uppercase text-ash">{(f.mime ?? "file").split("/")[1]?.slice(0, 4) ?? "file"}</span>
                   <div className="min-w-0">
-                    <a href={files.contentUrl(f.id)} target="_blank" rel="noreferrer" className="block truncate text-[14px] font-medium hover:underline">
+                    <a
+                      href={files.contentUrl(f.id)}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => {
+                        if (isRemoteUrl(files.contentUrl(f.id))) {
+                          e.preventDefault();
+                          openCoreUrl(files.contentUrl(f.id)).catch((err: unknown) => say(explainAction(err)));
+                        }
+                      }}
+                      className="block truncate text-[14px] font-medium hover:underline"
+                    >
                       {f.name}
                     </a>
                     <div className="text-[12px] text-ash">
@@ -244,7 +256,16 @@ export function LiveFiles() {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
-                  <a href={files.contentUrl(f.id, true)} className="rounded-[8px] px-2 py-1 text-[13px] text-ash hover:bg-ink/6 hover:text-ink">
+                  <a
+                    href={files.contentUrl(f.id, true)}
+                    onClick={(e) => {
+                      if (isRemoteUrl(files.contentUrl(f.id, true))) {
+                        e.preventDefault();
+                        openCoreUrl(files.contentUrl(f.id, true), { download: f.name }).catch((err: unknown) => say(explainAction(err)));
+                      }
+                    }}
+                    className="rounded-[8px] px-2 py-1 text-[13px] text-ash hover:bg-ink/6 hover:text-ink"
+                  >
                     Save
                   </a>
                   <Button kind="quiet" onClick={() => setRename({ file: f, name: f.name })}>

@@ -1,11 +1,11 @@
 "use client";
 
-import { ActionRecord, GateStatus, HomeState, Routine, RoutineRun, type NewRoutine, type PrepareRequest } from "@woven/schema";
+import { ActionRecord, GateStatus, HomeState, RemoteDevice, RemotePairing, RemoteStatus, Routine, RoutineRun, type NewRoutine, type PrepareRequest } from "@woven/schema";
 import { z } from "zod";
 import { CoreError } from "./client";
 import { coreClient } from "./store";
 import { NoCoreError } from "./identity";
-import { deviceHeaders } from "./device";
+import { coreFetch } from "./transport";
 
 /**
  * Actions, the home and the Gate against the connected Core (phases 12 to
@@ -13,9 +13,8 @@ import { deviceHeaders } from "./device";
  * Core; the preview pages keep their own local state.
  */
 export async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
-  const c = coreClient();
-  if (!c) throw new NoCoreError();
-  const res = await fetch(`${c.base}${path}`, { ...init, credentials: "include", cache: "no-store", headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...deviceHeaders(), ...(init.headers ?? {}) } });
+  if (!coreClient()) throw new NoCoreError();
+  const res = await coreFetch(path, { ...init, cache: "no-store", headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...(init.headers ?? {}) } });
   if (!res.ok) {
     let message = "";
     try {
@@ -51,6 +50,14 @@ export const routines = {
   remove: (id: string) => call(`/v1/routines/${id}`, z.object({ removed: z.literal(true) }), { method: "DELETE" }),
   run: (id: string) => call(`/v1/routines/${id}/run`, RoutineRun, post()),
   say: (phrase: string) => call("/v1/routines/say", RoutineRun.nullable(), post({ phrase })),
+};
+
+/** Remote access through the relay (gap 21). */
+export const remote = {
+  status: () => call("/v1/remote/status", RemoteStatus),
+  pair: (label: string) => call("/v1/remote/pair", RemotePairing, post({ label })),
+  devices: () => call("/v1/remote/devices", z.object({ devices: z.array(RemoteDevice) })).then((r) => r.devices),
+  revoke: (id: string) => call(`/v1/remote/devices/${id}`, RemoteDevice, { method: "DELETE" }),
 };
 
 export const gate = {

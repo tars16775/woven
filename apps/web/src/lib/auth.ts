@@ -14,7 +14,7 @@ export type Session = {
   household: string;
   name: string;
   email: string;
-  method: "passkey" | "code" | "email" | "recovery";
+  method: "passkey" | "code" | "email" | "recovery" | "remote";
   at: number;
   /** True when the session was made by the preview, not by a Core. */
   simulated?: boolean;

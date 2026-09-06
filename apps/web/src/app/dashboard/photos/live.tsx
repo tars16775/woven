@@ -9,6 +9,7 @@ import { models as modelsApi, photos as api, type ModelView, type Photo, type Ph
 import { actions, describe } from "@/lib/core/actions";
 import { identity } from "@/lib/core/identity";
 import { Approvals } from "@/components/dashboard/approvals";
+import { CoreImage } from "@/components/dashboard/core-image";
 import { useSession } from "@/lib/auth";
 
 const monthName = (ym: string) => new Date(`${ym}-01T00:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" });
@@ -176,8 +177,7 @@ export function LivePhotos() {
             {results.results.slice(0, 24).map((p) => (
               <li key={p.id}>
                 <button type="button" onClick={() => setOpen(p)} className="block aspect-square w-full overflow-hidden rounded-[8px] bg-chassis" aria-label={p.name}>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- served by the box */}
-                  <img src={api.thumbUrl(p.id)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  <CoreImage src={api.thumbUrl(p.id)} alt="" loading="lazy" className="h-full w-full object-cover" />
                 </button>
               </li>
             ))}
@@ -202,8 +202,7 @@ export function LivePhotos() {
             {list.map((p) => (
               <li key={p.id}>
                 <button type="button" onClick={() => setOpen(p)} className="block aspect-square w-full overflow-hidden rounded-[8px] bg-chassis" aria-label={p.name}>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- the bytes come from the household's own box, not a CDN */}
-                  <img src={api.thumbUrl(p.id)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  <CoreImage src={api.thumbUrl(p.id)} alt="" loading="lazy" className="h-full w-full object-cover" />
                 </button>
               </li>
             ))}
@@ -220,8 +219,7 @@ export function LivePhotos() {
       <Dialog open={open !== null} onClose={() => setOpen(null)} size="md" kicker={open ? `${new Date(open.takenAt).toLocaleString()}${open.camera ? ` · ${open.camera}` : ""}${open.place ? " · has a place" : ""}` : ""} title={open?.name ?? ""}>
         {open && (
           <div className="mt-3 overflow-hidden rounded-[10px] bg-graphite">
-            {/* eslint-disable-next-line @next/next/no-img-element -- served by the box */}
-            <img src={api.previewUrl(open.id)} alt={open.name} className="mx-auto max-h-[70vh] w-auto" />
+            <CoreImage src={api.previewUrl(open.id)} alt={open.name} className="mx-auto max-h-[70vh] w-auto" />
           </div>
         )}
         <DialogActions>

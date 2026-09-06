@@ -2,7 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { Button, Card, Pill, inputClass } from "@/components/dashboard/ui";
-import { connectTo, retryCore, useCore } from "@/lib/core/store";
+import { connectRemote, connectTo, retryCore, useCore } from "@/lib/core/store";
+import { loadPairing } from "@/lib/core/remote";
 import { hostOf } from "@/lib/core/format";
 
 /**
@@ -18,6 +19,15 @@ export function ConnectCore() {
 
   if (core.phase === "off" || core.phase === "connected") return null;
   const searching = core.phase === "searching";
+  const pairing = loadPairing();
+  const away = async () => {
+    if (busy) return;
+    setBusy(true);
+    setFailed(null);
+    const ok = await connectRemote();
+    setBusy(false);
+    if (!ok) setFailed("The relay did not reach your Core. Is it running at home, with remote access on?");
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -67,6 +77,11 @@ export function ConnectCore() {
         <Button kind="primary" type="submit" disabled={busy || !address.trim()} aria-busy={busy}>
           {busy ? "Connecting…" : "Connect"}
         </Button>
+        {pairing && (
+          <Button kind="soft" onClick={away} disabled={busy || searching} data-testid="connect-remote">
+            Reach {pairing.household || "it"} from away
+          </Button>
+        )}
         <Button kind="soft" onClick={retryCore} disabled={searching}>
           Look again
         </Button>

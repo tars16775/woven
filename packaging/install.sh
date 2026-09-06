@@ -98,6 +98,8 @@ WOVEN_LOCAL_PORT="${WOVEN_LOCAL_PORT:-4002}"
 WOVEN_GATE_PORT="${WOVEN_GATE_PORT:-4010}"
 WOVEN_ORIGINS="https://${WOVEN_NAME:-woven.local}:${WOVEN_PORT:-4000},http://localhost:${WOVEN_LOCAL_PORT:-4002},https://localhost:${WOVEN_PORT:-4000}"
 WOVEN_SNAPSHOT_MIRROR=""
+# Remote access: the relay address (wss://...). Empty keeps the Core reachable at home only.
+WOVEN_RELAY=""
 LOG_LEVEL="info"
 CONF
 fi

@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { CoreClient, CoreError, type CoreConfig, type CoreStatus, type GateStatus, type LedgerRow } from "./client";
 import { LIVE, defaultCandidates, discover, normalize, probe, remember } from "./discovery";
+import { REMOTE_BASE, RemoteTunnel, loadPairing } from "./remote";
 
 /**
  * One connection to the household's Core, shared by every dashboard surface.
@@ -15,7 +16,7 @@ import { LIVE, defaultCandidates, discover, normalize, probe, remember } from ".
 export type CoreState =
   | { phase: "off" }
   | { phase: "searching"; tried: string[] }
-  | { phase: "connected"; url: string; version: string; status: CoreStatus | null; config: CoreConfig | null; gate: GateStatus | null; rows: LedgerRow[]; since: number }
+  | { phase: "connected"; url: string; version: string; status: CoreStatus | null; config: CoreConfig | null; gate: GateStatus | null; rows: LedgerRow[]; since: number; remote?: RemoteTunnel }
   | { phase: "unreachable"; tried: string[]; reason: string };
 
 const initial: CoreState = LIVE ? { phase: "searching", tried: [] } : { phase: "off" };
@@ -89,12 +90,38 @@ export async function connectTo(input: string): Promise<boolean> {
   return true;
 }
 
+/** Away from home: reach the paired Core through the relay (gap 21). */
+export async function connectRemote(): Promise<boolean> {
+  const pairing = loadPairing();
+  if (!LIVE || !pairing) return false;
+  teardown();
+  set({ phase: "searching", tried: [pairing.relay] });
+  const tunnel = new RemoteTunnel(pairing);
+  try {
+    await tunnel.connect();
+  } catch (err) {
+    set({ phase: "unreachable", tried: [pairing.relay], reason: err instanceof Error ? err.message : "the relay did not answer" });
+    return false;
+  }
+  const health = await probe(REMOTE_BASE, 8000, (input, init) => tunnel.fetch(String(input).slice(REMOTE_BASE.length), init));
+  if (!health.ok) {
+    tunnel.close();
+    set({ phase: "unreachable", tried: [pairing.relay], reason: health.reason });
+    return false;
+  }
+  attach(REMOTE_BASE, health.version, tunnel);
+  return true;
+}
+
 async function search(candidates: string[]) {
   const gen = ++generation;
   set({ phase: "searching", tried: candidates });
   const url = await discover(candidates);
   if (gen !== generation) return;
   if (!url) {
+    // Nothing at home answered: a paired browser tries the relay before giving up.
+    if (loadPairing() && (await connectRemote())) return;
+    if (gen !== generation) return;
     set({ phase: "unreachable", tried: candidates, reason: "no answer" });
     return;
   }
@@ -107,11 +134,16 @@ async function search(candidates: string[]) {
   attach(url, first.version);
 }
 
-function attach(url: string, version: string) {
+function attach(url: string, version: string, remote?: RemoteTunnel) {
   const gen = ++generation;
-  remember(url);
-  client = new CoreClient(url);
-  set({ phase: "connected", url, version, status: null, config: null, gate: null, rows: [], since: Date.now() });
+  if (!remote) remember(url);
+  client = remote ? new CoreClient(url, (input, init) => remote.fetch(String(input).slice(REMOTE_BASE.length), init)) : new CoreClient(url);
+  set({ phase: "connected", url, version, status: null, config: null, gate: null, rows: [], since: Date.now(), ...(remote ? { remote } : {}) });
+  if (remote) {
+    remote.onClose = () => {
+      if (gen === generation) lost("the relay connection closed");
+    };
+  }
 
   const refresh = async () => {
     if (!client || gen !== generation) return;
@@ -139,6 +171,13 @@ function attach(url: string, version: string) {
     if (gen === generation && state.phase === "connected") set({ ...state, rows: mergeRows(rows, state.rows) });
   }).catch(() => undefined);
 
+  if (remote) {
+    const unsubscribe = remote.subscribe((row) => {
+      if (gen === generation && state.phase === "connected") set({ ...state, rows: mergeRows([row], state.rows) });
+    });
+    remoteUnsubscribe = unsubscribe;
+    return;
+  }
   try {
     socket = new WebSocket(client.eventsUrl());
     socket.onmessage = (ev) => {
@@ -164,6 +203,7 @@ function mergeRows(incoming: LedgerRow[], existing: LedgerRow[]): LedgerRow[] {
   return [...bySeq.values()].sort((a, b) => b.seq - a.seq).slice(0, 200);
 }
 
+let remoteUnsubscribe: (() => void) | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 function scheduleReconnect(gen: number) {
   if (reconnectTimer) return;
@@ -189,6 +229,9 @@ function lost(reason: string) {
 
 function teardown(opts: { keepState?: boolean } = {}) {
   generation += 1;
+  remoteUnsubscribe?.();
+  remoteUnsubscribe = null;
+  if (state.phase === "connected" && state.remote) state.remote.close();
   if (poll) clearInterval(poll);
   poll = null;
   if (reconnectTimer) clearTimeout(reconnectTimer);

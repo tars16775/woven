@@ -6,7 +6,8 @@ import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequest
 import { z } from "zod";
 import { CoreError } from "./client";
 import { coreClient } from "./store";
-import { deviceHeaders, rememberDevice } from "./device";
+import { coreFetch } from "./transport";
+import { rememberDevice } from "./device";
 
 /**
  * Identity against the connected Core (phase 8): setting up the house,
@@ -27,11 +28,11 @@ function base(): string {
 }
 
 async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${base()}${path}`, {
+  base();
+  const res = await coreFetch(path, {
     ...init,
-    credentials: "include",
     cache: "no-store",
-    headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...deviceHeaders(), ...(init.headers ?? {}) },
+    headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...(init.headers ?? {}) },
   });
   // A fresh session comes with the device secret, once; keep it outside the cookie jar.
   const secret = res.headers.get("x-woven-device-secret");
@@ -180,7 +181,7 @@ export function explain(err: unknown): string {
 }
 
 /** A local session record from what the Core said. */
-export function sessionRecord(view: SessionView, method: "passkey" | "code" | "recovery") {
+export function sessionRecord(view: SessionView, method: "passkey" | "code" | "recovery" | "remote") {
   return {
     household: view.household.name,
     name: view.person.name,

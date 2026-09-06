@@ -40,6 +40,8 @@ import { healthRoutes } from "./routes/health.ts";
 import { systemRoutes } from "./routes/system.ts";
 import { askRoutes } from "./routes/ask.ts";
 import { shareRoutes } from "./routes/shares.ts";
+import { remoteRoutes } from "./routes/remote.ts";
+import type { RelayClient } from "./remote/client.ts";
 
 export type AppDeps = {
   config: Config;
@@ -55,6 +57,8 @@ export type AppDeps = {
   logFile?: string;
   /** Ask the supervisor for a fresh process (exit code 75). Absent in tests. */
   restart?: () => void;
+  /** The relay connection when remote access is on; the remote routes read its status. */
+  relay?: RelayClient;
 };
 
 /**
@@ -142,6 +146,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(systemRoutes, { prefix: "/v1" });
   await app.register(askRoutes, { prefix: "/v1" });
   await app.register(shareRoutes, { prefix: "/v1" });
+  await app.register(remoteRoutes, { prefix: "/v1" });
   await app.register(ledgerRoutes, { prefix: "/v1" });
   await app.register(eventRoutes, { prefix: "/v1" });
   await app.register(householdRoutes, { prefix: "/v1" });

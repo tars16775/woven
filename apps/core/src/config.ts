@@ -50,6 +50,8 @@ const Env = z.object({
   WOVEN_GATE_ALLOW: z.string().default(""),
   /** A second place for snapshots: another drive, or a folder the household chose. Empty means none yet. */
   WOVEN_SNAPSHOT_MIRROR: z.string().default(""),
+  /** The relay for remote access (gap 21): a wss:// address, or empty for none. The Core opens one outbound connection there and listens on nothing from the internet. */
+  WOVEN_RELAY: z.string().default(""),
   /** Where the household data key lives: the login "keychain" (macOS) or a "file" in the keys folder. Defaults by platform. */
   WOVEN_KEY: z.enum(["keychain", "file"]).optional(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
@@ -71,6 +73,8 @@ export type Config = {
   localPort: number;
   gate: { mode: string; port: number; allow: string };
   snapshotMirror: string | null;
+  /** wss:// address of the relay, or null when remote access is off. */
+  relay: string | null;
   /** Folder with the static site, or null for API only. */
   siteDir: string | null;
   logLevel: z.infer<typeof Env>["LOG_LEVEL"];
@@ -97,6 +101,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     localPort: e.WOVEN_LOCAL_PORT,
     gate: { mode: e.WOVEN_GATE, port: e.WOVEN_GATE_PORT, allow: e.WOVEN_GATE_ALLOW },
     snapshotMirror: e.WOVEN_SNAPSHOT_MIRROR.trim() || null,
+    relay: e.WOVEN_RELAY.trim() ? e.WOVEN_RELAY.trim().replace(/^http/, "ws").replace(/\/+$/, "") : null,
     siteDir: e.WOVEN_SITE === "off" ? null : e.WOVEN_SITE === "auto" ? defaultSiteDir() : e.WOVEN_SITE,
     logLevel: e.LOG_LEVEL,
   };

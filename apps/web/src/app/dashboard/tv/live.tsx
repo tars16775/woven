@@ -5,6 +5,8 @@ import { Button, Card, PageHeader, Pill } from "@/components/dashboard/ui";
 import { useToast } from "@/components/dashboard/toast";
 import { explainAction } from "@/lib/core/actions";
 import { bytes, media as api, photos as photosApi, type MediaItem, type Photo } from "@/lib/core/files";
+import { CoreImage } from "@/components/dashboard/core-image";
+import { useCoreUrl } from "@/lib/core/transport";
 
 const clock = (s: number | null) => (s === null ? "" : `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`);
 
@@ -23,6 +25,8 @@ export function LiveTV() {
   const [now, setNow] = useState<MediaItem | null>(null);
   const [slideshow, setSlideshow] = useState<number | null>(null);
   const player = useRef<HTMLVideoElement & HTMLAudioElement>(null);
+  // At home the player streams with byte ranges; away, the tunnel fetches the file once.
+  const streamSrc = useCoreUrl(now ? api.streamUrl(now.fileId) : null);
   const stage = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -78,16 +82,15 @@ export function LiveTV() {
         <div className="relative aspect-video w-full bg-black">
           {now ? (
             now.kind === "video" ? (
-              <video ref={player} key={now.fileId} src={api.streamUrl(now.fileId)} crossOrigin="use-credentials" controls autoPlay playsInline className="h-full w-full" data-testid="player" />
+              <video ref={player} key={now.fileId} src={streamSrc ?? undefined} crossOrigin="use-credentials" controls autoPlay playsInline className="h-full w-full" data-testid="player" />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-4">
                 <div className="font-display text-[28px] font-medium">{now.name}</div>
-                <audio ref={player} key={now.fileId} src={api.streamUrl(now.fileId)} crossOrigin="use-credentials" controls autoPlay className="w-[min(600px,80%)]" data-testid="player" />
+                <audio ref={player} key={now.fileId} src={streamSrc ?? undefined} crossOrigin="use-credentials" controls autoPlay className="w-[min(600px,80%)]" data-testid="player" />
               </div>
             )
           ) : slideshow !== null && photos[slideshow] ? (
-            // eslint-disable-next-line @next/next/no-img-element -- served by the box
-            <img src={photosApi.previewUrl(photos[slideshow].id)} alt={photos[slideshow].name} className="h-full w-full object-contain" />
+            <CoreImage src={photosApi.previewUrl(photos[slideshow].id)} alt={photos[slideshow].name} className="h-full w-full object-contain" />
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
               <span className="orb" style={{ ["--orb" as string]: "14px" }} />
@@ -153,8 +156,7 @@ export function LiveTV() {
             {photos.slice(0, 20).map((p, i) => (
               <li key={p.id}>
                 <button type="button" onClick={() => { setNow(null); setSlideshow(i); }} className="block aspect-square w-full overflow-hidden rounded-[6px] bg-chassis" aria-label={p.name}>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- served by the box */}
-                  <img src={photosApi.thumbUrl(p.id)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  <CoreImage src={photosApi.thumbUrl(p.id)} alt="" loading="lazy" className="h-full w-full object-cover" />
                 </button>
               </li>
             ))}

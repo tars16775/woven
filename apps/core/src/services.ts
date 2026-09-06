@@ -7,6 +7,8 @@ import { Ask } from "./ask.ts";
 import { files as filesTable } from "./db/schema.ts";
 import { SearchIndex } from "./search.ts";
 import { ShareService } from "./shares.ts";
+import { RemoteDevices } from "./remote/devices.ts";
+import { derive } from "./keystore.ts";
 import { SessionService } from "./auth/sessions.ts";
 import { HouseholdService } from "./household.ts";
 import { ActionEngine } from "./actions/engine.ts";
@@ -62,6 +64,7 @@ export type Services = {
   ask: Ask;
   search: SearchIndex;
   shares: ShareService;
+  remoteDevices: RemoteDevices;
 };
 
 export type ServiceOptions = { home?: HomeAdapter; logger?: Logger; loadEmbedder?: (dir: string) => Promise<Embedder>; tools?: Tools; hardware?: Hardware; mdns?: boolean };
@@ -155,9 +158,10 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
   memory.onForgot = (id) => search.removeMemory(id);
   routines.onChanged = (r) => search.indexRoutine({ id: r.id, householdId: r.householdId, createdBy: r.createdBy, name: r.name, trigger: JSON.stringify(r.trigger), steps: JSON.stringify(r.steps) });
   routines.onRemoved = (id) => search.removeRoutine(id);
+  const sessions = new SessionService(db, data.ledger);
   const services: Services = {
     household,
-    sessions: new SessionService(db, data.ledger),
+    sessions,
     passkeys,
     recovery,
     enrolments: new OneTimeStore<Enrolment>(15 * 60 * 1000),
@@ -178,6 +182,7 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
     memory,
     search,
     shares: new ShareService(db, data.ledger, files),
+    remoteDevices: new RemoteDevices(db, data.ledger, sessions, derive(data.key, "remote")),
     alerts: new Alerts(),
     metrics: new Metrics(),
   } as Services;

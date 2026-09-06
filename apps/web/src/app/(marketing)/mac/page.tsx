@@ -60,6 +60,14 @@ woven-backup connect https://woven.local:4000 <token from Settings>
 woven-backup run ~/Documents --watch     # keeps watching; --into and --namespace to choose where`}</Code>
       </Block>
 
+      <Block id="away" title="Reach it from anywhere">
+        <p>
+          Your Mac keeps no open ports. When you set a relay address, the Core holds one outbound connection to it, and a browser you paired at home (Settings, Away from home) can reach the house from anywhere. Every frame is encrypted end to end with a key only that browser and the Core know; the relay carries ciphertext and keeps nothing. Pairing only happens on the home network, and any paired device can be revoked from Settings.
+        </p>
+        <Code>{`# in woven config, then: woven restart
+WOVEN_RELAY="wss://relay.woventechnology.com"`}</Code>
+      </Block>
+
       <Block id="command" title="The woven command">
         <Code>{`woven status      # running, where, how much space
 woven logs        # follow the core
