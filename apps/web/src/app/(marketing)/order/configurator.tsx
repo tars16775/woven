@@ -15,6 +15,7 @@ import {
   storageOptions,
   type FinishId,
 } from "@/lib/order";
+import { siteApi } from "@/lib/site-api";
 import { addReservation, type Reservation } from "@/lib/orders";
 
 function isTier(v: string | null): v is TierId {
@@ -77,6 +78,8 @@ export function Configurator() {
       email: session?.email,
     });
     setReserved(r);
+    // Also to the site's backend when one is configured, so a confirmation can go out by email. Best effort.
+    void siteApi.reservation({ code: r.code, tier: r.tier, finish: r.finish, storage: r.storage, cloud: r.cloud, addons: r.addons, total: r.total, deposit: r.deposit, ...(r.name ? { name: r.name } : {}), ...(r.email ? { email: r.email } : {}) });
   };
 
   return (

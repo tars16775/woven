@@ -10,7 +10,7 @@ const nextId = monotonicFactory();
 
 export class HouseholdError extends Error {
   constructor(
-    readonly status: 400 | 404 | 409,
+    readonly status: 400 | 403 | 404 | 409,
     message: string,
   ) {
     super(message);
@@ -76,6 +76,18 @@ export class HouseholdService {
       const owner = Person.parse(tx.select().from(people).where(eq(people.id, ownerId)).get());
       return { household, owner };
     });
+  }
+
+  /** The owner sets how much a person may keep on the box (gap 24); null lifts the limit. */
+  setQuota(personId: string, quotaBytes: number | null, by: Person): Person {
+    if (by.role !== "owner") throw new HouseholdError(403, "Only the owner sets storage quotas.");
+    const target = this.person(personId);
+    if (!target || target.householdId !== by.householdId) throw new HouseholdError(404, "No such person.");
+    this.db.transaction((tx) => {
+      tx.update(people).set({ quotaBytes }).where(eq(people.id, personId)).run();
+      this.ledger.append({ type: "action.executed", householdId: by.householdId, actor: { kind: "person", id: by.id }, where: "inside", target: personId, sensitivity: "low", payload: { capability: "person.quota", planned: { quotaBytes }, observed: { quotaBytes } } });
+    });
+    return this.person(personId)!;
   }
 
   addPerson(input: NewPerson, by: { id: string; role: Role }): Person {

@@ -1,8 +1,11 @@
-import { Alert, BackupStatus, CoreConfig, CoreStatus, StorageHealth } from "@woven/schema";
+import { Alert, BackupStatus, CoreConfig, CoreStatus, StorageHealth, UpdateCheck } from "@woven/schema";
 import { z } from "zod";
 import { writeDiagnostics } from "../diagnostics.ts";
 import { requireRole, requireSession } from "../auth/guard.ts";
 import { listSnapshots, restoreDrill } from "../integrity.ts";
+import { checkForUpdate } from "../update.ts";
+import { access, mkdir, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { takeSnapshot } from "../snapshot.ts";
 import { mirrorSnapshot } from "../integrity.ts";
 import { CORE_HOUSEHOLD_ID } from "../data.ts";
@@ -57,25 +60,51 @@ export const systemRoutes: FastifyPluginAsync = async (raw) => {
 
   /* Backups and the restore drill (phase 23) */
   let lastDrill: BackupStatus["lastDrill"] = null;
+  const mirror = () => app.deps.settings?.get().snapshotMirror ?? app.deps.config.snapshotMirror;
   const backupStatus = async (): Promise<BackupStatus> => ({
-    snapshots: (await listSnapshots(app.deps.data.paths.snapshots, app.deps.config.snapshotMirror)).slice(0, 30),
-    mirror: app.deps.config.snapshotMirror,
+    snapshots: (await listSnapshots(app.deps.data.paths.snapshots, mirror())).slice(0, 30),
+    mirror: mirror(),
+    mirrorPresent: mirror() ? await access(mirror()!).then(() => true, () => false) : null,
     lastDrill,
   });
+
+  /** The second location (gap 23): a folder on another drive, set from the dashboard. Checked to be a writable folder first. */
+  app.post("/system/backups/mirror", { preHandler: requireRole("owner"), schema: { body: z.object({ path: z.string().trim().max(1000).nullable() }), response: { 200: BackupStatus } } }, async (req) => {
+    const { data, settings } = app.deps;
+    if (!settings) throw Object.assign(new Error("Settings are not available on this Core."), { statusCode: 409 });
+    const path = req.body.path?.replace(/\/+$/, "") || null;
+    if (path) {
+      if (path.startsWith(data.paths.root)) throw Object.assign(new Error("The second location has to be outside the data folder, on another drive if you can."), { statusCode: 400 });
+      const probe = join(path, `.woven-write-test-${Date.now()}`);
+      try {
+        await mkdir(path, { recursive: true });
+        await writeFile(probe, "ok");
+        await rm(probe, { force: true });
+      } catch {
+        throw Object.assign(new Error(`Cannot write to ${path}. Is the drive connected?`), { statusCode: 400 });
+      }
+    }
+    settings.set({ snapshotMirror: path });
+    data.ledger.append({ type: "action.executed", householdId: req.session!.person.householdId || CORE_HOUSEHOLD_ID, actor: { kind: "person", id: req.session!.person.id }, where: "inside", target: "snapshots", sensitivity: "low", payload: { capability: "backup.mirror", planned: { path }, observed: { path } } });
+    return backupStatus();
+  });
+
+  /** Updates (gap 22): ask GitHub, through the Gate, whether a newer signed release exists. */
+  app.post("/system/update/check", { preHandler: requireRole("owner"), schema: { response: { 200: UpdateCheck } } }, async () => checkForUpdate(app.deps.services.gate, app.deps.data.ledger, app.deps.version));
   app.get("/system/backups", { preHandler: requireRole("owner", "adult"), schema: { response: { 200: BackupStatus } } }, async () => backupStatus());
 
   app.post("/system/backups/snapshot", { preHandler: requireRole("owner"), schema: { response: { 200: BackupStatus } } }, async (req) => {
-    const { data, config } = app.deps;
+    const { data } = app.deps;
     const snap = await takeSnapshot({ db: data.database, objectsDir: data.paths.store, snapshotsDir: data.paths.snapshots, keysDir: data.paths.keys });
     let mirrored = false;
-    if (config.snapshotMirror) mirrored = (await mirrorSnapshot(snap.dir, config.snapshotMirror).catch(() => ({ copied: false }))).copied;
+    if (mirror()) mirrored = (await mirrorSnapshot(snap.dir, mirror()!).catch(() => ({ copied: false }))).copied;
     data.ledger.append({ type: "action.executed", householdId: req.session!.person.householdId || CORE_HOUSEHOLD_ID, actor: { kind: "person", id: req.session!.person.id }, where: "inside", target: "snapshot", sensitivity: "low", payload: { capability: "backup.snapshot", planned: {}, observed: { objects: snap.manifest.objects.count, mirrored } } });
     return backupStatus();
   });
 
   app.post("/system/backups/drill", { preHandler: requireRole("owner"), schema: { response: { 200: BackupStatus } } }, async (req) => {
-    const { data, config } = app.deps;
-    const report = await restoreDrill(data.paths.snapshots, config.snapshotMirror, data.key);
+    const { data } = app.deps;
+    const report = await restoreDrill(data.paths.snapshots, mirror(), data.key);
     lastDrill = { ...report, at: new Date().toISOString() };
     data.ledger.append({ type: "core.integrity_checked", householdId: req.session!.person.householdId || CORE_HOUSEHOLD_ID, actor: { kind: "person", id: req.session!.person.id }, where: "inside", target: report.snapshot, sensitivity: "low", payload: { drill: true, ok: report.ok, rows: report.ledger.rows, objects: report.objects.checked, problem: report.problem } });
     return backupStatus();

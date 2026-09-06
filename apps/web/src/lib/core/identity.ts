@@ -113,6 +113,8 @@ export const identity = {
   },
   addPerson: (input: { name: string; email?: string; role: "adult" | "child" | "guest" }) => call("/v1/household/people", z.custom<Person>(), post(input)),
   removePerson: (id: string) => call(`/v1/household/people/${id}`, z.custom<Person>(), { method: "DELETE" }),
+  /** Storage quotas (gap 24): the owner sets a limit per person; null lifts it. */
+  setQuota: (id: string, quotaBytes: number | null) => call(`/v1/household/people/${id}/quota`, z.custom<Person>(), post({ quotaBytes })),
 
   /* Memory (phase 36) */
   memories: () => call("/v1/memory?candidates=true", z.object({ memories: z.array(Memory), settings: MemorySettings })),

@@ -35,6 +35,13 @@ export const householdRoutes: FastifyPluginAsync = async (raw) => {
     async (req) => app.deps.services.household.removePerson(req.params.id, req.session!.person),
   );
 
+  /** Storage quotas (gap 24): the owner sets a limit per person. */
+  app.post(
+    "/household/people/:id/quota",
+    { preHandler: requireSession, schema: { params: z.object({ id: Ulid }), body: z.object({ quotaBytes: z.number().int().min(0).max(1e15).nullable() }), response: { 200: Person } } },
+    async (req) => app.deps.services.household.setQuota(req.params.id, req.body.quotaBytes, req.session!.person),
+  );
+
   app.get(
     "/household/namespaces",
     { preHandler: requireSession, schema: { response: { 200: z.object({ role: z.string(), namespaces: z.array(z.string()) }) } } },

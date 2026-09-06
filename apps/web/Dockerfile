@@ -8,7 +8,8 @@ COPY apps/web ./apps/web
 COPY packaging ./packaging
 RUN pnpm install --frozen-lockfile --filter "./packages/*" --filter "./apps/web"
 ARG NEXT_PUBLIC_SITE_URL=https://woventechnology.com
-ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_WOVEN_LIVE=off NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_SITE_API=https://api.woventechnology.com
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_SITE_API=$NEXT_PUBLIC_SITE_API NEXT_PUBLIC_WOVEN_LIVE=off NEXT_TELEMETRY_DISABLED=1
 RUN cp packaging/install.sh apps/web/public/install.sh
 RUN cd apps/web && pnpm build
 

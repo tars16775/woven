@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useT } from "@/lib/i18n";
 import { displayNameFromEmail, householdFor, signIn, useSession } from "@/lib/auth";
 import { explain, identity, sessionRecord } from "@/lib/core/identity";
 import { startCore, useCore } from "@/lib/core/store";
@@ -13,6 +14,7 @@ const field =
   "mt-1.5 w-full rounded-[10px] border bg-white px-3.5 py-3 text-[15px] outline-none transition-colors focus:border-ink disabled:opacity-60 aria-[invalid=true]:border-[#a13a2a]";
 
 export function LoginForm() {
+  const { t } = useT();
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/dashboard";
@@ -232,7 +234,7 @@ export function LoginForm() {
             }}
             className={`flex-1 rounded-[8px] py-2 text-[13px] font-medium transition-colors ${mode === m ? "bg-ink text-bone" : "text-ink/70 hover:text-ink"}`}
           >
-            {m === "passkey" ? "Passkey" : m === "code" ? "Code on the screen" : "I lost my devices"}
+            {m === "passkey" ? t("login.tab.passkey") : m === "code" ? t("login.tab.code") : t("login.tab.recovery")}
           </button>
         ))}
       </div>
@@ -318,7 +320,7 @@ export function LoginForm() {
             </p>
           )}
           <button type="submit" disabled={busy} aria-busy={busy || undefined} className="btn btn-primary mt-5 w-full disabled:opacity-60">
-            {busy ? "Checking with the box…" : "Sign in with a recovery code"}
+            {busy ? t("login.checking") : t("login.recoveryButton")}
           </button>
           <p className="mt-3 text-center text-[12px] text-ash">One of the codes you wrote down, or a rescue code another adult in the house just gave you. Each works once; add a passkey on this device right after.</p>
         </form>

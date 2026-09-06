@@ -15,9 +15,26 @@ type Role = "adult" | "child" | "guest";
  * roles, invitations as links that work once, guests that expire, and the
  * owner's controls to remove people or delete an account.
  */
+const quotaLabel = (n: number) => (n >= 1e12 ? `${(n / 1e12).toFixed(n % 1e12 ? 1 : 0)} TB` : `${Math.round(n / 1e9)} GB`);
+
 export function HouseholdCard({ onTransfer }: { onTransfer?: (people: Person[]) => void }) {
   const session = useSession();
   const say = useToast();
+  /** Storage quotas (gap 24): a number of gigabytes, or nothing to lift the limit. */
+  const setQuota = async (p: Person) => {
+    const answer = window.prompt(`Storage quota for ${p.name}, in GB (leave empty for no limit):`, p.quotaBytes ? String(Math.round(p.quotaBytes / 1e9)) : "");
+    if (answer === null) return;
+    const gb = Number(answer.trim());
+    if (answer.trim() && (!Number.isFinite(gb) || gb < 0)) return say("Enter a number of gigabytes.");
+    try {
+      await identity.setQuota(p.id, answer.trim() ? Math.round(gb * 1e9) : null);
+      const h = await identity.household();
+      if (h.setup) setPeople(h.people);
+      say(answer.trim() ? `${p.name} can keep up to ${gb} GB.` : `${p.name} has no storage limit.`);
+    } catch (err) {
+      say(explain(err));
+    }
+  };
   const [people, setPeople] = useState<Person[]>([]);
   const [invites, setInvites] = useState<Invitation[]>([]);
   const [open, setOpen] = useState<null | "invite" | "link">(null);
@@ -142,6 +159,11 @@ export function HouseholdCard({ onTransfer }: { onTransfer?: (people: Person[]) 
                 {pending && canInvite && (
                   <Button kind="quiet" onClick={() => void withdraw(invites.find((i) => i.person.id === p.id)!)}>
                     Withdraw
+                  </Button>
+                )}
+                {!pending && me?.role === "owner" && (
+                  <Button kind="quiet" onClick={() => void setQuota(p)} aria-label={`Storage quota for ${p.name}`} data-testid={`quota-${p.id}`}>
+                    {p.quotaBytes ? `${quotaLabel(p.quotaBytes)} quota` : "No quota"}
                   </Button>
                 )}
                 {!pending && me?.role === "owner" && p.role !== "owner" && (

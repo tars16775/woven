@@ -145,6 +145,8 @@ export function LiveFiles() {
   };
 
   const crumbs = path === "/" ? [] : path.slice(1).split("/");
+  const mine = summary?.byPerson.find((p) => p.personId === session?.personId);
+  const quotaLine = mine ? `${bytes(mine.bytes)} yours${mine.quotaBytes ? ` of ${bytes(mine.quotaBytes)}` : ""}` : null;
   const disk = summary?.disk;
   const visible = spaces.filter((s) => session?.role !== "child" || s.id === "personal" || s.id === "household").filter((s) => session?.role !== "guest" || s.id === "personal");
 
@@ -152,7 +154,7 @@ export function LiveFiles() {
     <div className="mx-auto max-w-[1100px]">
       <PageHeader
         title="Files"
-        sub={disk ? `${bytes(disk.usedBytes)} of ${bytes(disk.totalBytes)} used on the box · ${summary ? bytes(summary.uniqueBytes) : ""} unique · stored once, however many devices` : "Reading the box…"}
+        sub={disk ? `${bytes(disk.usedBytes)} of ${bytes(disk.totalBytes)} used on the box${quotaLine ? ` · ${quotaLine}` : ""} · stored once, however many devices` : "Reading the box…"}
         action={
           <>
             <input ref={input} type="file" multiple className="sr-only" onChange={upload} data-testid="upload-input" />

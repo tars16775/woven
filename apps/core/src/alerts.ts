@@ -27,7 +27,7 @@ export class Alerts {
 }
 
 /** The checks that raise or clear alerts from what the box already knows. */
-export function assess(alerts: Alerts, facts: { diskFreeBytes: number; diskTotalBytes: number; ledgerOk: boolean; objectsBad: number; mirrorConfigured: boolean; mirrorOk: boolean | null; certDaysLeft: number | null; gate: "open" | "closed" | "absent"; lastSnapshotAgeHours: number | null; lowCodes?: { name: string; left: number }[] }): void {
+export function assess(alerts: Alerts, facts: { diskFreeBytes: number; diskTotalBytes: number; ledgerOk: boolean; objectsBad: number; mirrorConfigured: boolean; mirrorOk: boolean | null; certDaysLeft: number | null; gate: "open" | "closed" | "absent"; lastSnapshotAgeHours: number | null; lowCodes?: { name: string; left: number }[]; mirrorPresent?: boolean | null }): void {
   const freePct = facts.diskTotalBytes ? (facts.diskFreeBytes / facts.diskTotalBytes) * 100 : 100;
   if (freePct < 3) alerts.raise("disk", "urgent", "The volume is almost full", `${freePct.toFixed(1)}% free. Backups and photos will stop landing.`);
   else if (freePct < 10) alerts.raise("disk", "warn", "The volume is filling up", `${freePct.toFixed(0)}% free. Add a drive or clear space soon.`);
@@ -39,7 +39,8 @@ export function assess(alerts: Alerts, facts: { diskFreeBytes: number; diskTotal
   if (facts.objectsBad > 0) alerts.raise("objects", "urgent", "Damaged files on the volume", `${facts.objectsBad} objects no longer match their hash. The drive may be failing; run a restore drill.`);
   else alerts.clear("objects");
 
-  if (facts.mirrorConfigured && facts.mirrorOk === false) alerts.raise("mirror", "warn", "The second backup location is not reachable", "Last night's snapshot was not copied. Check the second drive.");
+  if (facts.mirrorConfigured && facts.mirrorPresent === false) alerts.raise("mirror", "warn", "The second drive is not connected", "The second backup location is not there right now. Plug the drive back in; the next snapshot copies itself.");
+  else if (facts.mirrorConfigured && facts.mirrorOk === false) alerts.raise("mirror", "warn", "The second backup location is not reachable", "Last night's snapshot was not copied. Check the second drive.");
   else alerts.clear("mirror");
   if (!facts.mirrorConfigured) alerts.raise("no-mirror", "info", "Snapshots have one copy", "Set a second location so a failed drive is not the end of the story.");
   else alerts.clear("no-mirror");

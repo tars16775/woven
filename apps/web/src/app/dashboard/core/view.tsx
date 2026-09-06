@@ -10,7 +10,7 @@ import { useGateOpen } from "@/components/dashboard/state";
 import { core, household } from "@/lib/dashboard/data";
 import { ConnectCore } from "@/components/dashboard/connect-core";
 import { BackupsCard } from "@/components/dashboard/backups-card";
-import { bytes, system } from "@/lib/core/files";
+import { bytes, system, updates } from "@/lib/core/files";
 import type { StorageHealth } from "@/lib/core/files";
 import { explainAction } from "@/lib/core/actions";
 import { identity, type Alert } from "@/lib/core/identity";
@@ -93,6 +93,18 @@ export function CoreView() {
   const checkForUpdates = () => {
     if (checking) return;
     setChecking(true);
+    if (connection.phase === "connected") {
+      updates
+        .check()
+        .then((u) => {
+          if (u.problem) say(`Could not check: ${u.problem}`);
+          else if (u.newer) say(`Woven Core ${u.latest} is out${u.signed ? ", signed" : ""}. Update from Terminal with: woven update`);
+          else say(`${u.current} is the newest release. Checked just now, through the Gate.`);
+        })
+        .catch((err: unknown) => say(explainAction(err)))
+        .finally(() => setChecking(false));
+      return;
+    }
     later(1100, () => {
       setChecking(false);
       say(`${core.version} is the latest on the ${core.update.channel} channel. Checked just now.`);
@@ -398,7 +410,7 @@ export function CoreView() {
               <div className="flex items-center gap-2">
                 <span className="font-medium">{live.version}</span>
               </div>
-              <div className="mt-1 text-[13px] text-ash">Updates arrive as signed releases and install with the woven command; the Core checks for them and rolls back on its own if a new version fails to start.</div>
+              <div className="mt-1 text-[13px] text-ash">Releases are signed with the Woven release key and verified by the installer before anything is used. Check here, then update from Terminal with woven update; the previous release is kept and comes back on its own if the new Core does not answer within a minute.</div>
             </div>
           </div>
         ) : (

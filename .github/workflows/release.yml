@@ -23,8 +23,23 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - name: Build the release tarball
-        run: packaging/release.sh "${GITHUB_REF_NAME#v}"
+      - name: Build and sign the release tarball
+        env:
+          WOVEN_RELEASE_KEY: ${{ secrets.WOVEN_RELEASE_KEY }}
+        run: |
+          if [ -z "$WOVEN_RELEASE_KEY" ]; then echo "The WOVEN_RELEASE_KEY secret is not set; releases must be signed (node packaging/keygen.mjs)."; exit 1; fi
+          packaging/release.sh "${GITHUB_REF_NAME#v}"
+          ls -la release/woven-macos.tar.gz.sig release/woven-macos.tar.gz.sha256
+      - name: Embed the release public key in the installer
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const pub = fs.readFileSync("packaging/woven-release.pub", "utf8").trim();
+            for (const f of ["packaging/install.sh", `release/woven-${process.env.GITHUB_REF_NAME.replace(/^v/, "")}/packaging/install.sh`]) {
+              fs.writeFileSync(f, fs.readFileSync(f, "utf8").replace("__WOVEN_RELEASE_PUB__", pub));
+            }
+          '
+          cp packaging/install.sh release/install.sh
       - name: Try the installer on this runner (no service)
         env:
           WOVEN_HOME: ${{ runner.temp }}/woven-home
@@ -38,6 +53,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" release/woven-macos.tar.gz \
+          gh release create "$GITHUB_REF_NAME" release/woven-macos.tar.gz release/woven-macos.tar.gz.sig release/woven-macos.tar.gz.sha256 release/install.sh packaging/woven-release.pub \
             --title "Woven $GITHUB_REF_NAME" \
             --notes "Install or update on a Mac with one command (see packaging/install.sh): curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/packaging/install.sh | bash"

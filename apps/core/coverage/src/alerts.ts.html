@@ -1,0 +1,265 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/alerts.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">src</a> alerts.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">93.47% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>43/46</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">91.11% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>41/45</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>6/6</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>31/31</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line high'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">47x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import type { Alert } from "@woven/schema";
+&nbsp;
+/**
+ * Alerts (phase 47): the few things the household should hear about, shown
+ * on the screen and the Core page. Raised by checks, cleared when the
+ * check passes again. Never carries content, only the state of the box.
+ */
+export class Alerts {
+  private readonly active = new Map&lt;string, Alert&gt;();
+  onChange: ((alerts: Alert[]) =&gt; void) | null = null;
+&nbsp;
+  raise(id: string, level: Alert["level"], title: string, detail: string): void {
+    const existing = this.active.get(id);
+    if (existing &amp;&amp; existing.level === level &amp;&amp; existing.detail === detail) return;
+    this.active.set(id, { id, level, title, detail, since: existing?.since ?? new Date().toISOString() });
+    this.onChange?.(this.list());
+  }
+&nbsp;
+  clear(id: string): void {
+    if (this.active.delete(id)) this.onChange?.(this.list());
+  }
+&nbsp;
+  list(): Alert[] {
+    const order = { urgent: 0, warn: 1, info: 2 };
+    return [...this.active.values()].sort((a, b) =&gt; order[a.level] - order[b.level] || a.since.localeCompare(b.since));
+  }
+}
+&nbsp;
+/** The checks that raise or clear alerts from what the box already knows. */
+export function assess(alerts: Alerts, facts: { diskFreeBytes: number; diskTotalBytes: number; ledgerOk: boolean; objectsBad: number; mirrorConfigured: boolean; mirrorOk: boolean | null; certDaysLeft: number | null; gate: "open" | "closed" | "absent"; lastSnapshotAgeHours: number | null; lowCodes?: { name: string; left: number }[]; mirrorPresent?: boolean | null }): void {
+  const freePct = facts.diskTotalBytes ? (facts.diskFreeBytes / facts.diskTotalBytes) * 100 : <span class="branch-1 cbranch-no" title="branch not covered" >100;</span>
+  if (freePct &lt; 3) alerts.raise("disk", "urgent", "The volume is almost full", `${freePct.toFixed(1)}% free. Backups and photos will stop landing.`);
+  else if (freePct &lt; 10) alerts.raise("disk", "warn", "The volume is filling up", `${freePct.toFixed(0)}% free. Add a drive or clear space soon.`);
+  else alerts.clear("disk");
+&nbsp;
+  if (!facts.ledgerOk) alerts.raise("ledger", "urgent", "The ledger does not verify", "A receipt was changed or damaged. Restore from a snapshot and check the box.");
+  else alerts.clear("ledger");
+&nbsp;
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (facts.objectsBad &gt; 0) <span class="cstat-no" title="statement not covered" >alerts.raise("objects", "urgent", "Damaged files on the volume", `${facts.objectsBad} objects no longer match their hash. The drive may be failing; run a restore drill.`);</span>
+  else alerts.clear("objects");
+&nbsp;
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (facts.mirrorConfigured &amp;&amp; facts.mirrorPresent === false) <span class="cstat-no" title="statement not covered" >alerts.raise("mirror", "warn", "The second drive is not connected", "The second backup location is not there right now. Plug the drive back in; the next snapshot copies itself.");</span>
+  else <span class="missing-if-branch" title="if path not taken" >I</span>if (facts.mirrorConfigured &amp;&amp; facts.mirrorOk === false) <span class="cstat-no" title="statement not covered" >alerts.raise("mirror", "warn", "The second backup location is not reachable", "Last night's snapshot was not copied. Check the second drive.");</span>
+  else alerts.clear("mirror");
+  if (!facts.mirrorConfigured) alerts.raise("no-mirror", "info", "Snapshots have one copy", "Set a second location so a failed drive is not the end of the story.");
+  else alerts.clear("no-mirror");
+&nbsp;
+  if (facts.certDaysLeft !== null &amp;&amp; facts.certDaysLeft &lt; 14) alerts.raise("cert", "warn", "The core's certificate is about to renew", `${facts.certDaysLeft} days left. It renews on its own at start; restart the core if devices complain.`);
+  else alerts.clear("cert");
+&nbsp;
+  if (facts.gate === "absent") alerts.raise("gate", "warn", "No Gate is running", "Nothing can cross. Restart the core to start it.");
+  else alerts.clear("gate");
+&nbsp;
+  if (facts.lastSnapshotAgeHours !== null &amp;&amp; facts.lastSnapshotAgeHours &gt; 48) alerts.raise("snapshot", "warn", "No recent snapshot", `The last one is ${Math.round(facts.lastSnapshotAgeHours / 24)} days old.`);
+  else alerts.clear("snapshot");
+&nbsp;
+  const low = facts.lowCodes ?? [];
+  if (low.length) alerts.raise("recovery-codes", "info", "Recovery codes are running low", `${low.map((p) =&gt; `${p.name} has ${p.left}`).join(", ")}. Print a new set from Settings before they are gone.`);
+  else alerts.clear("recovery-codes");
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-09-06T22:24:23.714Z
+            </div>
+        <script src="../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../sorter.js"></script>
+        <script src="../block-navigation.js"></script>
+    </body>
+</html>
+    

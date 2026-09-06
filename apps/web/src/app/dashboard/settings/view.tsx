@@ -5,6 +5,7 @@ import { Button, Card, Field, PageHeader, Pill, inputClass } from "@/components/
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { ThemeControl } from "@/components/dashboard/theme";
+import { LanguageControl } from "@/components/dashboard/language";
 import { PasskeysCard } from "@/components/dashboard/passkeys-card";
 import { HouseholdCard } from "@/components/dashboard/household-card";
 import { DataRightsCard } from "@/components/dashboard/data-rights-card";
@@ -164,6 +165,7 @@ export function SettingsView() {
         </Card>
 
         <Card title="Appearance">
+          <LanguageControl />
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="text-[14px] font-medium">Colour scheme</div>

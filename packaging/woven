@@ -19,7 +19,8 @@ woven <command>
   logs         follow the Core's log
   open         open the dashboard in your browser
   config       show the configuration file (edit with any editor, then: woven restart)
-  update       fetch the newest release and restart
+  update       fetch the newest signed release, restart, and roll back on its own if the new Core does not answer
+  rollback     go back to the release that ran before the last update
   uninstall    remove the service and the program (your data stays in the data folder)
   version      what is installed
 USAGE
@@ -61,7 +62,28 @@ case "${1:-}" in
   config) echo "$CONFIG"; echo; cat "$CONFIG" ;;
   version) cat "$APP/VERSION" 2>/dev/null || echo "unknown" ;;
   update)
-    curl -fsSL https://raw.githubusercontent.com/tars16775/woven/main/packaging/install.sh | WOVEN_HOME="$WOVEN_HOME" bash
+    before=$(readlink "$WOVEN_HOME/current" 2>/dev/null || true)
+    curl -fsSL "${WOVEN_INSTALLER_URL:-https://raw.githubusercontent.com/tars16775/woven/main/packaging/install.sh}" | WOVEN_HOME="$WOVEN_HOME" WOVEN_NO_OPEN=1 bash
+    after=$(readlink "$WOVEN_HOME/current" 2>/dev/null || true)
+    [ "$before" = "$after" ] && exit 0
+    echo "Waiting for the new Core to answer..."
+    ok=""
+    for i in $(seq 1 60); do curl -sk --max-time 2 -o /dev/null "https://localhost:$(port)/v1/health" && { ok=1; break; }; sleep 1; done
+    if [ -z "$ok" ]; then
+      echo "The new Core did not answer within a minute; rolling back to the previous release."
+      "$0" rollback
+      exit 1
+    fi
+    echo "Updated to $(cat "$APP/VERSION"). The previous release is kept; 'woven rollback' goes back to it."
+    ;;
+  rollback)
+    prev=$(readlink "$WOVEN_HOME/previous" 2>/dev/null || true)
+    [ -n "$prev" ] && [ -d "$prev" ] || { echo "There is no previous release to go back to."; exit 1; }
+    cur=$(readlink "$WOVEN_HOME/current" 2>/dev/null || true)
+    ln -sfn "$prev" "$WOVEN_HOME/current"
+    [ -n "$cur" ] && ln -sfn "$cur" "$WOVEN_HOME/previous"
+    launchctl kickstart -k "gui/$(id -u)/$LABEL" 2>/dev/null || "$0" start
+    echo "Rolled back to $(cat "$APP/VERSION"). Your data is untouched."
     ;;
   uninstall)
     "$0" stop >/dev/null 2>&1 || true

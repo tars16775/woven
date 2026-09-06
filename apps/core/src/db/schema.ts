@@ -27,6 +27,8 @@ export const people = sqliteTable(
     removedAt: text("removed_at"),
     /** Guests: when their access ends. */
     expiresAt: text("expires_at"),
+    /** Storage quota in bytes (gap 24); null means no limit. */
+    quotaBytes: integer("quota_bytes"),
   },
   (t) => [index("people_household_idx").on(t.householdId), uniqueIndex("people_email_idx").on(t.householdId, t.email)],
 );

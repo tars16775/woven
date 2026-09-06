@@ -1,0 +1,430 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/rights.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">src</a> rights.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">91.13% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>72/79</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">58.53% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>24/41</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">90% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>9/10</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>67/67</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line high'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">21x</span>
+<span class="cline-any cline-yes">21x</span>
+<span class="cline-any cline-yes">21x</span>
+<span class="cline-any cline-yes">21x</span>
+<span class="cline-any cline-yes">21x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { createHash } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import type { Person } from "@woven/schema";
+import { and, eq, isNull } from "drizzle-orm";
+import type { Db } from "./db/index.ts";
+import { actions, credentials, events, files, households, invitations, memories, people, sessions } from "./db/schema.ts";
+import { HouseholdError, type HouseholdService } from "./household.ts";
+import type { Ledger } from "./ledger.ts";
+import type { ContentStore } from "./store/index.ts";
+&nbsp;
+export type ExportManifest = { dir: string; takenAt: string; person: string | null; counts: Record&lt;string, number&gt; };
+&nbsp;
+/**
+ * Data rights (phase 11). Export everything as a folder on the volume;
+ * delete an account so nothing of theirs remains but the ledger's record
+ * that it happened; transfer ownership under strong authentication.
+ */
+export class RightsService {
+  constructor(
+    private readonly db: Db,
+    private readonly ledger: Ledger,
+    private readonly household: HouseholdService,
+    private readonly store: ContentStore,
+    private readonly exportsDir: string,
+  ) {}
+&nbsp;
+  /** A person's own data (or the whole household for the owner) as JSON files plus their objects. */
+  async exportData(by: Person, scope: "me" | "household"): Promise&lt;ExportManifest&gt; {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (scope === "household" &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >by.role !== "owner") <span class="cstat-no" title="statement not covered" >t</span>hrow new HouseholdError(400, "Only the owner can export the whole household.");</span>
+    const takenAt = new Date();
+    const stamp = takenAt.toISOString().replace(/[:.]/g, "-");
+    const dir = join(this.exportsDir, `${scope === "me" ? by.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") : <span class="branch-1 cbranch-no" title="branch not covered" >"household"}-</span>${stamp}`);
+    await mkdir(join(dir, "objects"), { recursive: true, mode: 0o700 });
+&nbsp;
+    const h = this.db.select().from(households).where(eq(households.id, by.householdId)).get();
+    const peopleRows = scope === "me" ? [this.db.select().from(people).where(eq(people.id, by.id)).get()!] : <span class="branch-1 cbranch-no" title="branch not covered" >this.db.select().from(people).where(eq(people.householdId, by.householdId)).all();</span>
+    const fileRows = scope === "me" ? this.db.select().from(files).where(and(eq(files.ownerId, by.id), isNull(files.deletedAt))).all() : <span class="branch-1 cbranch-no" title="branch not covered" >this.db.select().from(files).where(and(eq(files.householdId, by.householdId), isNull(files.deletedAt))).all();</span>
+    const actionRows = (scope === "me" ? this.db.select().from(actions).where(eq(actions.actorId, by.id)) : <span class="branch-1 cbranch-no" title="branch not covered" >this.db.select().from(actions).where(eq(actions.householdId, by.householdId)))</span>.all();
+    const eventRows = (scope === "me" ? this.db.select().from(events).where(eq(events.actorId, by.id)) : <span class="branch-1 cbranch-no" title="branch not covered" >this.db.select().from(events).where(eq(events.householdId, by.householdId)))</span>.all();
+&nbsp;
+    const memoryRows = (scope === "me" ? this.db.select().from(memories).where(and(eq(memories.personId, by.id), isNull(memories.deletedAt))) : <span class="branch-1 cbranch-no" title="branch not covered" >this.db.select().from(memories).where(and(eq(memories.householdId, by.householdId), isNull(memories.deletedAt))))</span>.all();
+    const write = (name: string, value: unknown) =&gt; writeFile(join(dir, name), JSON.stringify(value, null, 2), { mode: 0o600 });
+    await write("household.json", h);
+    await write("memory.json", scope === "me" ? memoryRows : <span class="branch-1 cbranch-no" title="branch not covered" >memoryRows.<span class="fstat-no" title="function not covered" >filter((m</span>) =&gt; <span class="cstat-no" title="statement not covered" >m.personId === by.id)</span>)</span>; // the owner's export never carries anyone else's memory
+    await write("people.json", peopleRows);
+    await write("files.json", fileRows);
+    await write("actions.json", actionRows);
+    await write("receipts.json", eventRows);
+    let objects = 0;
+    for (const f of fileRows) {
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (!(await this.store.has(f.sha256))) <span class="cstat-no" title="statement not covered" >continue;</span>
+      const chunks: Buffer[] = [];
+      for await (const c of this.store.open(f.sha256)) chunks.push(c as Buffer);
+      await writeFile(join(dir, "objects", `${f.sha256}${extOf(f.name)}`), Buffer.concat(chunks), { mode: 0o600 });
+      objects += 1;
+    }
+    const counts = { people: peopleRows.length, files: fileRows.length, objects, actions: actionRows.length, receipts: eventRows.length };
+    const manifest = { takenAt: takenAt.toISOString(), scope, person: scope === "me" ? by.id : <span class="branch-1 cbranch-no" title="branch not covered" >null, c</span>ounts, checksum: createHash("sha256").update(JSON.stringify(counts)).digest("hex") };
+    await write("manifest.json", manifest);
+    this.ledger.append({ type: "action.executed", householdId: by.householdId, actor: { kind: "person", id: by.id }, where: "inside", target: scope, sensitivity: "high", payload: { capability: "data.export", planned: { scope }, observed: counts } });
+    return { dir, takenAt: takenAt.toISOString(), person: manifest.person, counts };
+  }
+&nbsp;
+  /**
+   * Delete an account: sessions and passkeys revoked, files tombstoned and
+   * their objects removed when nothing else references them, the person row
+   * marked removed. The ledger keeps that it happened, not what was there.
+   */
+  async deleteAccount(target: Person, by: Person): Promise&lt;{ files: number; objects: number }&gt; {
+    if (target.role === "owner") throw new HouseholdError(400, "The owner's account cannot be deleted; transfer ownership first.");
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (by.id !== target.id &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >by.role !== "owner") <span class="cstat-no" title="statement not covered" >t</span>hrow new HouseholdError(400, "Only the owner can delete someone else's account.");</span>
+    const now = new Date().toISOString();
+    const owned = this.db.select().from(files).where(and(eq(files.ownerId, target.id), isNull(files.deletedAt))).all();
+    const hashes = new Set(owned.map((f) =&gt; f.sha256));
+    this.db.transaction((tx) =&gt; {
+      tx.update(sessions).set({ revokedAt: now }).where(and(eq(sessions.personId, target.id), isNull(sessions.revokedAt))).run();
+      tx.update(credentials).set({ revokedAt: now }).where(and(eq(credentials.personId, target.id), isNull(credentials.revokedAt))).run();
+      tx.update(invitations).set({ revokedAt: now }).where(and(eq(invitations.personId, target.id), isNull(invitations.acceptedAt))).run();
+      tx.update(files).set({ deletedAt: now }).where(and(eq(files.ownerId, target.id), isNull(files.deletedAt))).run();
+      tx.update(memories).set({ deletedAt: now, text: "" }).where(and(eq(memories.personId, target.id), isNull(memories.deletedAt))).run();
+      tx.update(people).set({ removedAt: now, email: null }).where(eq(people.id, target.id)).run();
+      this.ledger.append({ type: "person.removed", householdId: target.householdId, actor: { kind: "person", id: by.id }, where: "inside", target: target.id, sensitivity: "high", payload: { reason: "account deleted", files: owned.length } });
+    });
+    let objects = 0;
+    for (const sha of hashes) {
+      const stillUsed = this.db.select({ id: files.id }).from(files).where(and(eq(files.sha256, sha), isNull(files.deletedAt))).get();
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (stillUsed) <span class="cstat-no" title="statement not covered" >continue;</span>
+      await this.store.remove(sha);
+      objects += 1;
+    }
+    return { files: owned.length, objects };
+  }
+&nbsp;
+  /** Make another adult the owner; the previous owner becomes an adult. Called by the class H executor after strong authentication. */
+  transferOwnership(from: Person, toPersonId: string): { from: Person; to: Person } {
+    if (from.role !== "owner") throw new HouseholdError(400, "Only the owner can transfer ownership.");
+    const to = this.household.person(toPersonId);
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!to || to.removedAt || to.householdId !== from.householdId) <span class="cstat-no" title="statement not covered" >throw new HouseholdError(404, "No such person in this household.");</span>
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (to.role !== "adult") <span class="cstat-no" title="statement not covered" >throw new HouseholdError(400, "Ownership can only pass to an adult.");</span>
+    const now = new Date().toISOString();
+    this.db.transaction((tx) =&gt; {
+      tx.update(people).set({ role: "adult" }).where(eq(people.id, from.id)).run();
+      tx.update(people).set({ role: "owner" }).where(eq(people.id, to.id)).run();
+      // Recovery codes belong to the role of owner; the old set stops working.
+      tx.update(credentials).set({ revokedAt: now }).where(and(eq(credentials.personId, from.id), eq(credentials.kind, "recovery"), isNull(credentials.revokedAt))).run();
+    });
+    return { from: this.household.person(from.id)!, to: this.household.person(to.id)! };
+  }
+}
+&nbsp;
+function extOf(name: string): string {
+  const m = /\.[a-z0-9]{1,8}$/i.exec(name);
+  return m ? m[0].toLowerCase() : <span class="branch-1 cbranch-no" title="branch not covered" >"";</span>
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-09-06T22:24:23.714Z
+            </div>
+        <script src="../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../sorter.js"></script>
+        <script src="../block-navigation.js"></script>
+    </body>
+</html>
+    

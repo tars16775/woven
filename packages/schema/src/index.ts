@@ -53,6 +53,8 @@ export const Person = z.object({
   removedAt: z.iso.datetime().nullable(),
   /** Guests: when their access ends. */
   expiresAt: z.iso.datetime().nullable().optional(),
+  /** Storage quota in bytes (gap 24), set by the owner; null means no limit. */
+  quotaBytes: z.number().int().nonnegative().nullable().optional(),
 });
 export type Person = z.infer<typeof Person>;
 
@@ -468,6 +470,20 @@ export const RemotePairing = z.object({
 });
 export type RemotePairing = z.infer<typeof RemotePairing>;
 
+/* Updates (gap 22) ------------------------------------------------------------ */
+
+export const UpdateCheck = z.object({
+  current: z.string(),
+  latest: z.string().nullable(),
+  newer: z.boolean(),
+  publishedAt: z.string().nullable(),
+  /** The newest release carries a signature file; the installer refuses one that does not. */
+  signed: z.boolean(),
+  checkedAt: z.iso.datetime(),
+  problem: z.string().nullable(),
+});
+export type UpdateCheck = z.infer<typeof UpdateCheck>;
+
 /* Notifications (gap 17) ------------------------------------------------------ */
 
 export const PushSubscriptionView = z.object({ id: z.string(), host: z.string(), label: z.string().nullable(), createdAt: z.iso.datetime(), lastSentAt: z.iso.datetime().nullable(), failures: z.number().int() });
@@ -510,6 +526,8 @@ export const FilesSummary = z.object({
   totalBytes: z.number().int(),
   uniqueBytes: z.number().int(),
   disk: z.object({ usedBytes: z.number().int(), totalBytes: z.number().int() }),
+  /** Each person's own usage against their quota (gap 24); adults see everyone, others themselves. */
+  byPerson: z.array(z.object({ personId: Ulid, name: z.string(), bytes: z.number().int(), items: z.number().int(), quotaBytes: z.number().int().nullable() })),
 });
 export type FilesSummary = z.infer<typeof FilesSummary>;
 
@@ -572,6 +590,8 @@ export const SnapshotInfo = z.object({ name: z.string(), takenAt: z.iso.datetime
 export const BackupStatus = z.object({
   snapshots: z.array(SnapshotInfo),
   mirror: z.string().nullable(),
+  /** Whether the second location is there right now (gap 23); null when none is set. */
+  mirrorPresent: z.boolean().nullable().optional(),
   /** The last drill, if one ran since the core started. */
   lastDrill: z
     .object({ snapshot: z.string(), takenAt: z.iso.datetime(), ok: z.boolean(), ledger: z.object({ ok: z.boolean(), rows: z.number().int() }), objects: z.object({ checked: z.number().int(), total: z.number().int(), corrupt: z.array(z.string()), missing: z.array(z.string()), sampled: z.boolean() }), durationMs: z.number().int(), problem: z.string().nullable(), at: z.iso.datetime() })

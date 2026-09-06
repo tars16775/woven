@@ -6,8 +6,8 @@ import { takeSnapshot } from "./snapshot.ts";
 import { mirrorSnapshot, verifyStore } from "./integrity.ts";
 
 export type MaintenanceOptions = {
-  /** A second location for snapshots. */
-  mirror?: string | null;
+  /** A second location for snapshots, or a getter for it (the dashboard can change it while the Core runs). */
+  mirror?: string | null | (() => string | null);
   sweep?: () => Promise<number>;
   /** Called with what the night found, so alerts can be raised or cleared. */
   report?: (facts: { ledgerOk: boolean; objectsBad: number; mirrorOk: boolean | null }) => void;
@@ -47,9 +47,10 @@ export async function runNightly(data: Data, logger: Logger, keep = 14, opts: Pi
   const snap = await takeSnapshot({ db: data.database, objectsDir: data.paths.store, snapshotsDir: data.paths.snapshots, keysDir: data.paths.keys });
   logger.info({ dir: snap.dir, objects: snap.manifest.objects.count }, "snapshot taken");
   let mirrorOk: boolean | null = null;
-  if (opts.mirror) {
+  const mirror = typeof opts.mirror === "function" ? opts.mirror() : opts.mirror;
+  if (mirror) {
     try {
-      const m = await mirrorSnapshot(snap.dir, opts.mirror);
+      const m = await mirrorSnapshot(snap.dir, mirror);
       logger.info({ mirror: opts.mirror, copied: m.copied }, "snapshot mirrored");
       mirrorOk = true;
     } catch (err) {

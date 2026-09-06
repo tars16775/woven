@@ -73,7 +73,8 @@ WOVEN_RELAY="wss://relay.woventechnology.com"`}</Code>
 woven logs        # follow the core
 woven stop        # and start, restart
 woven config      # data folder, ports, the second backup location
-woven update      # the newest release, data untouched
+woven update      # the newest signed release; rolls back on its own if it does not start
+woven rollback    # back to the release that ran before
 woven uninstall   # removes the program; your data stays`}</Code>
       </Block>
 

@@ -6,14 +6,13 @@ import { useToast } from "@/components/dashboard/toast";
 import { explainAction } from "@/lib/core/actions";
 import { bytes } from "@/lib/core/files";
 import { coreClient } from "@/lib/core/store";
-import { deviceHeaders } from "@/lib/core/device";
+import { coreFetch } from "@/lib/core/transport";
 import { useSession } from "@/lib/auth";
 import { BackupStatus } from "@woven/schema";
 
 async function call(path: string, init: RequestInit = {}) {
-  const c = coreClient();
-  if (!c) throw new Error("No Core is connected.");
-  const res = await fetch(`${c.base}${path}`, { ...init, credentials: "include", cache: "no-store", headers: deviceHeaders() });
+  if (!coreClient()) throw new Error("No Core is connected.");
+  const res = await coreFetch(path, { ...init, cache: "no-store", headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...(init.headers ?? {}) } });
   if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? `HTTP ${res.status}`);
   return BackupStatus.parse(await res.json());
 }
@@ -24,6 +23,7 @@ export function BackupsCard() {
   const say = useToast();
   const [status, setStatus] = useState<BackupStatus | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [mirrorPath, setMirrorPath] = useState<string | null>(null);
   const canSee = session?.role === "owner" || session?.role === "adult";
   const isOwner = session?.role === "owner";
 
@@ -56,6 +56,21 @@ export function BackupsCard() {
   };
 
   const latest = status?.snapshots[0];
+
+  const saveMirror = async () => {
+    if (busy || mirrorPath === null) return;
+    setBusy("mirror");
+    try {
+      const s = await call("/v1/system/backups/mirror", { method: "POST", body: JSON.stringify({ path: mirrorPath.trim() || null }) });
+      setStatus(s);
+      setMirrorPath(null);
+      say(s.mirror ? `Snapshots will also be copied to ${s.mirror}.` : "The second location is off.");
+    } catch (err) {
+      say(explainAction(err));
+    } finally {
+      setBusy(null);
+    }
+  };
   return (
     <Card
       title="Backups"
@@ -80,8 +95,36 @@ export function BackupsCard() {
         </div>
         <div>
           <dt className="text-ash">Second location</dt>
-          <dd className="mt-0.5 font-medium">{status?.mirror ? <Pill tone={latest?.mirrored ? "good" : "warn"}>{latest?.mirrored ? "Mirrored" : "Not yet copied"}</Pill> : <Pill tone="warn">Not set</Pill>}</dd>
-          <dd className="text-[12px] text-ash">{status?.mirror ?? "Set WOVEN_SNAPSHOT_MIRROR to a second drive."}</dd>
+          <dd className="mt-0.5 font-medium">
+            {status?.mirror ? (
+              status.mirrorPresent === false ? (
+                <Pill tone="warn">Drive not connected</Pill>
+              ) : (
+                <Pill tone={latest?.mirrored ? "good" : "warn"}>{latest?.mirrored ? "Mirrored" : "Not yet copied"}</Pill>
+              )
+            ) : (
+              <Pill tone="warn">Not set</Pill>
+            )}
+          </dd>
+          <dd className="text-[12px] text-ash">{status?.mirror ?? "Another drive keeps a second copy of every snapshot."}</dd>
+          {isOwner && mirrorPath === null && (
+            <dd className="mt-1">
+              <Button kind="quiet" onClick={() => setMirrorPath(status?.mirror ?? "/Volumes/")} data-testid="set-mirror">
+                {status?.mirror ? "Change" : "Set a second location"}
+              </Button>
+            </dd>
+          )}
+          {isOwner && mirrorPath !== null && (
+            <dd className="mt-1 flex gap-1">
+              <input value={mirrorPath} onChange={(e) => setMirrorPath(e.target.value)} placeholder="/Volumes/Backup/Woven" aria-label="Second location" className="min-w-0 flex-1 rounded-[8px] bg-bone px-2 py-1 text-[13px] ring-1 ring-ink/8" data-testid="mirror-path" />
+              <Button kind="soft" onClick={saveMirror} disabled={busy !== null}>
+                Save
+              </Button>
+              <Button kind="quiet" onClick={() => setMirrorPath(null)}>
+                Cancel
+              </Button>
+            </dd>
+          )}
         </div>
         <div>
           <dt className="text-ash">Last restore drill</dt>

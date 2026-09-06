@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type FormEvent, type Ref } from "react";
+import { siteApi } from "@/lib/site-api";
 import { saveApplication, useApplications } from "@/lib/applications";
 import { useSession } from "@/lib/auth";
 
@@ -69,7 +70,8 @@ export function ApplyForm() {
       return;
     }
     setBusy(true);
-    saveApplication({ code: saved?.code, ...v, setup: setupValue });
+    const app = saveApplication({ code: saved?.code, ...v, setup: setupValue });
+    void siteApi.application({ code: app.code, name: app.name, email: app.email, city: app.city, people: app.people, setup: app.setup, why: app.why });
     setTyped({});
     setSetup(null);
     setEditing(false);

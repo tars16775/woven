@@ -15,6 +15,7 @@ import { ToastProvider } from "./toast";
 import { ThemeStyle, useDocumentTheme, useTheme } from "./theme";
 import { useGateOpen } from "./state";
 import { SearchBox } from "./search-box";
+import { useT } from "@/lib/i18n";
 import type { LedgerRow } from "@woven/schema";
 
 /** Bytes that left through the Gate since midnight, from the receipts on hand. */
@@ -33,20 +34,20 @@ function bytesCrossedToday(rows: LedgerRow[]): number {
 const formatBytes = (n: number) => (n < 1e3 ? `${n} bytes` : n < 1e6 ? `${(n / 1e3).toFixed(1)} KB` : `${(n / 1e6).toFixed(1)} MB`);
 
 const items = [
-  { href: "/dashboard", label: "Overview" },
-  { href: "/dashboard/ask", label: "Ask" },
-  { href: "/dashboard/files", label: "Files" },
-  { href: "/dashboard/photos", label: "Photos" },
-  { href: "/dashboard/home", label: "Home" },
-  { href: "/dashboard/cameras", label: "Cameras" },
-  { href: "/dashboard/tv", label: "TV" },
-  { href: "/dashboard/network", label: "Network" },
-  { href: "/dashboard/agents", label: "Agents" },
-  { href: "/dashboard/activity", label: "Activity" },
-  { href: "/dashboard/privacy", label: "Privacy" },
-  { href: "/dashboard/core", label: "Core" },
-  { href: "/dashboard/settings", label: "Settings" },
-];
+  { href: "/dashboard", key: "nav.overview" },
+  { href: "/dashboard/ask", key: "nav.ask" },
+  { href: "/dashboard/files", key: "nav.files" },
+  { href: "/dashboard/photos", key: "nav.photos" },
+  { href: "/dashboard/home", key: "nav.home" },
+  { href: "/dashboard/cameras", key: "nav.cameras" },
+  { href: "/dashboard/tv", key: "nav.tv" },
+  { href: "/dashboard/network", key: "nav.network" },
+  { href: "/dashboard/agents", key: "nav.agents" },
+  { href: "/dashboard/activity", key: "nav.activity" },
+  { href: "/dashboard/privacy", key: "nav.privacy" },
+  { href: "/dashboard/core", key: "nav.core" },
+  { href: "/dashboard/settings", key: "nav.settings" },
+] as const;
 
 /**
  * The app shell: a quiet sidebar, a status line that always says where the
@@ -61,6 +62,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const gateOpen = useGateOpen();
   const connection = useCore();
   const live = useLiveCore();
+  const { t } = useT();
   useDocumentTheme(resolved);
 
   // Look for the household's Core once the shell is on screen.
@@ -118,7 +120,7 @@ export function Shell({ children }: { children: ReactNode }) {
   }
 
   const nav = (
-    <nav aria-label="Dashboard" className="flex flex-col gap-0.5">
+    <nav aria-label={t("nav.label")} className="flex flex-col gap-0.5">
       {items.map((it) => {
         const active = it.href === "/dashboard" ? path === it.href : path.startsWith(it.href);
         return (
@@ -131,7 +133,7 @@ export function Shell({ children }: { children: ReactNode }) {
               active ? "bg-ink text-bone" : "text-ink/80 hover:bg-ink/6 hover:text-ink"
             }`}
           >
-            {it.label}
+            {t(it.key)}
           </Link>
         );
       })}
@@ -141,15 +143,15 @@ export function Shell({ children }: { children: ReactNode }) {
   const connectionChip =
     connection.phase === "off" ? null : connection.phase === "connected" ? (
       <Link href="/dashboard/core" data-testid="core-connection" className="rounded-full bg-local-bg px-2.5 py-1 font-medium text-local">
-        Core · {live.host}
+        {t("shell.core", { host: live.host ?? "" })}
       </Link>
     ) : connection.phase === "searching" ? (
       <span data-testid="core-connection" className="rounded-full bg-chassis px-2.5 py-1 font-medium text-ash">
-        Looking for your Core…
+        {t("shell.looking")}
       </span>
     ) : (
       <Link href="/dashboard/core#connect" data-testid="core-connection" className="rounded-full bg-ask-bg px-2.5 py-1 font-medium text-ask">
-        Preview · connect your Core
+        {t("shell.preview")}
       </Link>
     );
 
@@ -158,10 +160,10 @@ export function Shell({ children }: { children: ReactNode }) {
   const crossedToday = isLive ? bytesCrossedToday(connection.rows) : core.bytesCrossedToday;
   const gateChip = gateOpen ? (
     <span className="rounded-full bg-local-bg px-2.5 py-1 font-medium text-local" data-testid="gate-chip">
-      {crossedToday === 0 ? "0 bytes crossed the Gate today" : `${formatBytes(crossedToday)} crossed the Gate today`}
+      {crossedToday === 0 ? t("shell.gateNothing") : t("shell.gateBytes", { bytes: formatBytes(crossedToday) })}
     </span>
   ) : (
-    <span className="rounded-full bg-ask-bg px-2.5 py-1 font-medium text-ask">Gate closed · nothing crosses</span>
+    <span className="rounded-full bg-ask-bg px-2.5 py-1 font-medium text-ask">{t("shell.gateClosed")}</span>
   );
 
   return (
@@ -177,7 +179,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <div className="text-[13px] font-medium">{session.household}</div>
             <div className="mt-0.5 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ash">
               <span className="orb" style={{ ["--orb" as string]: "6px" }} />
-              Ready · inside
+              {t("shell.ready")}
             </div>
           </div>
           <div className="mt-6">{nav}</div>
@@ -194,14 +196,14 @@ export function Shell({ children }: { children: ReactNode }) {
         <div className="flex min-w-0 flex-1 flex-col">
           {!isLive && (
             <div className="flex items-center justify-center gap-2 bg-ask-bg px-4 py-1.5 text-center text-[12px] text-ask" data-testid="preview-badge" role="status">
-              <span className="font-medium">Preview house.</span>
-              <span>The people, files and numbers here are made up.</span>
+              <span className="font-medium">{t("preview.title")}</span>
+              <span>{t("preview.body")}</span>
               <Link href="/mac" className="font-medium underline underline-offset-2">
-                Run Woven on your Mac
+                {t("preview.mac")}
               </Link>
-              <span>or</span>
+              <span>{t("preview.or")}</span>
               <Link href="/dashboard/core#connect" className="font-medium underline underline-offset-2">
-                connect your Core
+                {t("preview.connect")}
               </Link>
             </div>
           )}
@@ -214,7 +216,7 @@ export function Shell({ children }: { children: ReactNode }) {
                 aria-haspopup="dialog"
                 aria-expanded={open}
               >
-                Menu
+                {t("shell.menu")}
               </button>
               <Wordmark className="h-[16px]" />
             </div>
@@ -239,10 +241,10 @@ export function Shell({ children }: { children: ReactNode }) {
                 href="/dashboard/ask"
                 className="hidden rounded-[8px] bg-white px-3 py-1.5 text-[13px] text-ash ring-1 ring-ink/8 hover:text-ink md:block"
               >
-                Ask Tandem anything…
+                {t("shell.ask")}
               </Link>
               <button type="button" onClick={leave} className="hidden text-[13px] font-medium text-ash hover:text-ink sm:block">
-                Sign out
+                {t("shell.signOut")}
               </button>
               <span
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-[13px] font-medium text-bone"

@@ -1,6 +1,6 @@
 "use client";
 
-import { ActionRecord, FileEntry, FileListing, FilesSummary, MediaItem, NetworkView, Photo, PhotoStats, PhotoTimeline, SearchResult, Share, StorageHealth, type Namespace } from "@woven/schema";
+import { ActionRecord, FileEntry, FileListing, FilesSummary, MediaItem, NetworkView, Photo, PhotoStats, PhotoTimeline, SearchResult, Share, StorageHealth, UpdateCheck, type Namespace } from "@woven/schema";
 import { z } from "zod";
 import { CoreError } from "./client";
 import { NoCoreError } from "./identity";
@@ -117,6 +117,11 @@ export const network = {
   scan: () => call("/v1/network", NetworkView),
 };
 export type { NetworkView };
+
+/** Updates (gap 22): ask the Core to check GitHub for a newer signed release, through the Gate. */
+export const updates = {
+  check: () => call("/v1/system/update/check", UpdateCheck, post({})),
+};
 
 export const system = {
   storage: () => call("/v1/system/storage", StorageHealth),

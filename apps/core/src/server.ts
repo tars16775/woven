@@ -10,6 +10,9 @@ import { CORE_HOUSEHOLD_ID, openData } from "./data.ts";
 import { derive, KeyStore } from "./keystore.ts";
 import { RelayClient } from "./remote/client.ts";
 import { relayIdentity } from "./remote/identity.ts";
+import { SettingsStore } from "./settings.ts";
+import { noteInstalledVersion } from "./update.ts";
+import { access } from "node:fs/promises";
 import { scheduleNightly } from "./maintenance.ts";
 import { buildServices } from "./services.ts";
 import { MediaService } from "./media.ts";
@@ -49,6 +52,9 @@ async function main() {
     process.exit(3);
   }
   const identity = await hardware.identity();
+  const settings = new SettingsStore(paths.root, { snapshotMirror: config.snapshotMirror });
+  const installed = await noteInstalledVersion(paths.root, version, data.ledger);
+  if (installed.changed) logger.info({ from: installed.from, to: version }, "a new version of the Core is running");
   data.ledger.append({
     type: "core.started",
     householdId: CORE_HOUSEHOLD_ID,
@@ -100,7 +106,7 @@ async function main() {
     });
     logger.info({ relay: config.relay, coreId: identity.coreId }, "remote access is on; connecting to the relay");
   }
-  const app = await buildApp({ config, logger, hardware, data, services, ...(tls ? { tls } : {}), version, startedAt, logFile: join(paths.logs, "core.log"), restart, ...(relay ? { relay } : {}) });
+  const app = await buildApp({ config, logger, hardware, data, services, ...(tls ? { tls } : {}), version, startedAt, logFile: join(paths.logs, "core.log"), restart, ...(relay ? { relay } : {}), settings });
   relay?.start();
   const scheme = tls ? "https" : "http";
   // The same API in plain HTTP, reachable only from this machine. Loopback
@@ -117,7 +123,7 @@ async function main() {
       })
     : null;
   const stopNightly = config.env === "production" || config.env === "development" ? scheduleNightly(data, logger, {
-          mirror: config.snapshotMirror,
+          mirror: () => settings.get().snapshotMirror,
           sweep: async () => (await services.files.sweepUploads()) + services.memory.sweep(),
           report: (facts) => {
             night = facts;
@@ -127,9 +133,10 @@ async function main() {
             ? {
                 // Opt-in and honest: version and uptime, through the Gate (woventechnology.com must be on the allow list), with a receipt that says exactly that.
                 ping: async () => {
-                  const sent = `A health ping to woventechnology.com: Woven Core ${version}, ${identity.kind}, up ${Math.round(process.uptime() / 86400)} days. Nothing about the household.`;
-                  const r = await services.gate.cross({ actionId: `health-ping:${new Date().toISOString().slice(0, 10)}`, host: "woventechnology.com", method: "POST", path: "/api/ping", body: JSON.stringify({ version, kind: identity.kind, upDays: Math.round(process.uptime() / 86400) }) });
-                  data.ledger.append({ type: "gate.crossing", householdId: CORE_HOUSEHOLD_ID, actor: { kind: "core", id: "core" }, where: "gate", sensitivity: "low", target: "woventechnology.com", sent, payload: { capability: "core.health_ping", observed: { status: r.status, bytesOut: r.bytesOut } } });
+                  const host = "api.woventechnology.com";
+                  const sent = `A health ping to ${host}: Woven Core ${version}, ${identity.kind}, up ${Math.round(process.uptime() / 86400)} days. Nothing about the household.`;
+                  const r = await services.gate.cross({ actionId: `health-ping:${new Date().toISOString().slice(0, 10)}`, host, method: "POST", path: "/ping", body: JSON.stringify({ version, kind: identity.kind, upDays: Math.round(process.uptime() / 86400) }) });
+                  data.ledger.append({ type: "gate.crossing", householdId: CORE_HOUSEHOLD_ID, actor: { kind: "core", id: "core" }, where: "gate", sensitivity: "low", target: host, sent, payload: { capability: "core.health_ping", observed: { status: r.status, bytesOut: r.bytesOut } } });
                 },
               }
             : {}),
@@ -139,7 +146,8 @@ async function main() {
   let night: { ledgerOk: boolean; objectsBad: number; mirrorOk: boolean | null } = { ledgerOk: integrity.ok, objectsBad: 0, mirrorOk: null };
   const reassess = async () => {
     try {
-      const [storage, snaps] = await Promise.all([hardware.storage(), listSnapshots(paths.snapshots, config.snapshotMirror)]);
+      const mirror = settings.get().snapshotMirror;
+      const [storage, snaps, mirrorPresent] = await Promise.all([hardware.storage(), listSnapshots(paths.snapshots, mirror), mirror ? access(mirror).then(() => true, () => false) : Promise.resolve(null)]);
       const certDaysLeft = tls ? Math.floor((new Date(tls.server.notAfter).getTime() - Date.now()) / 86400_000) : null;
       const lastSnapshotAgeHours = snaps[0] ? (Date.now() - new Date(snaps[0].takenAt).getTime()) / 3600_000 : null;
       const house = services.household.household();
@@ -150,7 +158,7 @@ async function main() {
             .map((p) => ({ name: p.name, left: services.recovery.remaining(p) }))
             .filter((p) => p.left < LOW_CODES)
         : [];
-      assess(services.alerts, { diskFreeBytes: storage.freeBytes, diskTotalBytes: storage.totalBytes, ledgerOk: night.ledgerOk, objectsBad: night.objectsBad, mirrorConfigured: !!config.snapshotMirror, mirrorOk: night.mirrorOk, certDaysLeft, gate: services.gate.cached().state, lastSnapshotAgeHours, lowCodes });
+      assess(services.alerts, { diskFreeBytes: storage.freeBytes, diskTotalBytes: storage.totalBytes, ledgerOk: night.ledgerOk, objectsBad: night.objectsBad, mirrorConfigured: !!mirror, mirrorOk: night.mirrorOk, mirrorPresent, certDaysLeft, gate: services.gate.cached().state, lastSnapshotAgeHours, lowCodes });
     } catch (err) {
       logger.warn({ err }, "could not assess alerts");
     }

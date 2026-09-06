@@ -54,6 +54,33 @@ else
     fi
   fi
 fi
+# 2b. The signature (gap 22). Every release is signed with the Woven release key; the public half is here,
+#     so a hosted copy of this script carries the trust root. WOVEN_UNSIGNED=1 skips the check for a local build.
+sig="$release.sig"
+if [ -z "${WOVEN_RELEASE_FILE:-}" ] && [ ! -f "$sig" ]; then
+  curl -fsSL -o "$sig" "${WOVEN_RELEASE_URL:-https://github.com/$REPO/releases/latest/download/woven-macos.tar.gz}.sig" 2>/dev/null \
+    || { command -v gh >/dev/null && gh release download --repo "$REPO" --pattern woven-macos.tar.gz.sig --output "$sig" --clobber >/dev/null 2>&1; } || true
+fi
+if [ -z "${WOVEN_UNSIGNED:-}" ]; then
+  pub="$WOVEN_HOME/tmp/woven-release.pub"
+  cat >"$pub" <<'PUB'
+__WOVEN_RELEASE_PUB__
+PUB
+  if grep -q "BEGIN PUBLIC KEY" "$pub"; then
+    [ -f "$sig" ] || { echo "No signature was published for this release; stopping. (WOVEN_UNSIGNED=1 installs an unsigned local build.)"; exit 1; }
+    node -e '
+      const { createPublicKey, verify } = require("node:crypto");
+      const { readFileSync } = require("node:fs");
+      const [file, sigFile, pubFile] = process.argv.slice(1);
+      const ok = verify(null, readFileSync(file), createPublicKey(readFileSync(pubFile, "utf8")), Buffer.from(readFileSync(sigFile, "utf8").trim(), "base64"));
+      if (!ok) { console.error("The release does not match the Woven release key; stopping."); process.exit(1); }
+      console.log("Release signature verified.");
+    ' "$release" "$sig" "$pub" || exit 1
+  else
+    echo "No release public key is embedded in this installer yet; installing without verification."
+  fi
+fi
+
 stage="$WOVEN_HOME/tmp/stage"
 rm -rf "$stage"; mkdir -p "$stage"
 tar -xzf "$release" -C "$stage" --strip-components=1
@@ -67,6 +94,8 @@ else
   (cd "$dest" && npm install --omit=dev --no-audit --no-fund --loglevel=error >"$WOVEN_HOME/logs/install.log" 2>&1) || { echo "npm install failed; see $WOVEN_HOME/logs/install.log"; exit 1; }
   touch "$dest/.complete"
 fi
+# Keep the release that was running so `woven rollback` can go back to it.
+if [ -L "$WOVEN_HOME/current" ] && [ "$(readlink "$WOVEN_HOME/current")" != "$dest" ]; then ln -sfn "$(readlink "$WOVEN_HOME/current")" "$WOVEN_HOME/previous"; fi
 ln -sfn "$dest" "$WOVEN_HOME/current"
 install -m 0755 "$dest/packaging/woven" "$WOVEN_HOME/bin/woven"
 install -m 0755 "$dest/packaging/woven-run" "$WOVEN_HOME/bin/woven-run"

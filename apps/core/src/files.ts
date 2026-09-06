@@ -121,8 +121,26 @@ export class FilesService {
   }
 
   /** Register bytes already in the store as a file; dedup by hash is implicit. */
+  /** Bytes this person keeps on the box: every live file they own, counted once per entry. */
+  usage(personId: string): { bytes: number; items: number } {
+    const rows = this.db.select({ size: files.size }).from(files).where(and(eq(files.ownerId, personId), isNull(files.deletedAt))).all();
+    return { bytes: rows.reduce((n, r) => n + r.size, 0), items: rows.length };
+  }
+
+  /** Quotas (gap 24): a person over their limit cannot add more; the refusal is a receipt. */
+  private checkQuota(owner: Person, size: number): void {
+    const quota = this.household.person(owner.id)?.quotaBytes ?? null;
+    if (quota === null || quota === undefined) return;
+    const used = this.usage(owner.id).bytes;
+    if (used + size > quota) {
+      this.ledger.append({ type: "action.declined", householdId: owner.householdId, actor: { kind: "person", id: owner.id }, where: "inside", sensitivity: "low", payload: { capability: "file.add", reason: "over quota", quotaBytes: quota, usedBytes: used, size } });
+      throw new FileError(413, `That would put ${owner.name} over the storage quota (${fmt(used)} of ${fmt(quota)} used). Delete something, or ask the owner for more.`);
+    }
+  }
+
   add(owner: Person, input: { name: string; path: string; namespace: Namespace; sha256: string; size: number; mime?: string | null; source?: string | null; modifiedAt?: string }): FileEntry {
     if (!this.household.namespacesFor(owner.role).includes(input.namespace)) throw new FileError(403, `A ${owner.role} cannot put files in ${input.namespace}.`);
+    this.checkQuota(owner, input.size);
     const path = normalizePath(input.path);
     const now = new Date().toISOString();
     const id = nextId();
@@ -197,7 +215,13 @@ export class FilesService {
       src.set(f.source ?? "dashboard", s);
       unique.set(f.sha256, f.size);
     }
+    const everyone = reader.role === "owner" || reader.role === "adult";
+    const byPerson = this.household
+      .people(reader.householdId)
+      .filter((p) => everyone || p.id === reader.id)
+      .map((p) => ({ personId: p.id, name: p.name, ...this.usage(p.id), quotaBytes: p.quotaBytes ?? null }));
     return {
+      byPerson,
       byNamespace: [...ns.entries()].map(([namespace, v]) => ({ namespace: namespace as Namespace, ...v })),
       sources: [...src.entries()].map(([source, v]) => ({ source, ...v })).sort((a, b) => b.lastAt.localeCompare(a.lastAt)),
       totalBytes: rows.reduce((n, f) => n + f.size, 0),
@@ -210,6 +234,7 @@ export class FilesService {
 
   async startUpload(owner: Person, input: StartUpload): Promise<UploadSession> {
     if (!this.household.namespacesFor(owner.role).includes(input.namespace)) throw new FileError(403, `A ${owner.role} cannot put files in ${input.namespace}.`);
+    this.checkQuota(owner, input.size);
     const alreadyStored = input.sha256 ? await this.store.has(input.sha256) : false;
     const id = nextId();
     const now = new Date().toISOString();
@@ -323,4 +348,8 @@ export function mimeGuess(name: string): string | null {
 
 function toEntry(row: typeof files.$inferSelect): FileEntry {
   return FileEntry.parse({ id: row.id, ownerId: row.ownerId, namespace: row.namespace, path: row.path, name: row.name, sha256: row.sha256, size: row.size, mime: row.mime, source: row.source, createdAt: row.createdAt, modifiedAt: row.modifiedAt });
+}
+
+function fmt(n: number): string {
+  return n < 1e6 ? `${(n / 1e3).toFixed(0)} KB` : n < 1e9 ? `${(n / 1e6).toFixed(1)} MB` : n < 1e12 ? `${(n / 1e9).toFixed(2)} GB` : `${(n / 1e12).toFixed(2)} TB`;
 }

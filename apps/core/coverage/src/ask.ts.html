@@ -1,0 +1,667 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/ask.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">src</a> ask.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">58.64% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>95/162</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">45.62% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>73/160</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">63.33% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>19/30</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">67.25% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>76/113</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line medium'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a>
+<a name='L154'></a><a href='#L154'>154</a>
+<a name='L155'></a><a href='#L155'>155</a>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a>
+<a name='L159'></a><a href='#L159'>159</a>
+<a name='L160'></a><a href='#L160'>160</a>
+<a name='L161'></a><a href='#L161'>161</a>
+<a name='L162'></a><a href='#L162'>162</a>
+<a name='L163'></a><a href='#L163'>163</a>
+<a name='L164'></a><a href='#L164'>164</a>
+<a name='L165'></a><a href='#L165'>165</a>
+<a name='L166'></a><a href='#L166'>166</a>
+<a name='L167'></a><a href='#L167'>167</a>
+<a name='L168'></a><a href='#L168'>168</a>
+<a name='L169'></a><a href='#L169'>169</a>
+<a name='L170'></a><a href='#L170'>170</a>
+<a name='L171'></a><a href='#L171'>171</a>
+<a name='L172'></a><a href='#L172'>172</a>
+<a name='L173'></a><a href='#L173'>173</a>
+<a name='L174'></a><a href='#L174'>174</a>
+<a name='L175'></a><a href='#L175'>175</a>
+<a name='L176'></a><a href='#L176'>176</a>
+<a name='L177'></a><a href='#L177'>177</a>
+<a name='L178'></a><a href='#L178'>178</a>
+<a name='L179'></a><a href='#L179'>179</a>
+<a name='L180'></a><a href='#L180'>180</a>
+<a name='L181'></a><a href='#L181'>181</a>
+<a name='L182'></a><a href='#L182'>182</a>
+<a name='L183'></a><a href='#L183'>183</a>
+<a name='L184'></a><a href='#L184'>184</a>
+<a name='L185'></a><a href='#L185'>185</a>
+<a name='L186'></a><a href='#L186'>186</a>
+<a name='L187'></a><a href='#L187'>187</a>
+<a name='L188'></a><a href='#L188'>188</a>
+<a name='L189'></a><a href='#L189'>189</a>
+<a name='L190'></a><a href='#L190'>190</a>
+<a name='L191'></a><a href='#L191'>191</a>
+<a name='L192'></a><a href='#L192'>192</a>
+<a name='L193'></a><a href='#L193'>193</a>
+<a name='L194'></a><a href='#L194'>194</a>
+<a name='L195'></a><a href='#L195'>195</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">21x</span>
+<span class="cline-any cline-yes">21x</span>
+<span class="cline-any cline-yes">21x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">34x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">17x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">18x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">18x</span>
+<span class="cline-any cline-yes">18x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import type { ActionRecord, AskAnswer, HomeDevice, Person } from "@woven/schema";
+import type { Services } from "./services.ts";
+import type { Ledger } from "./ledger.ts";
+&nbsp;
+/**
+ * Tandem lite (gap 11): the Ask page's answer engine until a model runs on
+ * the box. Plain rules over what the household already keeps here: files,
+ * photos, devices, backups, memory, routines, receipts. It never makes
+ * anything up, says so when it does not know, and never crosses the Gate.
+ * Anything that changes the house goes through the action engine like
+ * every other request, so it asks first where the policy says so.
+ */
+export class Ask {
+  constructor(
+    private readonly services: Services,
+    private readonly ledger: Ledger,
+    private readonly disk: () =&gt; Promise&lt;{ usedBytes: number; totalBytes: number; freeBytes: number }&gt;,
+  ) {}
+&nbsp;
+  async answer(person: Person, question: string): Promise&lt;AskAnswer&gt; {
+    const started = Date.now();
+    const q = question.trim();
+    const t = q.toLowerCase();
+    const done = (text: string, source: string, extra: { action?: ActionRecord; items?: AskAnswer["items"] } = {}): AskAnswer =&gt; ({
+      text,
+      source,
+      where: "local",
+      ms: Date.now() - started,
+      engine: "rules",
+      action: extra.action ?? null,
+      items: extra.items ?? [],
+    });
+&nbsp;
+    // Remember something, or say what is remembered.
+    const remember = /^(?:please )?remember (?:that )?(.+)$/i.exec(q);
+    if (remember) {
+      const m = this.services.memory.remember(person, { text: remember[1]!.trim(), kind: "fact" });
+      return done(`Remembered: “${m.text}”. It stays on the box; you can see and delete it under Privacy.`, "Memory");
+    }
+    if (/what do you (?:know|remember)|your memor/.test(t)) {
+      const list = this.services.memory.list(person);
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (!list.length) <span class="cstat-no" title="statement not covered" >return done("Nothing yet. Say “remember …” and it stays here, on the box, until you delete it.", "Memory");</span>
+      return done(`${list.length} ${list.length === 1 ? "thing" : <span class="branch-1 cbranch-no" title="branch not covered" >"things"},</span> all kept on the box:`, "Memory", { items: list.slice(0, 8).map((m) =&gt; ({ title: m.text, detail: m.kind, href: "/dashboard/privacy" })) });
+    }
+&nbsp;
+    // The home: state, and changes through the action engine.
+    if (/\b(light|lamp|plug|switch)s?\b/.test(t) &amp;&amp; /\b(on|off)\b/.test(t)) {
+      const on = !/\boff\b/.test(t);
+      const devices = this.services.home.devices().filter((d) =&gt; d.kind === "light" || d.kind === "plug");
+      const picked = this.pickDevices(t, devices);
+      if (!picked.length) {
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (!devices.length) <span class="cstat-no" title="statement not covered" >return done("There are no lights or plugs paired with this box yet. Pair one from Home.", "Home");</span>
+        return done(`Which one? I know ${devices.map((d) =&gt; d.name).join(", ")}.`, "Home", { items: devices.slice(0, 8).map((d) =&gt; ({ title: d.name, detail: this.roomName(d), href: "/dashboard/home" })) });
+      }
+      const target = picked[0]!;
+      const record = await this.services.actions.run(person.householdId, { kind: "person", id: person.id, role: person.role }, { capability: target.kind === "light" ? "light.set" : <span class="branch-1 cbranch-no" title="branch not covered" >"plug.set", t</span>arget: target.id, parameters: { on } });
+      const verb = on ? <span class="branch-0 cbranch-no" title="branch not covered" >"on" : "</span>off";
+      if (record.status === "succeeded") return done(`${target.name} is ${verb}, read back from the device. Written to Activity.`, "Home", { action: record });
+<span class="cstat-no" title="statement not covered" >      if (record.status === "prepared") <span class="cstat-no" title="statement not covered" >return done(`${target.name} ${verb} needs your approval first: ${record.decision.reason}`, "Home · permission engine", { action: record });</span></span>
+<span class="cstat-no" title="statement not covered" >      return done(`I could not turn ${target.name} ${verb}: ${record.error ?? record.decision.reason}`, "Home", { action: record });</span>
+    }
+    if (/\b(lock|door)s?\b/.test(t)) {
+      const locks = this.services.home.devices().filter((d) =&gt; d.kind === "lock");
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (!locks.length) <span class="cstat-no" title="statement not covered" >return done("No lock is paired with this box.", "Home");</span>
+      const lines = locks.map((d) =&gt; `${d.name} is ${d.state.locked === true ? "locked" : <span class="branch-1 cbranch-no" title="branch not covered" >d.state.locked === false ? "unlocked" : "in an unknown state"}`)</span>;
+      return done(`${lines.join("; ")}. Unlocking is a class D action and asks first.`, "Home");
+    }
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (/\b(temperature|thermostat|heating|how (?:warm|cold))\b/.test(t)) {
+      const th = <span class="cstat-no" title="statement not covered" >this.services.home.devices().<span class="fstat-no" title="function not covered" >filter((d</span>) =&gt; <span class="cstat-no" title="statement not covered" >d.kind === "thermostat")</span>;</span>
+<span class="cstat-no" title="statement not covered" >      if (!th.length) <span class="cstat-no" title="statement not covered" >return done("No thermostat is paired with this box.", "Home");</span></span>
+<span class="cstat-no" title="statement not covered" >      return done(th.<span class="fstat-no" title="function not covered" >map((d</span>) =&gt; <span class="cstat-no" title="statement not covered" >`${d.name}: ${fmtState(d)}`)</span>.join("; "), "Home");</span>
+    }
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (/\b(device|room)s?\b/.test(t) &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >/\b(what|which|list|how many)\b/.test(t)) {</span>
+      const devices = <span class="cstat-no" title="statement not covered" >this.services.home.devices();</span>
+      const rooms = <span class="cstat-no" title="statement not covered" >this.services.home.rooms();</span>
+<span class="cstat-no" title="statement not covered" >      return done(`${devices.length} ${devices.length === 1 ? "device" : "devices"} in ${rooms.length} ${rooms.length === 1 ? "room" : "rooms"}, through the ${this.services.home.name} adapter.`, "Home", { items: devices.slice(0, 10).<span class="fstat-no" title="function not covered" >map((d</span>) =&gt; (<span class="cstat-no" title="statement not covered" >{ title: d.name, detail: `${this.roomName(d)} · ${fmtState(d)}`, href: "/dashboard/home" }))</span> });</span>
+    }
+&nbsp;
+    // Photos: counts, and search when the model is on the box.
+    if (/\b(photo|picture|pic|image)s?\b/.test(t)) {
+      const stats = this.services.photos.stats(person);
+      const of = /\b(?:of|with|from|showing)\s+(.+?)[?.!]*$/.exec(q);
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (of &amp;&amp; (<span class="branch-1 cbranch-no" title="branch not covered" >await this.services.photoIndex.ready())) {</span>
+        const r = <span class="cstat-no" title="statement not covered" >await this.services.photoIndex.search(person, of[1]!, 8);</span>
+<span class="cstat-no" title="statement not covered" >        if (!r.results.length) <span class="cstat-no" title="statement not covered" >return done(`Nothing that looks like “${of[1]}” among the ${r.indexed} photos indexed so far.`, "Photos · search on the box");</span></span>
+<span class="cstat-no" title="statement not covered" >        return done(`${r.results.length} of the closest matches for “${of[1]}”, from ${r.indexed} indexed photos:`, "Photos · search on the box", { items: r.results.<span class="fstat-no" title="function not covered" >map((p</span>) =&gt; (<span class="cstat-no" title="statement not covered" >{ title: p.name, detail: p.takenAt ? new Date(p.takenAt).toLocaleDateString() : "no date", href: `/dashboard/photos` }))</span> });</span>
+      }
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (of) <span class="cstat-no" title="statement not covered" >return done(`Photo search by what is in the picture needs the model on the box; turn it on from Photos. Meanwhile: ${stats.total} photos, ${stats.newThisWeek} new this week.`, "Photos");</span>
+      return done(stats.total === 0 ? "No photos on the box yet. Import a folder or back up a phone from Photos." : <span class="branch-1 cbranch-no" title="branch not covered" >`${stats.total} photos on the box, ${stats.newThisWeek} new this week, ${stats.withPlace} with a place.`, "</span>Photos");
+    }
+&nbsp;
+    // Files by name.
+    const fileQ = /\b(?:file|document|doc|pdf)s?\b.*?(?:called|named|about|for|with)\s+(.+?)[?.!]*$/.exec(t) ?? /\bfind\s+(?:me\s+)?(?:the\s+)?(.+?)[?.!]*$/.exec(t);
+    if (/\b(file|document|doc|pdf)s?\b/.test(t) || /^find\b/.test(t)) {
+      const needle = fileQ?.[1]?.trim();
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (!needle) {
+        const summary = <span class="cstat-no" title="statement not covered" >this.services.files.summary(person, await this.disk());</span>
+        const items = <span class="cstat-no" title="statement not covered" >summary.byNamespace.<span class="fstat-no" title="function not covered" >reduce((n</span>, x) =&gt; <span class="cstat-no" title="statement not covered" >n + x.items, 0</span>);</span>
+<span class="cstat-no" title="statement not covered" >        return done(items === 0 ? "No files on the box yet." : `${items} files on the box, ${fmtBytes(summary.totalBytes)}. Ask for one by name: “find the lease”.`, "Files");</span>
+      }
+      const hits = this.services.files.search(person, needle, 8);
+      if (!hits.length) return done(`Nothing on the box is called anything like “${needle}”. I only look at file names; there is no reading inside documents yet.`, "Files");
+      return done(`${hits.length} ${hits.length === 1 ? "file" : <span class="branch-1 cbranch-no" title="branch not covered" >"files"} </span>named like “${needle}”:`, "Files", { items: hits.map((f) =&gt; ({ title: f.name, detail: `${f.namespace}${f.path} · ${fmtBytes(f.size)}`, href: `/dashboard/files?ns=${f.namespace}&amp;path=${encodeURIComponent(f.path)}` })) });
+    }
+&nbsp;
+    // Backups.
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (/\bback(?:ed)?[ -]?ups?\b/.test(t)) {
+      const summary = <span class="cstat-no" title="statement not covered" >this.services.files.summary(person, await this.disk());</span>
+<span class="cstat-no" title="statement not covered" >      if (!summary.sources.length) <span class="cstat-no" title="statement not covered" >return done("No device has backed up to this box yet. Install the backup client on a Mac and point it here.", "Backups");</span></span>
+<span class="cstat-no" title="statement not covered" >      return done(`${summary.sources.length} ${summary.sources.length === 1 ? "source" : "sources"} back up here:`, "Backups", { items: summary.sources.<span class="fstat-no" title="function not covered" >map((s</span>) =&gt; (<span class="cstat-no" title="statement not covered" >{ title: s.source, detail: `${s.items} items · ${fmtBytes(s.bytes)} · last ${ago(s.lastAt)}`, href: "/dashboard/files" }))</span> });</span>
+    }
+&nbsp;
+    // The box itself.
+    if (/\b(storage|space|disk|drive|full)\b/.test(t) || /how (?:is|are) (?:the )?(?:box|core)/.test(t) || /\bstatus\b/.test(t)) {
+      const d = await this.disk();
+      const alerts = this.services.alerts.list();
+      const gate = this.services.gate.cached().state;
+      const head = `${fmtBytes(d.usedBytes)} of ${fmtBytes(d.totalBytes)} used, ${fmtBytes(d.freeBytes)} free. The Gate is ${gate}.`;
+      <span class="missing-if-branch" title="else path not taken" >E</span>if (!alerts.length) return done(`${head} Nothing needs a look.`, "Core");
+<span class="cstat-no" title="statement not covered" >      return done(`${head} ${alerts.length} ${alerts.length === 1 ? "thing needs" : "things need"} a look:`, "Core", { items: alerts.<span class="fstat-no" title="function not covered" >map((a</span>) =&gt; (<span class="cstat-no" title="statement not covered" >{ title: a.title, detail: a.detail, href: "/dashboard/core" }))</span> });</span>
+    }
+&nbsp;
+    // Routines.
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (/\broutines?\b|\bautomations?\b/.test(t)) {
+      const list = <span class="cstat-no" title="statement not covered" >this.services.routines.list(person.householdId);</span>
+<span class="cstat-no" title="statement not covered" >      if (!list.length) <span class="cstat-no" title="statement not covered" >return done("No routines yet. Make one from Home; they run on the box and never cross the Gate.", "Routines");</span></span>
+<span class="cstat-no" title="statement not covered" >      return done(`${list.length} ${list.length === 1 ? "routine" : "routines"}, all running on the box:`, "Routines", { items: list.<span class="fstat-no" title="function not covered" >map((r</span>) =&gt; (<span class="cstat-no" title="statement not covered" >{ title: r.name, detail: `${r.enabled ? "on" : "off"} · ${r.lastResult ?? "never run"}`, href: "/dashboard/home" }))</span> });</span>
+    }
+&nbsp;
+    // What happened.
+    if (/\b(today|happened|activity|receipts?|crossed|crossings?)\b/.test(t)) {
+      const midnight = new Date();
+      midnight.setHours(0, 0, 0, 0);
+      const rows = this.ledger.since(midnight.toISOString());
+      const crossings = rows.filter((r) =&gt; r.type === "gate.crossing").length;
+      return done(rows.length === 0 ? <span class="branch-0 cbranch-no" title="branch not covered" >"Nothing has been written to the ledger today." : `</span>${rows.length} ${rows.length === 1 ? <span class="branch-0 cbranch-no" title="branch not covered" >"receipt" : "</span>receipts"} today, ${crossings === 0 ? "none crossed the Gate" : <span class="branch-1 cbranch-no" title="branch not covered" >`${crossings} crossed the Gate`}.</span> Every one is in Activity.`, "Ledger", { items: rows.slice(0, 6).map((r) =&gt; ({ title: r.type, detail: `${new Date(r.occurredAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · ${r.where}`, href: "/dashboard/activity" })) });
+    }
+&nbsp;
+    // People.
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (/\b(who|people|members?|household)\b/.test(t)) {
+      const view = <span class="cstat-no" title="statement not covered" >this.services.household.view();</span>
+<span class="cstat-no" title="statement not covered" >      if (!view.setup) <span class="cstat-no" title="statement not covered" >return done("No household on this box yet.", "Household");</span></span>
+<span class="cstat-no" title="statement not covered" >      return done(`${view.people.length} ${view.people.length === 1 ? "person" : "people"} in ${view.household.name}:`, "Household", { items: view.people.<span class="fstat-no" title="function not covered" >map((p</span>) =&gt; (<span class="cstat-no" title="statement not covered" >{ title: p.name, detail: p.role, href: "/dashboard/settings" }))</span> });</span>
+    }
+&nbsp;
+    return done(
+      "I can only answer from what is on this box: files by name, photos, devices, backups, routines, memory and the receipts. There is no language model here yet and nothing crosses the Gate for a question, so I cannot look that up. Try “find the lease”, “turn the kitchen light off” or “what happened today”.",
+      "Rules on the box",
+    );
+  }
+&nbsp;
+  private pickDevices(t: string, devices: HomeDevice[]): HomeDevice[] {
+    const rooms = new Map(this.services.home.rooms().map((r) =&gt; [r.id, r.name.toLowerCase()]));
+    const byName = devices.filter((d) =&gt; t.includes(d.name.toLowerCase()));
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (byName.length) <span class="cstat-no" title="statement not covered" >return byName;</span>
+    const byRoom = devices.filter((d) =&gt; {
+      const room = rooms.get(d.roomId);
+      return room ? t.includes(room) : <span class="branch-1 cbranch-no" title="branch not covered" >false;</span>
+    });
+    if (byRoom.length) return byRoom;
+    return devices.length === 1 ? <span class="branch-0 cbranch-no" title="branch not covered" >devices : [</span>];
+  }
+&nbsp;
+  private roomName(d: HomeDevice): string {
+    return this.services.home.rooms().find((r) =&gt; r.id === d.roomId)?.name ?? <span class="branch-1 cbranch-no" title="branch not covered" >"no room";</span>
+  }
+}
+&nbsp;
+function <span class="fstat-no" title="function not covered" >fmtState(d</span>: HomeDevice): string {
+  const s = <span class="cstat-no" title="statement not covered" >d.state;</span>
+  const parts: string[] = <span class="cstat-no" title="statement not covered" >[];</span>
+<span class="cstat-no" title="statement not covered" >  if (typeof s.on === "boolean") <span class="cstat-no" title="statement not covered" >parts.push(s.on ? "on" : "off");</span></span>
+<span class="cstat-no" title="statement not covered" >  if (typeof s.brightness === "number") <span class="cstat-no" title="statement not covered" >parts.push(`${s.brightness}%`);</span></span>
+<span class="cstat-no" title="statement not covered" >  if (typeof s.setpointC === "number") <span class="cstat-no" title="statement not covered" >parts.push(`set to ${s.setpointC} °C`);</span></span>
+<span class="cstat-no" title="statement not covered" >  if (typeof s.currentC === "number") <span class="cstat-no" title="statement not covered" >parts.push(`${s.currentC} °C now`);</span></span>
+<span class="cstat-no" title="statement not covered" >  if (typeof s.locked === "boolean") <span class="cstat-no" title="statement not covered" >parts.push(s.locked ? "locked" : "unlocked");</span></span>
+<span class="cstat-no" title="statement not covered" >  if (!parts.length) <span class="cstat-no" title="statement not covered" >parts.push(d.reachable ? "reachable" : "unreachable");</span></span>
+<span class="cstat-no" title="statement not covered" >  return parts.join(", ");</span>
+}
+&nbsp;
+function fmtBytes(n: number): string {
+  if (n &lt; 1e3) return `${n} B`;
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (n &lt; 1e6) <span class="cstat-no" title="statement not covered" >return `${(n / 1e3).toFixed(0)} KB`;</span>
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (n &lt; 1e9) <span class="cstat-no" title="statement not covered" >return `${(n / 1e6).toFixed(1)} MB`;</span>
+  if (n &lt; 1e12) return `${(n / 1e9).toFixed(2)} GB`;
+  return `${(n / 1e12).toFixed(2)} TB`;
+}
+&nbsp;
+function <span class="fstat-no" title="function not covered" >ago(i</span>so: string): string {
+  const <span class="cstat-no" title="statement not covered" >h = (Date.now() - new Date(iso).getTime()) / 3_600_000;</span>
+<span class="cstat-no" title="statement not covered" >  if (h &lt; 1) <span class="cstat-no" title="statement not covered" >return "under an hour ago";</span></span>
+<span class="cstat-no" title="statement not covered" >  if (h &lt; 48) <span class="cstat-no" title="statement not covered" >return `${Math.round(h)} hours ago`;</span></span>
+<span class="cstat-no" title="statement not covered" >  return `${Math.round(h / 24)} days ago`;</span>
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-09-06T22:24:23.714Z
+            </div>
+        <script src="../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../sorter.js"></script>
+        <script src="../block-navigation.js"></script>
+    </body>
+</html>
+    

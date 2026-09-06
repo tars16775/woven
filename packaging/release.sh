@@ -28,4 +28,11 @@ node -e '
   require("fs").writeFileSync(process.argv[3], JSON.stringify(pkg, null, 2) + "\n");
 ' "$ROOT/apps/core/package.json" "$VERSION" "$OUT/package.json" "$ROOT/package.json"
 (cd "$ROOT/release" && tar -czf "woven-macos.tar.gz" "woven-$VERSION")
+if [ -n "${WOVEN_RELEASE_KEY:-}" ]; then
+  node "$ROOT/packaging/sign.mjs" "$ROOT/release/woven-macos.tar.gz"
+elif security find-generic-password -s woven-release -a key -w >/dev/null 2>&1; then
+  WOVEN_RELEASE_KEY="$(security find-generic-password -s woven-release -a key -w)" node "$ROOT/packaging/sign.mjs" "$ROOT/release/woven-macos.tar.gz"
+else
+  echo "Not signed: no WOVEN_RELEASE_KEY and no woven-release key in the Keychain (node packaging/keygen.mjs makes one)."
+fi
 echo "release/woven-macos.tar.gz ($(du -h "$ROOT/release/woven-macos.tar.gz" | cut -f1))"

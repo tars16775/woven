@@ -15,7 +15,7 @@ import { ledgerRoutes } from "./routes/ledger.ts";
 import { eventRoutes } from "./routes/events.ts";
 import { householdRoutes } from "./routes/household.ts";
 import { authRoutes } from "./routes/auth.ts";
-import { attachSession } from "./auth/guard.ts";
+import { requireSession, attachSession } from "./auth/guard.ts";
 import { registerLimits } from "./auth/limits.ts";
 import { CORE_HOUSEHOLD_ID } from "./data.ts";
 import { HouseholdError } from "./household.ts";
@@ -43,6 +43,7 @@ import { shareRoutes } from "./routes/shares.ts";
 import { remoteRoutes } from "./routes/remote.ts";
 import { pushRoutes } from "./routes/push.ts";
 import type { RelayClient } from "./remote/client.ts";
+import type { SettingsStore } from "./settings.ts";
 
 export type AppDeps = {
   config: Config;
@@ -60,6 +61,8 @@ export type AppDeps = {
   restart?: () => void;
   /** The relay connection when remote access is on; the remote routes read its status. */
   relay?: RelayClient;
+  /** Dashboard-changeable settings (the second snapshot location). Tests may leave it out. */
+  settings?: SettingsStore;
 };
 
 /**
@@ -75,6 +78,16 @@ export async function buildApp(deps: AppDeps) {
     trustProxy: false,
     bodyLimit: 1024 * 1024, // 1 MiB; uploads use the store's chunked path, not JSON bodies
   }).withTypeProvider<ZodTypeProvider>();
+
+  // The route table (gap 27): what is exposed, whether it is guarded and typed. The contract test reads it.
+  const routeTable: RouteInfo[] = [];
+  app.decorate("routeTable", routeTable);
+  app.addHook("onRoute", (route) => {
+    const pre = ([] as unknown[]).concat((route.preHandler as unknown) ?? []);
+    const guarded = pre.some((h) => typeof h === "function" && (h === requireSession || h.name === "requireSession" || h.name === "requireRole"));
+    const schema = route.schema as { response?: Record<string, unknown> } | undefined;
+    for (const method of ([] as string[]).concat(route.method)) routeTable.push({ method, url: route.url, guarded, typed: !!schema?.response && Object.keys(schema.response).length > 0 });
+  });
 
   app.setValidatorCompiler(zodValidatorCompiler);
   app.setSerializerCompiler(zodSerializerCompiler);
@@ -167,7 +180,12 @@ export async function buildApp(deps: AppDeps) {
   return app;
 }
 
+export type RouteInfo = { method: string; url: string; guarded: boolean; typed: boolean };
+
 declare module "fastify" {
+  interface FastifyInstance {
+    routeTable: RouteInfo[];
+  }
   interface FastifyInstance {
     deps: AppDeps;
   }

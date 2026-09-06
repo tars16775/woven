@@ -41,22 +41,22 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --filter "./packages/*" --filter "./apps/core" --filter "./apps/relay"
+        run: pnpm install --frozen-lockfile --filter "./packages/*" --filter "./apps/core" --filter "./apps/relay" --filter "./apps/site-api"
 
       - name: Known vulnerabilities (high and above, production dependencies)
         run: pnpm audit --audit-level=high --prod
 
       - name: Typecheck
-        run: pnpm --filter "./packages/*" --filter "./apps/core" --filter "./apps/relay" typecheck
+        run: pnpm --filter "./packages/*" --filter "./apps/core" --filter "./apps/relay" --filter "./apps/site-api" typecheck
 
       - name: Lint
-        run: pnpm --filter "./apps/core" --filter "./apps/relay" lint
+        run: pnpm --filter "./apps/core" --filter "./apps/relay" --filter "./apps/site-api" lint
 
       - name: Tests
-        run: pnpm --filter "./packages/*" --filter "./apps/core" test
+        run: pnpm --filter "./packages/*" --filter "./apps/core" --filter "./apps/site-api" test
 
       - name: Build
-        run: pnpm --filter "./apps/core" --filter "./apps/relay" build
+        run: pnpm --filter "./apps/core" --filter "./apps/relay" --filter "./apps/site-api" build
 
       - name: Migrations are up to date
         # drizzle-kit generate must be a no-op; a schema change without a checked-in migration fails here.
