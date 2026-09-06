@@ -6,6 +6,7 @@
  * operating system directly. See ADR 0003.
  */
 import type { HardwareIdentity, HardwareKind, Metrics } from "@woven/schema";
+import { genericHardware } from "./generic.ts";
 import { macosHardware } from "./macos.ts";
 
 export type { HardwareIdentity, Metrics } from "@woven/schema";
@@ -53,10 +54,11 @@ export function detectHardware(opts: HardwareOptions): Hardware {
   switch (kind) {
     case "macos":
       return macosHardware(paths);
-    case "linux-box":
     case "linux-generic":
-      // Phase 49 adds the box and generic Linux implementations. Until then
-      // running on Linux is a configuration error, not a silent fallback.
+      return genericHardware(paths);
+    case "linux-box":
+      // Phase 49 adds the box implementation (radios, screen, router, temperatures).
+      // Until then, asking for the box on a machine that is not one is a configuration error.
       throw new Error(`hardware kind "${kind}" is not implemented yet`);
   }
 }

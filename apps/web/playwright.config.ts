@@ -1,7 +1,15 @@
+import os from "node:os";
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000";
 const isCI = !!process.env.CI;
+/**
+ * LIVE_CORE=1 also starts a real Woven Core (apps/core) on :4000 with TLS off
+ * and a scratch data root, so the dashboard's live screens are tested against
+ * the real API instead of the preview data. tests/e2e/live-core.spec.ts needs it.
+ */
+const liveCore = process.env.LIVE_CORE === "1";
+const coreData = process.env.WOVEN_DATA || `${os.tmpdir()}/woven-e2e-${process.pid}`;
 
 /**
  * Locally the suite runs against the dev server already listening on :3000
@@ -29,12 +37,37 @@ export default defineConfig({
     },
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: {
-    command: isCI ? "pnpm start --port 3000" : "pnpm dev --port 3000",
-    url: baseURL,
-    reuseExistingServer: true,
-    timeout: 180_000,
-    stdout: "ignore",
-    stderr: "pipe",
-  },
+  webServer: [
+    {
+      command: isCI ? "pnpm start --port 3000" : "pnpm dev --port 3000",
+      url: baseURL,
+      reuseExistingServer: true,
+      timeout: 180_000,
+      stdout: "ignore",
+      stderr: "pipe",
+    },
+    ...(liveCore
+      ? [
+          {
+            command: "pnpm exec tsx src/server.ts",
+            cwd: "../core",
+            url: "http://localhost:4000/v1/health",
+            reuseExistingServer: !isCI,
+            timeout: 120_000,
+            stdout: "ignore" as const,
+            stderr: "pipe" as const,
+            env: {
+              WOVEN_DATA: coreData,
+              WOVEN_TLS: "off",
+              WOVEN_MDNS: "off",
+              WOVEN_PORT: "4000",
+              WOVEN_HOST: "127.0.0.1",
+              WOVEN_ORIGINS: baseURL,
+              NODE_ENV: "production",
+              LOG_LEVEL: "warn",
+            },
+          },
+        ]
+      : []),
+  ],
 });

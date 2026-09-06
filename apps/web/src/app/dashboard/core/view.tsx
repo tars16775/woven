@@ -8,6 +8,10 @@ import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { useGateOpen } from "@/components/dashboard/state";
 import { core, household } from "@/lib/dashboard/data";
+import { ConnectCore } from "@/components/dashboard/connect-core";
+import { memoryLabel, storageLabel, temperatureLabel, useLiveCore } from "@/lib/core/live";
+import { coreClient, useCore } from "@/lib/core/store";
+import type { Integrity } from "@/lib/core/client";
 
 const upgradeSteps = [
   ["Back up", "Tonight's backup covers everything on the drives. Nothing to do; the household state lives on the chassis, not the module."],
@@ -27,7 +31,10 @@ export function CoreView() {
   const [checking, setChecking] = useState(false);
   const [confirmRestart, setConfirmRestart] = useState(false);
   const [upgrade, setUpgrade] = useState(false);
+  const [integrity, setIntegrity] = useState<Integrity | "checking" | "failed" | null>(null);
   const timers = useRef<number[]>([]);
+  const connection = useCore();
+  const live = useLiveCore();
 
   // Clear pending timers if the page unmounts mid-restart.
   useEffect(() => {
@@ -58,9 +65,24 @@ export function CoreView() {
     });
   };
 
+  const verifyLedger = async () => {
+    const client = coreClient();
+    if (!client || integrity === "checking") return;
+    setIntegrity("checking");
+    try {
+      setIntegrity(await client.integrity());
+    } catch {
+      setIntegrity("failed");
+    }
+  };
+
   const restarting = phase === "restarting";
-  const uptime = restarted ? "just now" : core.uptime;
-  const status = restarting ? "Restarting · locks stay locked" : `${core.model} · ${core.tempC} °C · ${core.fan}`;
+  const uptime = restarted ? "just now" : live.uptime;
+  const status = restarting
+    ? "Restarting · locks stay locked"
+    : live.temperatureC === null
+      ? `${live.model} · ${live.fan}`
+      : `${live.model} · ${live.temperatureC} °C · ${live.fan}`;
 
   const netRows = [
     { label: core.network.inside.label, value: core.network.inside.value },
@@ -77,7 +99,9 @@ export function CoreView() {
           restarting ? (
             <span className="text-ask">Restarting · back in a moment</span>
           ) : (
-            `${core.version} · up ${uptime} · ${core.update.channel} channel`
+            <>
+              <span data-testid="core-version">{live.version}</span> · <span data-testid="core-uptime">up {uptime}</span> · {core.update.channel} channel
+            </>
           )
         }
         action={
@@ -92,6 +116,8 @@ export function CoreView() {
         }
       />
 
+      <ConnectCore />
+
       <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
         <Card dark className="flex items-center justify-center py-8">
           <div className={restarting ? "opacity-60 transition-opacity" : "transition-opacity"}>
@@ -100,34 +126,68 @@ export function CoreView() {
         </Card>
 
         <div className="grid gap-4">
-          <Card title="Right now" action={restarting ? <Pill tone="warn">Restarting</Pill> : <Pill tone="good">Ready</Pill>}>
+          <Card
+            title="Right now"
+            action={
+              restarting ? <Pill tone="warn">Restarting</Pill> : live.connected ? <Pill tone="good">Ready · {live.host}</Pill> : <Pill tone="good">Ready</Pill>
+            }
+          >
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-[14px] sm:grid-cols-4">
               <div>
-                <dt className="text-ash">Model</dt>
-                <dd className="mt-0.5 font-medium">{core.model}</dd>
+                <dt className="text-ash">{live.connected ? "Machine" : "Model"}</dt>
+                <dd className="mt-0.5 font-medium" data-testid="core-model">
+                  {live.model}
+                </dd>
+                {live.cpu && <dd className="mt-0.5 text-[12px] text-ash">{live.cpu}</dd>}
               </div>
               <div>
                 <dt className="text-ash">Memory</dt>
-                <dd className="mt-0.5 font-medium">
-                  {core.memoryUsedGb} / {core.memoryGb} GB
-                </dd>
-                <Meter value={restarting ? 4 : core.memoryUsedGb} max={core.memoryGb} className="mt-2" />
+                <dd className="mt-0.5 font-medium">{memoryLabel(live)}</dd>
+                <Meter value={restarting ? live.memory.total * 0.06 : live.memory.used} max={live.memory.total} className="mt-2" />
               </div>
               <div>
                 <dt className="text-ash">Storage</dt>
-                <dd className="mt-0.5 font-medium">
-                  {core.storageUsedTb} / {core.storageTb} TB
-                </dd>
-                <Meter value={core.storageUsedTb} max={core.storageTb} className="mt-2" />
+                <dd className="mt-0.5 font-medium">{storageLabel(live)}</dd>
+                <Meter value={live.storage.usedBytes} max={live.storage.totalBytes} className="mt-2" />
               </div>
               <div>
                 <dt className="text-ash">Temperature</dt>
                 <dd className="mt-0.5 font-medium">
-                  {core.tempC} °C · {core.fan}
+                  {live.temperatureC === null ? "Not reported" : `${temperatureLabel(live)} · ${live.fan}`}
                 </dd>
+                {live.connected && live.temperatureC === null && <dd className="mt-0.5 text-[12px] text-ash">This machine keeps its sensors to itself.</dd>}
               </div>
             </dl>
           </Card>
+
+          {connection.phase === "connected" && (
+            <Card
+              title="Ledger"
+              action={
+                <Button kind="soft" onClick={verifyLedger} disabled={integrity === "checking"} aria-busy={integrity === "checking"}>
+                  {integrity === "checking" ? "Verifying…" : "Verify the ledger"}
+                </Button>
+              }
+            >
+              <div className="text-[14px]" data-testid="ledger-integrity">
+                {integrity === null || integrity === "checking" ? (
+                  <span className="text-ash">Every receipt is chained to the one before it. Verify walks the whole chain and recomputes every hash.</span>
+                ) : integrity === "failed" ? (
+                  <span className="text-ask">The Core did not answer the check.</span>
+                ) : integrity.ok ? (
+                  <>
+                    <span className="font-medium">Chain intact · {integrity.rows} rows</span>
+                    <span className="block mt-1 font-mono text-[11px] text-ash">head {integrity.head?.slice(0, 16) ?? "—"}…</span>
+                  </>
+                ) : (
+                  <span className="text-ask">
+                    Chain broken at row {integrity.brokenAtSeq}: {integrity.reason}
+                  </span>
+                )}
+              </div>
+              {live.dataRoot && <div className="mt-2 font-mono text-[11px] uppercase tracking-[0.12em] text-ash">Data at {live.dataRoot}</div>}
+            </Card>
+          )}
 
           <Card title="Compute module">
             <div className="flex flex-wrap items-start justify-between gap-4">

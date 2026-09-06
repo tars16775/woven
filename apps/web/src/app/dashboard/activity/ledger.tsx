@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Card, Meter, PageHeader, WherePill, whereRan } from "@/components/dashboard/ui";
-import { activity, core, type ActivityItem, type Where } from "@/lib/dashboard/data";
+import { Card, Meter, PageHeader, Pill, WherePill, whereRan } from "@/components/dashboard/ui";
+import { activity as preview, core, type Where } from "@/lib/dashboard/data";
+import { toActivity, type LiveActivityItem } from "@/lib/core/activity";
+import { useCore } from "@/lib/core/store";
 
 const filters: { id: "all" | Where; label: string }[] = [
   { id: "all", label: "Everything" },
@@ -15,34 +17,40 @@ const filters: { id: "all" | Where; label: string }[] = [
 export function ActivityLedger() {
   const [filter, setFilter] = useState<"all" | Where>("all");
   const [openId, setOpenId] = useState<string | null>(null);
+  const connection = useCore();
+  const isLive = connection.phase === "connected";
 
-  const rows = useMemo(
-    () => activity.filter((a) => filter === "all" || a.where === filter),
-    [filter],
+  // Real ledger rows when a Core is connected; the preview household otherwise.
+  const activity: LiveActivityItem[] = useMemo(
+    () => (connection.phase === "connected" ? connection.rows.map((r) => toActivity(r)) : preview.map((a) => ({ ...a, seq: 0, hash: "" }))),
+    [connection],
   );
-  const days: ActivityItem["day"][] = ["today", "yesterday"];
+  const rows = useMemo(() => activity.filter((a) => filter === "all" || a.where === filter), [activity, filter]);
+  const days: LiveActivityItem["day"][] = ["today", "yesterday", "earlier"];
   const stayed = activity.filter((a) => a.where !== "cloud").length;
+  const crossings = activity.filter((a) => a.where === "cloud").length;
+  const share = activity.length ? Math.round((stayed / activity.length) * 100) : 100;
 
   return (
     <div className="mx-auto max-w-[1100px]">
       <PageHeader
         title="Where your data went"
         sub="Every consequential action, who asked, where it ran, and what left."
+        action={isLive ? <Pill tone="good"><span data-testid="activity-live">Live from the ledger</span></Pill> : undefined}
       />
 
       <Card dark>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="font-display text-[30px] font-medium leading-none tracking-[-0.02em]">
-              {Math.round((stayed / activity.length) * 100)}% stayed in this box
-            </div>
+            <div className="font-display text-[30px] font-medium leading-none tracking-[-0.02em]">{share}% stayed in this box</div>
             <div className="mt-2 text-[14px] text-ash-2">
-              {activity.filter((a) => a.where === "cloud").length} crossings in two days, each approved ·{" "}
-              {core.insideShare7d}% inside over seven days
+              {isLive
+                ? `${crossings} crossings in the last ${activity.length} receipts · each one written before anything left`
+                : `${crossings} crossings in two days, each approved · ${core.insideShare7d}% inside over seven days`}
             </div>
           </div>
           <div className="w-full md:w-[300px]">
-            <Meter value={stayed} max={activity.length} />
+            <Meter value={stayed} max={Math.max(1, activity.length)} />
           </div>
         </div>
       </Card>
@@ -70,7 +78,7 @@ export function ActivityLedger() {
         return (
           <section key={day} className="mt-6">
             <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-[0.1em] text-ash">
-              {day === "today" ? "Today" : "Yesterday"}
+              {day === "today" ? "Today" : day === "yesterday" ? "Yesterday" : "Earlier"}
             </h2>
             <ul className="overflow-hidden rounded-[14px] bg-white ring-1 ring-ink/5">
               {items.map((a) => {
@@ -97,7 +105,7 @@ export function ActivityLedger() {
                         <dt className="text-ash">Sent</dt>
                         <dd>{a.sent ?? "Nothing left the box"}</dd>
                         <dt className="text-ash">Receipt</dt>
-                        <dd className="font-mono text-[12px]">rcp_{a.id}_{a.time.replace(":", "")}</dd>
+                        <dd className="font-mono text-[12px]">{a.hash ? `#${a.seq} · ${a.hash.slice(0, 24)}…` : `rcp_${a.id}_${a.time.replace(":", "")}`}</dd>
                       </dl>
                     )}
                   </li>

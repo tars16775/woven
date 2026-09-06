@@ -7,6 +7,9 @@ import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { scheduleBackup, useCamerasPaused, useGateOpen, useScheduledBackups } from "@/components/dashboard/state";
 import { activity, cameras, core, folders, people, photoStats, rooms, suggestions } from "@/lib/dashboard/data";
+import { memoryLabel, storageLabel, storageUsedLabel, temperatureLabel, useLiveCore } from "@/lib/core/live";
+import { useCore } from "@/lib/core/store";
+import { toActivity } from "@/lib/core/activity";
 
 function greeting() {
   const h = new Date().getHours();
@@ -28,10 +31,15 @@ export function OverviewView() {
   const scheduled = useScheduledBackups();
   const camerasPaused = useCamerasPaused();
   const gateOpen = useGateOpen();
+  const connection = useCore();
+  const machine = useLiveCore();
 
   const devices = rooms.reduce((n, r) => n + r.devices.length, 0);
   const live = camerasPaused ? 0 : cameras.filter((c) => c.live).length;
-  const today = activity.filter((a) => a.day === "today").slice(0, 5);
+  const today =
+    connection.phase === "connected" && connection.rows.length
+      ? connection.rows.slice(0, 5).map((r) => toActivity(r))
+      : activity.filter((a) => a.day === "today").slice(0, 5);
   const mayaScheduled = scheduled.includes("Maya's laptop");
 
   const backUpTonight = () => {
@@ -44,7 +52,9 @@ export function OverviewView() {
       <h1 className="font-display text-[34px] font-medium leading-none tracking-[-0.02em] md:text-[40px]">
         {greeting()}, {people[0].name}
       </h1>
-      <p className="mt-2 text-[14px] text-ash">Everything is running at home · Woven Core+</p>
+      <p className="mt-2 text-[14px] text-ash">
+        {machine.connected ? `Everything is running at home · ${machine.model} · up ${machine.uptime}` : "Everything is running at home · Woven Core+"}
+      </p>
 
       {/* The one card that matters */}
       <div className="dash-lock mt-6 flex flex-col gap-4 rounded-[16px] bg-graphite p-5 text-bone ring-1 ring-white/8 md:flex-row md:items-center md:justify-between md:p-6">
@@ -78,27 +88,23 @@ export function OverviewView() {
           </div>
           <dl className="grid grid-cols-3 gap-6 text-right md:gap-10">
             <div>
-              <dd className="font-display text-[20px] font-medium">
-                {core.memoryUsedGb}/{core.memoryGb} GB
-              </dd>
+              <dd className="font-display text-[20px] font-medium">{memoryLabel(machine)}</dd>
               <dt className="text-[12px] text-ash-2">Memory</dt>
             </div>
             <div>
-              <dd className="font-display text-[20px] font-medium">
-                {core.storageUsedTb}/{core.storageTb} TB
-              </dd>
+              <dd className="font-display text-[20px] font-medium">{storageLabel(machine)}</dd>
               <dt className="text-[12px] text-ash-2">Storage</dt>
             </div>
             <div>
-              <dd className="font-display text-[20px] font-medium">{core.tempC} °C</dd>
-              <dt className="text-[12px] text-ash-2">{core.fan}</dt>
+              <dd className="font-display text-[20px] font-medium">{machine.temperatureC === null ? `up ${machine.uptime}` : temperatureLabel(machine)}</dd>
+              <dt className="text-[12px] text-ash-2">{machine.temperatureC === null ? "Uptime" : machine.fan}</dt>
             </div>
           </dl>
         </div>
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Files" value={`${core.storageUsedTb} TB`} sub={`${folders.filter((f) => f.kind === "device").length} devices syncing`} href="/dashboard/files" />
+        <Stat label="Files" value={storageUsedLabel(machine)} sub={`${folders.filter((f) => f.kind === "device").length} devices syncing`} href="/dashboard/files" />
         <Stat label="Photos" value={photoStats.total.toLocaleString()} sub={`${photoStats.newThisWeek} new · indexed`} href="/dashboard/photos" />
         <Stat label="Home" value={`${devices} devices`} sub="Goodnight scene 22:30" href="/dashboard/home" />
         <Stat label="Cameras" value={camerasPaused ? "Paused" : `${live} live`} sub={camerasPaused ? "Resume from Cameras" : "1 event today"} href="/dashboard/cameras" />

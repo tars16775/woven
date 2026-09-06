@@ -7,6 +7,8 @@ import { signOut, useSession } from "@/lib/auth";
 import { Wordmark } from "@/components/wordmark";
 import { Clock } from "@/components/clock";
 import { household, core } from "@/lib/dashboard/data";
+import { startCore, useCore } from "@/lib/core/store";
+import { memoryLabel, storageLabel, temperatureLabel, useLiveCore } from "@/lib/core/live";
 import { Dialog } from "./dialog";
 import { ToastProvider } from "./toast";
 import { ThemeStyle, useDocumentTheme, useTheme } from "./theme";
@@ -39,7 +41,14 @@ export function Shell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const { resolved } = useTheme();
   const gateOpen = useGateOpen();
+  const connection = useCore();
+  const live = useLiveCore();
   useDocumentTheme(resolved);
+
+  // Look for the household's Core once the shell is on screen.
+  useEffect(() => {
+    startCore();
+  }, []);
 
   useEffect(() => {
     if (session === null) router.replace(`/login?next=${encodeURIComponent(path)}`);
@@ -80,6 +89,21 @@ export function Shell({ children }: { children: ReactNode }) {
     </nav>
   );
 
+  const connectionChip =
+    connection.phase === "off" ? null : connection.phase === "connected" ? (
+      <Link href="/dashboard/core" data-testid="core-connection" className="rounded-full bg-local-bg px-2.5 py-1 font-medium text-local">
+        Core · {live.host}
+      </Link>
+    ) : connection.phase === "searching" ? (
+      <span data-testid="core-connection" className="rounded-full bg-chassis px-2.5 py-1 font-medium text-ash">
+        Looking for your Core…
+      </span>
+    ) : (
+      <Link href="/dashboard/core#connect" data-testid="core-connection" className="rounded-full bg-ask-bg px-2.5 py-1 font-medium text-ask">
+        Preview · connect your Core
+      </Link>
+    );
+
   const gateChip = gateOpen ? (
     <span className="rounded-full bg-local-bg px-2.5 py-1 font-medium text-local">
       {core.bytesCrossedToday === 0 ? "0 bytes crossed the Gate today" : `${core.bytesCrossedToday} crossed the Gate today`}
@@ -106,8 +130,8 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
           <div className="mt-6">{nav}</div>
           <div className="mt-auto px-3 text-[11px] leading-relaxed text-ash">
-            <div>{household.screenLabel}</div>
-            <div>{core.version}</div>
+            <div>{live.connected ? live.model : household.screenLabel}</div>
+            <div>{live.version}</div>
             <div>
               Inside · <Clock />
             </div>
@@ -130,17 +154,19 @@ export function Shell({ children }: { children: ReactNode }) {
               <Wordmark className="h-[16px]" />
             </div>
             <div className="hidden items-center gap-2 text-[13px] text-ash lg:flex">
+              {connectionChip}
+              {connectionChip && <span>·</span>}
               {gateChip}
               <span>·</span>
-              <span>
-                {core.memoryUsedGb}/{core.memoryGb} GB
-              </span>
+              <span data-testid="core-memory">{memoryLabel(live)}</span>
               <span>·</span>
-              <span>
-                {core.storageUsedTb}/{core.storageTb} TB
-              </span>
-              <span>·</span>
-              <span>{core.tempC} °C</span>
+              <span data-testid="core-storage">{storageLabel(live)}</span>
+              {live.temperatureC !== null && (
+                <>
+                  <span>·</span>
+                  <span>{temperatureLabel(live)}</span>
+                </>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <Link

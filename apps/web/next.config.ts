@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Workspace packages ship TypeScript source; Next compiles them with the app.
+  transpilePackages: ["@woven/schema"],
   images: {
     // The project lives on an external volume whose filesystem writes
     // AppleDouble sidecars into Next's image cache during development, which

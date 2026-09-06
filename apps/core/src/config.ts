@@ -20,6 +20,8 @@ const Env = z.object({
   WOVEN_TLS: z.enum(["on", "off"]).default("on"),
   /** Plain-HTTP port for the trust page that hands devices the household CA. */
   WOVEN_TRUST_PORT: z.coerce.number().int().min(1).max(65535).default(4001),
+  /** Plain-HTTP copy of the API bound to 127.0.0.1 only, so the dashboard on this same machine works before the CA is trusted. */
+  WOVEN_LOCAL_PORT: z.coerce.number().int().min(0).max(65535).default(4002),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 });
 
@@ -33,6 +35,8 @@ export type Config = {
   name: string;
   tls: boolean;
   trustPort: number;
+  /** 0 disables the loopback listener. */
+  localPort: number;
   logLevel: z.infer<typeof Env>["LOG_LEVEL"];
 };
 
@@ -53,6 +57,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     name: e.WOVEN_NAME.toLowerCase(),
     tls: e.WOVEN_TLS === "on",
     trustPort: e.WOVEN_TRUST_PORT,
+    localPort: e.WOVEN_LOCAL_PORT,
     logLevel: e.LOG_LEVEL,
   };
 }

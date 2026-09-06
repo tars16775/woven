@@ -55,7 +55,7 @@ jobs:
           fi
 
   web:
-    name: web (lint, typecheck, unit, build, e2e)
+    name: web (lint, typecheck, unit, build, e2e against a real core)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -66,21 +66,24 @@ jobs:
       NEXT_TELEMETRY_DISABLED: 1
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
       PLAYWRIGHT_BASE_URL: http://localhost:3000
+      # Playwright starts apps/core on :4000 (TLS off, scratch data root) for the live screens.
+      LIVE_CORE: "1"
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        # Reads the version from apps/web/package.json "packageManager".
         with:
-          package_json_file: apps/web/package.json
+          package_json_file: package.json
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: apps/web/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
+        # The whole workspace: the web app imports @woven/schema and the e2e suite runs the core.
+        working-directory: .
         run: pnpm install --frozen-lockfile
 
       - name: Lint

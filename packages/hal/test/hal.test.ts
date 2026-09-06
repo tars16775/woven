@@ -25,6 +25,18 @@ describe("@woven/hal", () => {
     expect(m.temperatureC).toBeNull();
   });
 
+  it("reports a valid identity and metrics on any machine through the generic layer", async () => {
+    const root = mkdtempSync(`${os.tmpdir()}/woven-hal-`);
+    const hw = detectHardware({ dataRoot: root, kind: "linux-generic" });
+    const id = HardwareIdentity.parse(await hw.identity());
+    expect(id.kind).toBe("linux-generic");
+    expect(id.machineId).toHaveLength(32);
+    expect(id.features.radios).toEqual([]);
+    const m = Metrics.parse(await hw.metrics());
+    expect(m.memoryUsedBytes).toBeLessThanOrEqual(m.memoryTotalBytes);
+    expect(m.diskTotalBytes).toBeGreaterThan(0);
+  });
+
   it("refuses an unimplemented hardware kind instead of guessing", () => {
     expect(() => detectHardware({ dataRoot: "/tmp", kind: "linux-box" })).toThrow(/not implemented/);
   });

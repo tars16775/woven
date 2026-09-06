@@ -39,8 +39,9 @@ Honest limits of the Mac phase: no Thread or Zigbee without a Linux radio bridge
 | 2 Data layer | done · 2026-09-06 | SQLite WAL + Drizzle migrations, content store, snapshot and tested restore, nightly job |
 | 3 Core service | done · 2026-09-06 | HTTPS with the household CA (ADR 0006), trust page on :4001, WebSocket `/v1/events`, `/v1/system/config`, `woven.local` over mDNS |
 | 4 Ledger and events | done · 2026-09-06 | Landed inside phase 2: hash chain, tamper detection, receipt writer (`Ledger.append`), `/v1/ledger/*` |
-| 5 Developer loop | next | seed household, e2e against a real core |
-| 6 Site meets core | queued | |
+| 5 Developer loop | done · 2026-09-06 | `pnpm seed` demo household, generic Linux hardware layer so CI can run the core, Playwright `LIVE_CORE=1` starts a real core for the e2e suite |
+| 6 Site meets core | first pass · 2026-09-06 | dashboard discovers the core (woven.local, loopback :4002), "Connect to your Core" card, shell + Overview + Core + Activity read real status and ledger; remaining screens switch as their services land |
+| 7 Household setup | next | |
 
 ## Tracks and phases
 

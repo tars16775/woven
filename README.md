@@ -33,6 +33,15 @@ pnpm typecheck && pnpm lint && pnpm test
 pnpm --filter ./apps/core snapshot                       # take a snapshot now
 pnpm --filter ./apps/core restore <snapshot-dir> [root]  # restore into an empty data root
 pnpm --filter ./apps/core db:generate                    # after editing apps/core/src/db/schema.ts
+pnpm --filter ./apps/core seed                           # a demo household for development
+
+# End-to-end against a real core (Playwright starts one on :4000 with TLS off):
+LIVE_CORE=1 pnpm --filter web test:e2e
+```
+
+The dashboard looks for a Core at `https://woven.local:4000`, then this machine (`http://localhost:4002`, the core's loopback listener). Until one answers it shows preview data and a "Connect to your Core" card on the Core page. Build the marketing deploy with `NEXT_PUBLIC_WOVEN_LIVE=off` so it never looks.
+
+```bash
 ```
 
 Or double-click `Start Woven.command` on the LaCie. The site is at http://localhost:3000, the dashboard at `/dashboard`, the core at https://woven.local:4000/v1/health. On a new device open http://woven.local:4001 first and install the household certificate (ADR 0006); on this Mac double-click `Woven Data/keys/ca.crt`, then set its trust to Always in Keychain Access.

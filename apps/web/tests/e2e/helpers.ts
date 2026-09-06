@@ -31,13 +31,28 @@ const ignoredConsole = [
   /Failed to load resource: the server responded with a status of 404.*favicon/i,
 ];
 
+/** Requests the dashboard makes while looking for a Core; they fail by design when none is running. */
+const isCoreProbe = (url: string) => /\/v1\/(health|system|ledger|events)/.test(url) || /:4000\b/.test(url);
+
 export function collectConsoleErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on("console", (m: ConsoleMessage) => {
     if (m.type() !== "error") return;
     const text = m.text();
     if (ignoredConsole.some((re) => re.test(text))) return;
+    if (isCoreProbe(m.location().url)) return;
+    // A failed resource says only "404" in the console; name the URL so CI failures are actionable.
+    if (/Failed to load resource/.test(text)) return;
     errors.push(text);
+  });
+  page.on("response", (res) => {
+    const url = res.url();
+    if (res.status() < 400 || /favicon/.test(url) || isCoreProbe(url)) return;
+    errors.push(`${res.status()} ${url}`);
+  });
+  page.on("requestfailed", (req) => {
+    if (isCoreProbe(req.url())) return;
+    errors.push(`failed ${req.url()} ${req.failure()?.errorText ?? ""}`.trim());
   });
   page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
   return errors;

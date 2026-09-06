@@ -51,8 +51,13 @@ async function main() {
     if (tls.issued) logger.info({ names: tls.server.dns, addresses: tls.server.ips, notAfter: tls.server.notAfter }, "issued the core's certificate");
   }
 
-  const app = await buildApp({ config, logger, hardware, data, ...(tls ? { tls } : {}), version, startedAt: new Date() });
+  const startedAt = new Date();
+  const app = await buildApp({ config, logger, hardware, data, ...(tls ? { tls } : {}), version, startedAt });
   const scheme = tls ? "https" : "http";
+  // The same API in plain HTTP, reachable only from this machine. Loopback
+  // cannot be sniffed from the network, so it needs no certificate, and the
+  // dashboard served from localhost:3000 works before anyone trusts the CA.
+  const local = tls && config.localPort > 0 ? await buildApp({ config, logger, hardware, data, version, startedAt }) : null;
   const trust = tls
     ? await buildTrustServer({
         logger,
@@ -69,7 +74,7 @@ async function main() {
     logger.info({ signal }, "stopping");
     stopNightly();
     bonjour?.unpublishAll(() => bonjour.destroy());
-    await Promise.all([app.close(), trust?.close()]);
+    await Promise.all([app.close(), trust?.close(), local?.close()]);
     data.close();
     process.exit(0);
   };
@@ -78,6 +83,7 @@ async function main() {
 
   await app.listen({ host: config.host, port: config.port });
   if (trust) await trust.listen({ host: config.host, port: config.trustPort });
+  if (local) await local.listen({ host: "127.0.0.1", port: config.localPort });
 
   if (bonjour) {
     // Publishing with `host` makes the responder answer A records for the
@@ -92,7 +98,7 @@ async function main() {
   }
 
   logger.info(
-    { url: `${scheme}://${config.name}:${config.port}`, trust: trust ? `http://${config.name}:${config.trustPort}` : null, dataRoot: config.dataRoot, hardware: identity.kind, ledgerRows: integrity.rows },
+    { url: `${scheme}://${config.name}:${config.port}`, trust: trust ? `http://${config.name}:${config.trustPort}` : null, local: local ? `http://127.0.0.1:${config.localPort}` : null, dataRoot: config.dataRoot, hardware: identity.kind, ledgerRows: integrity.rows },
     "Ready.",
   );
 }

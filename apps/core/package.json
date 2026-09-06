@@ -13,7 +13,8 @@
     "test": "vitest run",
     "snapshot": "tsx src/cli/snapshot.ts",
     "restore": "tsx src/cli/restore.ts",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "seed": "tsx src/cli/seed.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.0.0",
