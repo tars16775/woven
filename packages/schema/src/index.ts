@@ -42,13 +42,15 @@ export const Household = z.object({
 });
 export type Household = z.infer<typeof Household>;
 
+/** A member of the household. Email is null for children without one; removedAt is set instead of deleting. */
 export const Person = z.object({
   id: Ulid,
   householdId: Ulid,
   name: z.string().min(1).max(80),
-  email: z.email().optional(),
+  email: z.email().nullable(),
   role: Role,
   createdAt: z.iso.datetime(),
+  removedAt: z.iso.datetime().nullable(),
 });
 export type Person = z.infer<typeof Person>;
 
@@ -251,4 +253,39 @@ export const CoreConfig = z.object({
   ]),
 });
 export type CoreConfig = z.infer<typeof CoreConfig>;
+
+/** GET /v1/household: the household and its living members, or `setup: false` on a fresh box. */
+export const HouseholdView = z.discriminatedUnion("setup", [
+  z.object({ setup: z.literal(false) }),
+  z.object({ setup: z.literal(true), household: Household, people: z.array(Person) }),
+]);
+export type HouseholdView = z.infer<typeof HouseholdView>;
+
+export const NewPerson = z.object({
+  name: z.string().trim().min(1).max(80),
+  email: z.email().trim().toLowerCase().optional(),
+  role: Role.exclude(["owner"]),
+});
+export type NewPerson = z.infer<typeof NewPerson>;
+
+export const SetupHousehold = z.object({
+  household: z.string().trim().min(1).max(80),
+  owner: z.object({ name: z.string().trim().min(1).max(80), email: z.email().trim().toLowerCase() }),
+});
+export type SetupHousehold = z.infer<typeof SetupHousehold>;
+
+export const AuthMethod = z.enum(["passkey", "code", "recovery"]);
+export type AuthMethod = z.infer<typeof AuthMethod>;
+
+/** GET /v1/auth/session: who is signed in on this device. */
+export const SessionView = z.object({
+  person: Person,
+  household: Household,
+  method: AuthMethod,
+  createdAt: z.iso.datetime(),
+  expiresAt: z.iso.datetime(),
+  /** How many passkeys this person has; zero means "add one now". */
+  passkeys: z.number().int().nonnegative(),
+});
+export type SessionView = z.infer<typeof SessionView>;
 

@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { signIn } from "@/lib/auth";
+import { explain, identity, sessionRecord } from "@/lib/core/identity";
+import { startCore, useCore } from "@/lib/core/store";
 
 type FieldKey = "house" | "name" | "email";
 
@@ -13,7 +15,27 @@ const field =
 export function SignupForm() {
   const router = useRouter();
   const uid = useId();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const core = useCore();
+  const connected = core.phase === "connected";
+  const [existing, setExisting] = useState<string | null>(null);
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
+  const [failure, setFailure] = useState<string | null>(null);
+
+  useEffect(() => {
+    startCore();
+  }, []);
+  useEffect(() => {
+    if (!connected) return;
+    let alive = true;
+    identity
+      .household()
+      .then((h) => alive && setExisting(h.setup ? h.household.name : null))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [connected]);
   const [house, setHouse] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -58,10 +80,23 @@ export function SignupForm() {
       return;
     }
     setErrors({});
+    setFailure(null);
     setBusy(true);
-    // The real flow calls navigator.credentials.create against the box and
-    // registers the public key with your Core over the home network. Until a
-    // Core exists, the session is simulated on this device and nothing is sent.
+    if (connected) {
+      // The Core creates the house; this device makes the owner's first passkey; the codes are shown once.
+      try {
+        const { session, recoveryCodes: codes } = await identity.setup({ household: house.trim(), owner: { name: name.trim(), email: clean } });
+        signIn(sessionRecord(session, "passkey"));
+        setRecoveryCodes(codes);
+        setStep(3);
+      } catch (err) {
+        setFailure(explain(err));
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    // Preview without a Core: the session is simulated on this device and nothing is sent.
     await new Promise((r) => setTimeout(r, 800));
     signIn({ household: house.trim(), name: name.trim(), email: clean, method: "passkey", simulated: true });
     router.replace("/dashboard");
@@ -71,17 +106,46 @@ export function SignupForm() {
 
   return (
     <div>
-      <p className="text-[13px] font-medium text-ash">Set up · step {step} of 2</p>
+      <p className="text-[13px] font-medium text-ash">Set up · step {step} of {connected ? 3 : 2}</p>
       <h1 className="mt-2 font-display text-[34px] font-medium leading-[1.05] tracking-[-0.02em]">
-        {step === 1 ? "Name the house." : "Make your key."}
+        {step === 1 ? "Name the house." : step === 2 ? "Make your key." : "Write these down."}
       </h1>
       <p className="mt-3 text-[14px] leading-relaxed text-ash">
         {step === 1
           ? "This is the household everyone in it will share. You are its first person and its owner."
-          : "A passkey lives on this device and never leaves it. There is no password to remember or to lose."}
+          : step === 2
+            ? "A passkey lives on this device and never leaves it. There is no password to remember or to lose."
+            : "Eight recovery codes, each good once. They are the only way back in if every device is lost. The Core will not show them again."}
       </p>
 
-      {step === 1 ? (
+      {connected && existing && step !== 3 && (
+        <div role="status" className="mt-6 rounded-[12px] bg-white p-4 text-[13px] ring-1 ring-ink/5" data-testid="house-exists">
+          <div className="font-medium">This Core already runs {existing}.</div>
+          <p className="mt-1 text-ash">
+            A box holds one household. Ask its owner to invite you, or{" "}
+            <Link href="/login" className="font-medium text-ink underline decoration-amber decoration-2 underline-offset-4">
+              sign in
+            </Link>
+            .
+          </p>
+        </div>
+      )}
+
+      {step === 3 ? (
+        <div className="mt-8">
+          <ol className="grid grid-cols-2 gap-2 rounded-[12px] bg-white p-4 font-mono text-[15px] ring-1 ring-ink/5" data-testid="recovery-codes">
+            {recoveryCodes.map((c) => (
+              <li key={c} className="rounded-[8px] bg-bone px-3 py-2 text-center tracking-wider">
+                {c}
+              </li>
+            ))}
+          </ol>
+          <button type="button" onClick={() => router.replace("/dashboard")} className="btn btn-primary mt-5 w-full">
+            I have written them down
+          </button>
+          <p className="mt-3 text-center text-[12px] text-ash">You can make a new set from Settings at any time; the old set stops working.</p>
+        </div>
+      ) : step === 1 ? (
         <form onSubmit={next} className="mt-8 space-y-4" noValidate>
           <div>
             <label htmlFor={`${uid}-house`} className="block text-[13px] font-medium text-ash">
@@ -170,12 +234,19 @@ export function SignupForm() {
               <li>2. A key is made here and registered with your Core over the home network.</li>
               <li>3. You land in the dashboard. Nothing about you has left the house.</li>
             </ol>
-            <p className="mt-3 border-t border-ink/8 pt-3 text-[12px] text-ash">
-              In this preview, steps 1 and 2 are simulated on this device. Your key is not made yet;
-              a session is saved in this browser and nothing is sent anywhere.
-            </p>
+            {!connected && (
+              <p className="mt-3 border-t border-ink/8 pt-3 text-[12px] text-ash">
+                In this preview, steps 1 and 2 are simulated on this device. Your key is not made yet;
+                a session is saved in this browser and nothing is sent anywhere.
+              </p>
+            )}
           </div>
-          <button type="submit" disabled={busy} aria-busy={busy || undefined} className="btn btn-primary w-full disabled:opacity-60">
+          {failure && (
+            <p role="alert" className="text-[13px] text-[#a13a2a]">
+              {failure}
+            </p>
+          )}
+          <button type="submit" disabled={busy || Boolean(connected && existing)} aria-busy={busy || undefined} className="btn btn-primary w-full disabled:opacity-60">
             {busy ? "Making your key…" : "Create passkey and finish"}
           </button>
           <button

@@ -41,7 +41,9 @@ Honest limits of the Mac phase: no Thread or Zigbee without a Linux radio bridge
 | 4 Ledger and events | done · 2026-09-06 | Landed inside phase 2: hash chain, tamper detection, receipt writer (`Ledger.append`), `/v1/ledger/*` |
 | 5 Developer loop | done · 2026-09-06 | `pnpm seed` demo household, generic Linux hardware layer so CI can run the core, Playwright `LIVE_CORE=1` starts a real core for the e2e suite |
 | 6 Site meets core | first pass · 2026-09-06 | dashboard discovers the core (woven.local, loopback :4002), "Connect to your Core" card, shell + Overview + Core + Activity read real status and ledger; remaining screens switch as their services land |
-| 7 Household setup | next | |
+| 7 Household model | done · 2026-09-06 | households, people, roles, soft removal, private namespaces (personal, health, financial, work) checked per owner; `/v1/household*`; every change a receipt |
+| 8 Passkeys | done · 2026-09-06 | SimpleWebAuthn registration and sign-in, rpID from the dashboard origin, httpOnly device sessions, recovery codes shown once, `/v1/auth/*`; signup and login talk to the Core when one is connected; Settings shows your keys; e2e with Chrome's virtual authenticator |
+| 9 Code on the screen | next | |
 
 ## Tracks and phases
 

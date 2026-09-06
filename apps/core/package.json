@@ -17,10 +17,12 @@
     "seed": "tsx src/cli/seed.ts"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^11.0.0",
     "@fastify/sensible": "^6.0.0",
     "@fastify/websocket": "^11.3.0",
     "@peculiar/x509": "^2.1.0",
+    "@simplewebauthn/server": "^14.0.1",
     "@woven/hal": "workspace:*",
     "@woven/policy": "workspace:*",
     "@woven/schema": "workspace:*",

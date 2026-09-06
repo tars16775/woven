@@ -7,6 +7,7 @@ import { buildApp } from "../src/app.ts";
 import { loadConfig } from "../src/config.ts";
 import { CORE_HOUSEHOLD_ID, openData, type Data } from "../src/data.ts";
 import { createLogger } from "../src/logger.ts";
+import { buildServices } from "../src/services.ts";
 
 const dataRoot = mkdtempSync(`${os.tmpdir()}/woven-events-`);
 const config = loadConfig({ NODE_ENV: "test", WOVEN_DATA: dataRoot, LOG_LEVEL: "fatal", WOVEN_MDNS: "off", WOVEN_TLS: "off" });
@@ -17,7 +18,7 @@ let port: number;
 beforeAll(async () => {
   const hardware = detectHardware({ dataRoot });
   data = await openData(hardware.paths);
-  app = await buildApp({ config, logger: createLogger(config), hardware, data, version: "test", startedAt: new Date() });
+  app = await buildApp({ config, logger: createLogger(config), hardware, data, services: buildServices(data, config), version: "test", startedAt: new Date() });
   await app.listen({ host: "127.0.0.1", port: 0 });
   port = (app.server.address() as { port: number }).port;
 });

@@ -1,3 +1,4 @@
+import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
 import websocket from "@fastify/websocket";
@@ -9,6 +10,12 @@ import type { Logger } from "./logger.ts";
 import type { Data } from "./data.ts";
 import { ledgerRoutes } from "./routes/ledger.ts";
 import { eventRoutes } from "./routes/events.ts";
+import { householdRoutes } from "./routes/household.ts";
+import { authRoutes } from "./routes/auth.ts";
+import { attachSession } from "./auth/guard.ts";
+import { HouseholdError } from "./household.ts";
+import { PasskeyError } from "./auth/passkeys.ts";
+import type { Services } from "./services.ts";
 import type { TlsMaterial } from "./tls.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { systemRoutes } from "./routes/system.ts";
@@ -18,6 +25,7 @@ export type AppDeps = {
   logger: Logger;
   hardware: Hardware;
   data: Data;
+  services: Services;
   /** Present when serving HTTPS; the app also exposes it on /v1/system/config. */
   tls?: TlsMaterial;
   version: string;
@@ -43,6 +51,7 @@ export async function buildApp(deps: AppDeps) {
 
   await app.register(sensible);
   await app.register(websocket, { options: { maxPayload: 64 * 1024 } });
+  await app.register(cookie);
   await app.register(cors, {
     origin: deps.config.origins,
     credentials: true,
@@ -50,6 +59,8 @@ export async function buildApp(deps: AppDeps) {
   });
 
   app.decorate("deps", deps);
+  app.decorateRequest("session", null);
+  app.addHook("onRequest", attachSession);
 
   // Every response says who answered, and nothing about the machine leaks in headers.
   app.addHook("onSend", async (_req, reply) => {
@@ -64,6 +75,10 @@ export async function buildApp(deps: AppDeps) {
   });
 
   app.setErrorHandler((err: FastifyError, req, reply) => {
+    if (err instanceof HouseholdError || err instanceof PasskeyError) {
+      void reply.status(err.status).send({ error: err.message, requestId: req.id });
+      return;
+    }
     const status = typeof err.statusCode === "number" ? err.statusCode : 500;
     if (status >= 500) req.log.error({ err }, "request failed");
     void reply.status(status).send({
@@ -76,6 +91,8 @@ export async function buildApp(deps: AppDeps) {
   await app.register(systemRoutes, { prefix: "/v1" });
   await app.register(ledgerRoutes, { prefix: "/v1" });
   await app.register(eventRoutes, { prefix: "/v1" });
+  await app.register(householdRoutes, { prefix: "/v1" });
+  await app.register(authRoutes, { prefix: "/v1" });
 
   return app;
 }

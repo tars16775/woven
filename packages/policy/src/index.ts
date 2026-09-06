@@ -56,7 +56,8 @@ export const riskClassTable: Record<RiskClass, { example: string; defaultPolicy:
 };
 
 /** Namespaces a role may act in without an explicit grant. */
-const namespaceAccess: Record<Role, ReadonlySet<Namespace>> = {
+/** Which namespaces each role may act in. Exported so the core can answer "what can this person see". */
+export const namespaceAccess: Record<Role, ReadonlySet<Namespace>> = {
   owner: new Set(["household", "personal", "security", "financial", "health", "work", "children", "guest"]),
   adult: new Set(["household", "personal", "security", "financial", "health", "work", "children"]),
   child: new Set(["household", "personal"]),

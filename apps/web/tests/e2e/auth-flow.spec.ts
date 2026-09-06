@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { collectConsoleErrors, openLogin, signInWithPasskey } from "./helpers";
+import { LIVE, collectConsoleErrors, openLogin, signInWithPasskey } from "./helpers";
 
 test("signing in with a passkey reaches the dashboard", async ({ page }) => {
   const errors = collectConsoleErrors(page);
@@ -11,7 +11,7 @@ test("signing in with a passkey reaches the dashboard", async ({ page }) => {
 
   const session = await page.evaluate(() => localStorage.getItem("woven:session"));
   expect(session).not.toBeNull();
-  expect(JSON.parse(session!)).toMatchObject({ email: "alex@example.com", method: "passkey" });
+  expect(JSON.parse(session!)).toMatchObject({ email: "alex@example.com", method: LIVE ? "recovery" : "passkey" });
   expect(errors).toEqual([]);
 });
 

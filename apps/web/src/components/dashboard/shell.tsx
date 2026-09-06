@@ -8,6 +8,7 @@ import { Wordmark } from "@/components/wordmark";
 import { Clock } from "@/components/clock";
 import { household, core } from "@/lib/dashboard/data";
 import { startCore, useCore } from "@/lib/core/store";
+import { identity } from "@/lib/core/identity";
 import { memoryLabel, storageLabel, temperatureLabel, useLiveCore } from "@/lib/core/live";
 import { Dialog } from "./dialog";
 import { ToastProvider } from "./toast";
@@ -55,9 +56,25 @@ export function Shell({ children }: { children: ReactNode }) {
   }, [session, router, path]);
 
   const leave = () => {
+    if (connection.phase === "connected" && session && !session.simulated) void identity.logout();
     signOut();
     router.replace("/login");
   };
+
+  // A Core-issued session is only as real as the cookie on the Core: check it once we are connected.
+  useEffect(() => {
+    if (connection.phase !== "connected" || !session || session.simulated) return;
+    let alive = true;
+    identity
+      .session()
+      .then((s) => {
+        if (alive && s === null) signOut();
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [connection.phase, session]);
 
   if (!session) {
     return (

@@ -5,6 +5,7 @@ import { Button, Card, Field, PageHeader, Pill, inputClass } from "@/components/
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { ThemeControl } from "@/components/dashboard/theme";
+import { PasskeysCard } from "@/components/dashboard/passkeys-card";
 import { household, people as initialPeople, type Person } from "@/lib/dashboard/data";
 
 type Integration = { name: string; detail: string; tone: "good" | "warn" };
@@ -63,7 +64,9 @@ export function SettingsView() {
     <div className="mx-auto max-w-[1100px]">
       <PageHeader title="Settings" sub={`${household.name} · ${household.city}`} />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <PasskeysCard />
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card
           title="Household"
           action={

@@ -14,10 +14,13 @@ export type Session = {
   household: string;
   name: string;
   email: string;
-  method: "passkey" | "code" | "email";
+  method: "passkey" | "code" | "email" | "recovery";
   at: number;
   /** True when the session was made by the preview, not by a Core. */
   simulated?: boolean;
+  /** Set when a Core issued the session. The cookie on the Core is the real thing; this is its reflection. */
+  personId?: string;
+  role?: "owner" | "adult" | "child" | "guest";
 };
 
 const KEY = "woven:session";

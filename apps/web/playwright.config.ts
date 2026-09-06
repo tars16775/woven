@@ -36,7 +36,13 @@ export default defineConfig({
       args: ["--ignore-gpu-blocklist", "--enable-unsafe-swiftshader", "--use-angle=swiftshader"],
     },
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: liveCore
+    ? [
+        // Signs the seeded owner in once and saves the cookies; tests reuse them (helpers.ts) so one-time codes are not spent per test.
+        { name: "live-setup", testMatch: /live-setup\.ts/, use: { ...devices["Desktop Chrome"] } },
+        { name: "chromium", dependencies: ["live-setup"], use: { ...devices["Desktop Chrome"] } },
+      ]
+    : [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
       command: isCI ? "pnpm start --port 3000" : "pnpm dev --port 3000",
@@ -49,7 +55,8 @@ export default defineConfig({
     ...(liveCore
       ? [
           {
-            command: "pnpm exec tsx src/server.ts",
+            // Seed the demo household (with a known recovery code) then start the core.
+            command: "pnpm exec tsx src/cli/seed.ts && pnpm exec tsx src/server.ts",
             cwd: "../core",
             url: "http://localhost:4000/v1/health",
             reuseExistingServer: !isCI,
@@ -65,6 +72,7 @@ export default defineConfig({
               WOVEN_ORIGINS: baseURL,
               NODE_ENV: "production",
               LOG_LEVEL: "warn",
+              WOVEN_DEMO_RECOVERY_CODE: "demo-house,demo-key-1,demo-key-2,demo-key-3",
             },
           },
         ]

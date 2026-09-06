@@ -7,6 +7,7 @@ import { loadConfig } from "./config.ts";
 import { createLogger } from "./logger.ts";
 import { CORE_HOUSEHOLD_ID, openData } from "./data.ts";
 import { scheduleNightly } from "./maintenance.ts";
+import { buildServices } from "./services.ts";
 import { coreDnsNames, lanAddresses } from "./network.ts";
 import { ensureHouseholdTls, type TlsMaterial } from "./tls.ts";
 import { buildTrustServer } from "./trust.ts";
@@ -52,12 +53,13 @@ async function main() {
   }
 
   const startedAt = new Date();
-  const app = await buildApp({ config, logger, hardware, data, ...(tls ? { tls } : {}), version, startedAt });
+  const services = buildServices(data, config);
+  const app = await buildApp({ config, logger, hardware, data, services, ...(tls ? { tls } : {}), version, startedAt });
   const scheme = tls ? "https" : "http";
   // The same API in plain HTTP, reachable only from this machine. Loopback
   // cannot be sniffed from the network, so it needs no certificate, and the
   // dashboard served from localhost:3000 works before anyone trusts the CA.
-  const local = tls && config.localPort > 0 ? await buildApp({ config, logger, hardware, data, version, startedAt }) : null;
+  const local = tls && config.localPort > 0 ? await buildApp({ config, logger, hardware, data, services, version, startedAt }) : null;
   const trust = tls
     ? await buildTrustServer({
         logger,

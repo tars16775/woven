@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { displayNameFromEmail, householdFor, signIn, useSession } from "@/lib/auth";
+import { explain, identity, sessionRecord } from "@/lib/core/identity";
+import { startCore, useCore } from "@/lib/core/store";
 
-type Mode = "passkey" | "code";
+type Mode = "passkey" | "code" | "recovery";
 
 const field =
   "mt-1.5 w-full rounded-[10px] border bg-white px-3.5 py-3 text-[15px] outline-none transition-colors focus:border-ink disabled:opacity-60 aria-[invalid=true]:border-[#a13a2a]";
@@ -25,8 +27,12 @@ export function LoginForm() {
     codeError: `${uid}-code-error`,
   };
 
+  const core = useCore();
+  const connected = core.phase === "connected";
+  const [houseReady, setHouseReady] = useState<boolean | null>(null);
   const [mode, setMode] = useState<Mode>("passkey");
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +46,27 @@ export function LoginForm() {
   useEffect(() => {
     if (session) router.replace(next);
   }, [session, router, next]);
+
+  // Find the Core, and ask it whether a house exists yet.
+  useEffect(() => {
+    startCore();
+  }, []);
+  useEffect(() => {
+    if (!connected) return;
+    let alive = true;
+    identity
+      .household()
+      .then((h) => alive && setHouseReady(h.setup))
+      .catch(() => alive && setHouseReady(null));
+    return () => {
+      alive = false;
+    };
+  }, [connected]);
+
+  const arrive = (view: Awaited<ReturnType<typeof identity.loginWithPasskey>>, method: "passkey" | "recovery") => {
+    signIn(sessionRecord(view, method));
+    router.replace(next);
+  };
 
   // Preview: the session is built from what the person typed and saved on
   // this device only. Nothing is sent anywhere.
@@ -65,12 +92,45 @@ export function LoginForm() {
       return;
     }
     setBusy(true);
-    // The real flow calls navigator.credentials.get with a challenge from the
-    // box and posts the assertion back over the home network, or through the
-    // Gate with your key. Until then the wait stands in for the device prompt.
+    if (connected) {
+      // The Core sends a challenge; this device signs it; the Core answers with a session cookie.
+      try {
+        arrive(await identity.loginWithPasskey(clean), "passkey");
+      } catch (err) {
+        setError(explain(err));
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    // Preview without a Core: the wait stands in for the device prompt.
     await new Promise((r) => setTimeout(r, 700));
     setBusy(false);
     finish("passkey", { name: displayNameFromEmail(clean), email: clean });
+  };
+
+  const recover = async (e: FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+    setError(null);
+    const clean = email.trim();
+    if (!clean.includes("@")) {
+      setError("Enter the email you set up the house with.");
+      emailRef.current?.focus();
+      return;
+    }
+    if (code.replace(/[^a-z0-9]/gi, "").length < 8) {
+      setError("Enter one of the recovery codes you wrote down.");
+      return;
+    }
+    setBusy(true);
+    try {
+      arrive(await identity.recover(clean, code), "recovery");
+    } catch (err) {
+      setError(explain(err));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const submitCode = async (d: string[]) => {
@@ -133,8 +193,20 @@ export function LoginForm() {
         Use the passkey on this device, or the six-digit code showing on the front of your Core.
       </p>
 
+      {connected && houseReady === false && (
+        <div role="status" className="mt-6 rounded-[12px] bg-white p-4 text-[13px] ring-1 ring-ink/5" data-testid="no-house-yet">
+          <div className="font-medium">Your Core is here, but it has no house yet.</div>
+          <p className="mt-1 text-ash">
+            Set one up first, then come back to sign in.{" "}
+            <Link href="/signup" className="font-medium text-ink underline decoration-amber decoration-2 underline-offset-4">
+              Set up a house
+            </Link>
+          </p>
+        </div>
+      )}
+
       <div className="mt-8 flex rounded-[10px] bg-white p-1 ring-1 ring-ink/8" role="tablist" aria-label="Sign-in method">
-        {(["passkey", "code"] as Mode[]).map((m) => (
+        {(connected ? (["passkey", "code", "recovery"] as Mode[]) : (["passkey", "code"] as Mode[])).map((m) => (
           <button
             key={m}
             type="button"
@@ -149,7 +221,7 @@ export function LoginForm() {
             }}
             className={`flex-1 rounded-[8px] py-2 text-[13px] font-medium transition-colors ${mode === m ? "bg-ink text-bone" : "text-ink/70 hover:text-ink"}`}
           >
-            {m === "passkey" ? "Passkey" : "Code on the screen"}
+            {m === "passkey" ? "Passkey" : m === "code" ? "Code on the screen" : "Recovery code"}
           </button>
         ))}
       </div>
@@ -190,7 +262,54 @@ export function LoginForm() {
           <button type="submit" disabled={busy} aria-busy={busy || undefined} className="btn btn-primary mt-5 w-full disabled:opacity-60">
             {busy ? "Waiting for your device…" : "Continue with passkey"}
           </button>
-          <p className="mt-3 text-center text-[12px] text-ash">Face, fingerprint or device PIN. No password exists to leak.</p>
+          <p className="mt-3 text-center text-[12px] text-ash">
+            {connected ? `Face, fingerprint or device PIN, checked by your Core at ${core.phase === "connected" ? new URL(core.url).hostname : "home"}.` : "Face, fingerprint or device PIN. No password exists to leak."}
+          </p>
+        </form>
+      ) : mode === "recovery" ? (
+        <form id={`${uid}-panel-recovery`} role="tabpanel" aria-labelledby={`${uid}-tab-recovery`} onSubmit={recover} className="mt-6" noValidate>
+          <label htmlFor={`${ids.email}-r`} className="block text-[13px] font-medium text-ash">
+            Email
+          </label>
+          <input
+            id={`${ids.email}-r`}
+            ref={emailRef}
+            type="email"
+            autoComplete="username"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (error) setError(null);
+            }}
+            disabled={busy}
+            className={`${field} border-ink/10`}
+            placeholder="you@example.com"
+          />
+          <label htmlFor={`${uid}-recovery-code`} className="mt-4 block text-[13px] font-medium text-ash">
+            Recovery code
+          </label>
+          <input
+            id={`${uid}-recovery-code`}
+            value={code}
+            onChange={(e) => {
+              setCode(e.target.value);
+              if (error) setError(null);
+            }}
+            disabled={busy}
+            autoComplete="one-time-code"
+            spellCheck={false}
+            className={`${field} border-ink/10 font-mono`}
+            placeholder="kq7m-v3xz"
+          />
+          {error && (
+            <p role="alert" className="mt-3 text-[13px] text-[#a13a2a]">
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={busy} aria-busy={busy || undefined} className="btn btn-primary mt-5 w-full disabled:opacity-60">
+            {busy ? "Checking with the box…" : "Sign in with a recovery code"}
+          </button>
+          <p className="mt-3 text-center text-[12px] text-ash">Each code works once. Add a passkey on this device right after.</p>
         </form>
       ) : (
         <form

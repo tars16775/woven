@@ -6,6 +6,7 @@ import { CoreStatus } from "@woven/schema";
 import { buildApp } from "../src/app.ts";
 import { loadConfig } from "../src/config.ts";
 import { createLogger } from "../src/logger.ts";
+import { buildServices } from "../src/services.ts";
 import { openData, type Data } from "../src/data.ts";
 
 const dataRoot = mkdtempSync(`${os.tmpdir()}/woven-core-`);
@@ -22,6 +23,7 @@ beforeAll(async () => {
     logger: createLogger(config),
     hardware,
     data,
+    services: buildServices(data, config),
     version: "test",
     startedAt: new Date(),
   });

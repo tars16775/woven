@@ -1,4 +1,6 @@
-import { expect, type ConsoleMessage, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { expect, type BrowserContext, type ConsoleMessage, type Page } from "@playwright/test";
 
 /** The public routes from src/app/sitemap.ts, kept as plain paths for the browser. */
 export const publicPaths = [
@@ -88,10 +90,72 @@ export async function openLogin(page: Page) {
   await expect(passkeyTab).toHaveAttribute("aria-selected", "true");
 }
 
-/** Sign in through the simulated passkey flow and land on `next` (default /dashboard). */
-export async function signInWithPasskey(page: Page, email = "alex@example.com") {
+export const LIVE = process.env.LIVE_CORE === "1";
+/** The demo household seeded for LIVE_CORE runs (apps/core/src/cli/seed.ts). Recovery codes are single-use. */
+export const demo = {
+  email: "alex@example.com",
+  household: "Alex's house",
+  /** Spent by live-setup.ts to create the shared session. */
+  setupCode: "demo-house",
+  /** For tests that need a session of their own (they sign out, etc.); tried in order. */
+  ownCodes: ["demo-key-1", "demo-key-2", "demo-key-3"],
+};
+/** Where live-setup.ts leaves the signed-in state (cookies on the core, session in localStorage). */
+export const liveStatePath = path.resolve(__dirname, "../../test-results/live-state.json");
+
+/** Sign in on the login page with a recovery code. */
+export async function signInWithRecoveryCode(page: Page, code: string, email = demo.email) {
   await openLogin(page);
-  await page.getByLabel("Email").fill(email);
-  await page.getByRole("button", { name: "Continue with passkey" }).click();
+  const tab = page.getByRole("tab", { name: "Recovery code" });
+  await expect(tab).toBeVisible({ timeout: 30_000 });
+  await tab.click();
+  await page.getByRole("textbox", { name: "Email" }).fill(email);
+  await page.getByRole("textbox", { name: "Recovery code" }).fill(code);
+  await page.getByRole("button", { name: "Sign in with a recovery code" }).click();
+}
+
+/** Try the test's own codes in order until one signs in (retries spend codes). */
+export async function signInWithOwnCode(page: Page) {
+  for (const code of demo.ownCodes) {
+    await signInWithRecoveryCode(page, code);
+    const outcome = await Promise.race([
+      page.waitForURL(/\/dashboard(\/|$)/, { timeout: 15_000 }).then(() => "ok" as const),
+      page.getByRole("alert").filter({ hasText: /did not match/ }).waitFor({ timeout: 15_000 }).then(() => "spent" as const),
+    ]).catch(() => "unknown" as const);
+    if (outcome === "ok") return;
+  }
+  throw new Error("every demo recovery code was spent; restart the live core");
+}
+
+/** Apply the shared signed-in state saved by live-setup.ts to this page's context. */
+async function applyLiveState(page: Page) {
+  const state = JSON.parse(readFileSync(liveStatePath, "utf8")) as {
+    cookies: Parameters<BrowserContext["addCookies"]>[0];
+    origins: { origin: string; localStorage: { name: string; value: string }[] }[];
+  };
+  await page.context().addCookies(state.cookies);
+  const items = state.origins.flatMap((o) => o.localStorage);
+  // Set localStorage once from a page on the origin (not an init script, so tests can sign out later).
+  await page.goto("/login");
+  await page.evaluate((entries: { name: string; value: string }[]) => {
+    for (const e of entries) localStorage.setItem(e.name, e.value);
+  }, items);
+}
+
+/**
+ * Sign in and land on /dashboard. Without a Core this is the simulated
+ * passkey flow. With LIVE_CORE the login page talks to the real core, so we
+ * use the seeded owner's recovery code (a passkey needs a virtual
+ * authenticator; see live-identity.spec.ts).
+ */
+export async function signInWithPasskey(page: Page, email = demo.email) {
+  if (LIVE) {
+    await applyLiveState(page);
+    await page.goto("/dashboard");
+  } else {
+    await openLogin(page);
+    await page.getByLabel("Email").fill(email);
+    await page.getByRole("button", { name: "Continue with passkey" }).click();
+  }
   await expect(page).toHaveURL(/\/dashboard(\/|$)/);
 }
