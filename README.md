@@ -28,7 +28,7 @@ docs/backend-plan.md  the 50 phases
 curl -fsSL https://raw.githubusercontent.com/tars16775/woven/main/packaging/install.sh | bash
 ```
 
-That fetches Node and the newest release into `~/.woven`, installs a login service (`launchd`), and opens the setup page. Data goes to `~/Library/Application Support/Woven` unless `WOVEN_DATA` says otherwise. Afterwards: `woven status`, `woven logs`, `woven config`, `woven update`, `woven uninstall`. The core serves the dashboard itself at `https://woven.local:4000` (and `http://localhost:4002` on the Mac), so there is one process and one address. Releases are built by `packaging/release.sh` and published by the Release workflow on a `v*` tag.
+That fetches Node and the newest release into `~/.woven`, installs a login service (`launchd`), and opens the setup page. While the repository is private the raw URL needs a signed-in `gh` (the installer falls back to it); the public site serves the same script at `/install.sh` once it is deployed. Data goes to `~/Library/Application Support/Woven` unless `WOVEN_DATA` says otherwise. Afterwards: `woven status`, `woven logs`, `woven config`, `woven update`, `woven uninstall`. The core serves the dashboard itself at `https://woven.local:4000` (and `http://localhost:4002` on the Mac), so there is one process and one address. Releases are built by `packaging/release.sh` and published by the Release workflow on a `v*` tag.
 
 ## Run it from source
 
