@@ -72,15 +72,15 @@ if [ ! -f "$WOVEN_HOME/config.env" ]; then
   cat >"$WOVEN_HOME/config.env" <<CONF
 # Woven configuration. Edit, then: woven restart
 NODE_ENV=production
-WOVEN_DATA=${WOVEN_DATA:-$HOME/Library/Application Support/Woven}
-WOVEN_NAME=${WOVEN_NAME:-woven.local}
-WOVEN_PORT=${WOVEN_PORT:-4000}
-WOVEN_TRUST_PORT=${WOVEN_TRUST_PORT:-4001}
-WOVEN_LOCAL_PORT=${WOVEN_LOCAL_PORT:-4002}
-WOVEN_GATE_PORT=${WOVEN_GATE_PORT:-4010}
-WOVEN_ORIGINS=https://${WOVEN_NAME:-woven.local}:${WOVEN_PORT:-4000},http://localhost:${WOVEN_LOCAL_PORT:-4002},https://localhost:${WOVEN_PORT:-4000}
-WOVEN_SNAPSHOT_MIRROR=
-LOG_LEVEL=info
+WOVEN_DATA="${WOVEN_DATA:-$HOME/Library/Application Support/Woven}"
+WOVEN_NAME="${WOVEN_NAME:-woven.local}"
+WOVEN_PORT="${WOVEN_PORT:-4000}"
+WOVEN_TRUST_PORT="${WOVEN_TRUST_PORT:-4001}"
+WOVEN_LOCAL_PORT="${WOVEN_LOCAL_PORT:-4002}"
+WOVEN_GATE_PORT="${WOVEN_GATE_PORT:-4010}"
+WOVEN_ORIGINS="https://${WOVEN_NAME:-woven.local}:${WOVEN_PORT:-4000},http://localhost:${WOVEN_LOCAL_PORT:-4002},https://localhost:${WOVEN_PORT:-4000}"
+WOVEN_SNAPSHOT_MIRROR=""
+LOG_LEVEL="info"
 CONF
 fi
 set -a; . "$WOVEN_HOME/config.env"; set +a

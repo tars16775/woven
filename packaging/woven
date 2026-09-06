@@ -26,8 +26,10 @@ USAGE
 }
 
 loaded() { launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1; }
-port() { (grep -E '^WOVEN_PORT=' "$CONFIG" 2>/dev/null | cut -d= -f2) || true; }
-name() { (grep -E '^WOVEN_NAME=' "$CONFIG" 2>/dev/null | cut -d= -f2) || true; }
+setting() { (grep -E "^$1=" "$CONFIG" 2>/dev/null | cut -d= -f2- | tr -d '"') || true; }
+port() { setting WOVEN_PORT; }
+name() { setting WOVEN_NAME; }
+datadir() { setting WOVEN_DATA; }
 
 case "${1:-}" in
   start)
@@ -47,7 +49,7 @@ case "${1:-}" in
   status)
     if loaded; then
       pid=$(launchctl print "gui/$(id -u)/$LABEL" 2>/dev/null | awk '/pid =/{print $3; exit}')
-      echo "Running (pid ${pid:-?}) · https://$(name):$(port) · data: $(grep -E '^WOVEN_DATA=' "$CONFIG" | cut -d= -f2-)"
+      echo "Running (pid ${pid:-?}) - https://$(name):$(port) - data: $(datadir)"
       curl -sk --max-time 3 "https://localhost:$(port)/v1/health" || echo "  (not answering yet)"
       echo
     else
@@ -65,7 +67,7 @@ case "${1:-}" in
     "$0" stop >/dev/null 2>&1 || true
     rm -f "$PLIST"
     rm -rf "$WOVEN_HOME/current" "$WOVEN_HOME/releases" "$WOVEN_HOME/node"
-    echo "Woven is uninstalled. Your data is untouched at: $(grep -E '^WOVEN_DATA=' "$CONFIG" | cut -d= -f2-)"
+    echo "Woven is uninstalled. Your data is untouched at: $(datadir)"
     ;;
   *) usage; exit 1 ;;
 esac
