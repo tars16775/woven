@@ -52,8 +52,10 @@ export const actionRoutes: FastifyPluginAsync = async (raw) => {
     services.actions.decline(req.params.id, req.session!.person),
   );
 
-  app.post("/actions/:id/execute", { preHandler: requireSession, schema: { params: z.object({ id: Ulid }), response: { 200: ActionRecord } } }, async (req) => {
+  app.post("/actions/:id/execute", { preHandler: requireSession, schema: { params: z.object({ id: Ulid }), response: { 200: ActionRecord.extend({ secret: z.string().optional() }) } } }, async (req) => {
     const { actor } = who(req);
-    return services.actions.execute(req.params.id, actor);
+    const record = await services.actions.execute(req.params.id, actor);
+    const secret = services.actions.takeSecret(req.params.id);
+    return secret ? { ...record, secret } : record;
   });
 };

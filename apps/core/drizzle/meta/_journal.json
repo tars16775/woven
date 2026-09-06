@@ -71,6 +71,13 @@
       "when": 1788723728011,
       "tag": "0009_device_secret",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1788730000000,
+      "tag": "0010_rescue",
+      "breakpoints": true
     }
   ]
 }

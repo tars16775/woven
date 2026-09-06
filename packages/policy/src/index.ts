@@ -29,6 +29,8 @@ export type ApprovalRequirement = {
 export type PolicyRequest = {
   actor: { kind: "person" | "agent" | "routine" | "core"; id: string; role?: Role };
   riskClass: RiskClass;
+  /** The capability name, for the few rules that turn on it. */
+  capability?: string | undefined;
   namespace: Namespace;
   /** Whether a household adult is physically present, when known. */
   presence?: boolean | undefined;
@@ -103,6 +105,8 @@ export function evaluate(req: PolicyRequest, ctx: PolicyContext = defaultContext
       }
       return { outcome: "approve", reason: "Above the automatic limit.", requires: { by: "self", factors: [], ttlSeconds: 600 } };
     case "H":
+      // Rescuing a locked-out person is the one administrative act any trusted adult can do: the owner may be the one locked out.
+      if (req.capability === "person.recover" && role === "adult") return { outcome: "approve", reason: "A trusted adult confirms with a passkey.", requires: { by: "adult", factors: ["strong_auth"], ttlSeconds: 120 } };
       if (role !== "owner") return { outcome: "deny", reason: "Only the owner can change keys, ownership or reset the box." };
       return { outcome: "approve", reason: "Administrative action.", requires: { by: "owner", factors: ["strong_auth"], ttlSeconds: 120 } };
     default:

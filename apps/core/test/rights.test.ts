@@ -174,6 +174,30 @@ describe("data rights (phase 11)", () => {
     expect(data.ledger.verify().ok).toBe(true);
   });
 
+  it("lets a trusted adult rescue someone locked out with a one-time code that expires", async () => {
+    const res = await app.inject({ method: "POST", url: "/v1/household/people", headers: auth(owner), payload: { name: "Sam", email: "sam@example.com", role: "adult" } });
+    const sam = res.json<{ id: string }>().id;
+    const prepared = await app.inject({ method: "POST", url: "/v1/actions/prepare", headers: auth(owner), payload: { capability: "person.recover", target: "household", parameters: { personId: sam } } });
+    expect(prepared.json<{ status: string; approval: { by: string; factors: string[] }; preview: string }>()).toMatchObject({ status: "prepared", approval: { by: "owner", factors: ["strong_auth"] } });
+    expect(prepared.json<{ preview: string }>().preview).toMatch(/rescue code/);
+    const noKey = await app.inject({ method: "POST", url: `/v1/actions/${prepared.json<{ id: string }>().id}/execute`, headers: auth(owner) });
+    expect(noKey.statusCode).toBe(409);
+    // The service, as the executor calls it after the passkey check: a code that signs Sam in once.
+    const samPerson = services.household.person(sam)!;
+    const issued = services.recovery.rescue(samPerson, ownerId);
+    expect(issued.code).toMatch(/^[a-z2-9]{4}-[a-z2-9]{4}$/);
+    expect(new Date(issued.expiresAt).getTime() - Date.now()).toBeGreaterThan(25 * 60_000);
+    expect(services.recovery.remaining(samPerson)).toBe(0); // a rescue code is not a recovery code
+    const late = services.recovery.redeem(samPerson, issued.code, new Date(Date.now() + 31 * 60_000));
+    expect(late).toBe(false);
+    const signedIn = await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "sam@example.com", code: issued.code } });
+    expect(signedIn.statusCode).toBe(200);
+    expect(signedIn.json()).toMatchObject({ person: { name: "Sam" }, method: "recovery" });
+    const again = await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "sam@example.com", code: issued.code } });
+    expect(again.statusCode).toBe(401);
+    expect(() => services.recovery.rescue(samPerson, sam)).not.toThrow(); // the service does not judge; the executor does
+  });
+
   it("transfers ownership only through the class H action with a passkey, and the roles swap", async () => {
     const res = await app.inject({ method: "POST", url: "/v1/household/people", headers: auth(owner), payload: { name: "Jo", email: "jo@example.com", role: "adult" } });
     const jo = res.json<{ id: string }>().id;

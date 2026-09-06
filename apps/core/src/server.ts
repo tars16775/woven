@@ -12,6 +12,7 @@ import { scheduleNightly } from "./maintenance.ts";
 import { buildServices } from "./services.ts";
 import { MediaService } from "./media.ts";
 import { assess } from "./alerts.ts";
+import { LOW_CODES } from "./auth/recovery.ts";
 import { listSnapshots } from "./integrity.ts";
 import { startGate } from "./gate/spawn.ts";
 import { coreDnsNames, lanAddresses } from "./network.ts";
@@ -106,7 +107,15 @@ async function main() {
       const [storage, snaps] = await Promise.all([hardware.storage(), listSnapshots(paths.snapshots, config.snapshotMirror)]);
       const certDaysLeft = tls ? Math.floor((new Date(tls.server.notAfter).getTime() - Date.now()) / 86400_000) : null;
       const lastSnapshotAgeHours = snaps[0] ? (Date.now() - new Date(snaps[0].takenAt).getTime()) / 3600_000 : null;
-      assess(services.alerts, { diskFreeBytes: storage.freeBytes, diskTotalBytes: storage.totalBytes, ledgerOk: night.ledgerOk, objectsBad: night.objectsBad, mirrorConfigured: !!config.snapshotMirror, mirrorOk: night.mirrorOk, certDaysLeft, gate: services.gate.cached().state, lastSnapshotAgeHours });
+      const house = services.household.household();
+      const lowCodes = house
+        ? services.household
+            .people(house.id)
+            .filter((p) => p.role === "owner" || p.role === "adult")
+            .map((p) => ({ name: p.name, left: services.recovery.remaining(p) }))
+            .filter((p) => p.left < LOW_CODES)
+        : [];
+      assess(services.alerts, { diskFreeBytes: storage.freeBytes, diskTotalBytes: storage.totalBytes, ledgerOk: night.ledgerOk, objectsBad: night.objectsBad, mirrorConfigured: !!config.snapshotMirror, mirrorOk: night.mirrorOk, certDaysLeft, gate: services.gate.cached().state, lastSnapshotAgeHours, lowCodes });
     } catch (err) {
       logger.warn({ err }, "could not assess alerts");
     }

@@ -94,6 +94,11 @@ describe("alerts and metrics (phases 44 and 47)", () => {
     const base = { diskFreeBytes: 500e9, diskTotalBytes: 1e12, ledgerOk: true, objectsBad: 0, mirrorConfigured: true, mirrorOk: true, certDaysLeft: 200, gate: "open" as const, lastSnapshotAgeHours: 5 };
     assess(a, base);
     expect(a.list()).toEqual([]);
+    assess(a, { ...base, lowCodes: [{ name: "Alex", left: 2 }] });
+    expect(a.list().map((x) => x.id)).toEqual(["recovery-codes"]);
+    expect(a.list()[0]?.detail).toMatch(/Alex has 2/);
+    assess(a, { ...base, lowCodes: [] });
+    expect(a.list()).toEqual([]);
     assess(a, { ...base, diskFreeBytes: 20e9, ledgerOk: false });
     expect(a.list().map((x) => `${x.level}:${x.id}`).sort()).toEqual(["urgent:disk", "urgent:ledger"]);
     const since = a.list().find((x) => x.id === "ledger")!.since;

@@ -201,6 +201,16 @@ export const capabilities: readonly CapabilitySpec[] = [
     preview: (_t, p) => `Transfer ownership of the house to ${p.toPersonId}.`,
   }),
   spec({
+    name: "person.recover",
+    riskClass: "H",
+    idempotent: false,
+    latency: "interactive",
+    description: "Give someone who lost every device and their codes a one-time way back in.",
+    executor: "household",
+    params: z.object({ personId: z.string().min(1) }),
+    preview: (_t, p) => `Give ${p.personId} a one-time rescue code, good for 30 minutes.`,
+  }),
+  spec({
     name: "core.factory_reset",
     riskClass: "H",
     idempotent: false,

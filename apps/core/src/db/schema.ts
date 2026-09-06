@@ -37,7 +37,7 @@ export const credentials = sqliteTable(
   {
     id: text("id").primaryKey(),
     personId: text("person_id").notNull().references(() => people.id),
-    kind: text("kind", { enum: ["passkey", "recovery"] }).notNull(),
+    kind: text("kind", { enum: ["passkey", "recovery", "rescue"] }).notNull(),
     /** WebAuthn credential id, base64url. */
     credentialId: text("credential_id").notNull(),
     publicKey: text("public_key").notNull(),
@@ -47,6 +47,8 @@ export const credentials = sqliteTable(
     createdAt: text("created_at").notNull(),
     lastUsedAt: text("last_used_at"),
     revokedAt: text("revoked_at"),
+    /** Rescue codes (gap 4) are short-lived; passkeys and recovery codes have none. */
+    expiresAt: text("expires_at"),
   },
   (t) => [uniqueIndex("credentials_credential_id_idx").on(t.credentialId), index("credentials_person_idx").on(t.personId)],
 );

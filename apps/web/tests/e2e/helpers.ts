@@ -107,7 +107,7 @@ export const liveStatePath = path.resolve(__dirname, "../../test-results/live-st
 /** Sign in on the login page with a recovery code. */
 export async function signInWithRecoveryCode(page: Page, code: string, email = demo.email) {
   await openLogin(page);
-  const tab = page.getByRole("tab", { name: "Recovery code" });
+  const tab = page.getByRole("tab", { name: "I lost my devices" });
   await expect(tab).toBeVisible({ timeout: 30_000 });
   await tab.click();
   await page.getByRole("textbox", { name: "Email" }).fill(email);

@@ -120,7 +120,7 @@ export function LoginForm() {
       return;
     }
     if (code.replace(/[^a-z0-9]/gi, "").length < 8) {
-      setError("Enter one of the recovery codes you wrote down.");
+      setError("Enter one of the codes you wrote down, or the rescue code you were given.");
       return;
     }
     setBusy(true);
@@ -232,7 +232,7 @@ export function LoginForm() {
             }}
             className={`flex-1 rounded-[8px] py-2 text-[13px] font-medium transition-colors ${mode === m ? "bg-ink text-bone" : "text-ink/70 hover:text-ink"}`}
           >
-            {m === "passkey" ? "Passkey" : m === "code" ? "Code on the screen" : "Recovery code"}
+            {m === "passkey" ? "Passkey" : m === "code" ? "Code on the screen" : "I lost my devices"}
           </button>
         ))}
       </div>
@@ -320,7 +320,7 @@ export function LoginForm() {
           <button type="submit" disabled={busy} aria-busy={busy || undefined} className="btn btn-primary mt-5 w-full disabled:opacity-60">
             {busy ? "Checking with the box…" : "Sign in with a recovery code"}
           </button>
-          <p className="mt-3 text-center text-[12px] text-ash">Each code works once. Add a passkey on this device right after.</p>
+          <p className="mt-3 text-center text-[12px] text-ash">One of the codes you wrote down, or a rescue code another adult in the house just gave you. Each works once; add a passkey on this device right after.</p>
         </form>
       ) : (
         <form

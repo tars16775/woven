@@ -21,6 +21,10 @@ describe("@woven/policy", () => {
 
   it("never allows F or G, for anyone", () => {
     expect(evaluate(req({ riskClass: "F" })).outcome).toBe("deny");
+    // Class H is the owner's, except rescuing a locked-out person, which any trusted adult may do with a passkey.
+    expect(evaluate({ ...req({ riskClass: "H" }), actor: { kind: "person", id: "a", role: "adult" } }).outcome).toBe("deny");
+    expect(evaluate({ ...req({ riskClass: "H" }), capability: "person.recover", actor: { kind: "person", id: "a", role: "adult" } })).toMatchObject({ outcome: "approve", requires: { by: "adult", factors: ["strong_auth"] } });
+    expect(evaluate({ ...req({ riskClass: "H" }), capability: "person.recover", actor: { kind: "person", id: "c", role: "child" } }).outcome).toBe("deny");
     expect(evaluate(req({ riskClass: "G", actor: maya })).outcome).toBe("deny");
   });
 

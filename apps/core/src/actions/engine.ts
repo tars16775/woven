@@ -38,6 +38,8 @@ export type EngineDeps = {
   verifyAssertion: (key: string, credential: Record<string, unknown>) => Promise<string>;
   /** Class H household changes, run only after the approval above. */
   transferOwnership: (fromPersonId: string, toPersonId: string) => { from: string; to: string };
+  /** person.recover: a one-time rescue code for someone locked out, issued by the approving adult. */
+  recoverPerson: (byPersonId: string, personId: string) => { personId: string; code: string; expiresAt: string };
   /** model.install: fetch every file through the Gate; resolves with what arrived. */
   installModel?: (model: string, actionId: string) => Promise<{ bytes: number; files: number }>;
   now?: () => Date;
@@ -50,6 +52,8 @@ export type EngineDeps = {
  */
 export class ActionEngine {
   private readonly now: () => Date;
+  /** One-time secrets an execution produced, handed to the caller once (person.recover). */
+  private readonly secrets = new Map<string, string>();
   constructor(private readonly deps: EngineDeps) {
     this.now = deps.now ?? (() => new Date());
   }
@@ -78,6 +82,7 @@ export class ActionEngine {
         // A routine acts with its author's role: it can do what they could, and no more.
         actor: { kind: actor.kind === "routine" && actor.role ? "person" : actor.kind, id: actor.id, ...(actor.role ? { role: actor.role } : {}) },
         riskClass: spec.riskClass,
+        capability: spec.name,
         namespace,
         presence: this.deps.presence.get().adultsHome,
         amount: typeof params.amount === "number" ? params.amount : undefined,
@@ -248,9 +253,15 @@ export class ActionEngine {
         }
         case "household": {
           where = "inside";
-          if (spec.name !== "household.transfer_ownership") throw new ActionError(409, `${spec.name} is not wired yet.`);
-          if (!row.approvedBy) throw new ActionError(403, "Ownership only moves after the owner confirms with a passkey.");
-          observed = this.deps.transferOwnership(row.approvedBy, String(params.toPersonId));
+          if (!row.approvedBy) throw new ActionError(403, "This only happens after someone confirms with a passkey.");
+          if (spec.name === "household.transfer_ownership") {
+            observed = this.deps.transferOwnership(row.approvedBy, String(params.toPersonId));
+          } else if (spec.name === "person.recover") {
+            const r = this.deps.recoverPerson(row.approvedBy, String(params.personId));
+            // The code goes to the approver once, never into the record or the ledger.
+            this.secrets.set(id, r.code);
+            observed = { personId: r.personId, expiresAt: r.expiresAt };
+          } else throw new ActionError(409, `${spec.name} is not wired yet.`);
           break;
         }
         case "core":
@@ -292,6 +303,13 @@ export class ActionEngine {
       if (err instanceof ActionError && err.status >= 500) return this.get(prepared.id)!;
       throw err;
     }
+  }
+
+  /** The secret an execution produced, if any; gone after this. */
+  takeSecret(id: string): string | null {
+    const s = this.secrets.get(id) ?? null;
+    this.secrets.delete(id);
+    return s;
   }
 
   private mustGet(id: string) {

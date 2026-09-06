@@ -66,6 +66,7 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
   const passkeys = new PasskeyService(db, config.origins);
   const presence = new Presence();
   const household = new HouseholdService(db, data.ledger);
+  const recovery = new RecoveryService(db);
   const rights = new RightsService(db, data.ledger, household, data.store, join(data.paths.root, "exports"));
   const files = new FilesService(db, data.ledger, data.store, household, data.paths.storeTmp);
   const photos = new PhotoService(db, data.ledger, data.store, household, files);
@@ -107,6 +108,15 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
       embedSoon();
       return { bytes: state.bytes, files: Object.keys(spec.files).length };
     },
+    recoverPerson: (byId, personId) => {
+      const by = household.person(byId);
+      const target = household.person(personId);
+      if (!by || !target || target.householdId !== by.householdId) throw new Error("no such person");
+      if (target.id === by.id) throw new Error("You cannot rescue yourself; ask another adult.");
+      const r = recovery.rescue(target, by.id);
+      data.ledger.append({ type: "person.rescued", householdId: by.householdId, actor: { kind: "person", id: by.id }, where: "inside", sensitivity: "high", payload: { personId: target.id, expiresAt: r.expiresAt } });
+      return { personId: target.id, ...r };
+    },
     transferOwnership: (fromId, toId) => {
       const from = household.person(fromId);
       if (!from) throw new Error("no such person");
@@ -121,7 +131,7 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
     household,
     sessions: new SessionService(db, data.ledger),
     passkeys,
-    recovery: new RecoveryService(db),
+    recovery,
     enrolments: new OneTimeStore<Enrolment>(15 * 60 * 1000),
     home,
     presence,

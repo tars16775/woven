@@ -33,7 +33,8 @@ export const actions = {
   prepare: (req: PrepareRequest) => call("/v1/actions/prepare", ActionRecord, post(req)),
   approve: (id: string, assertion?: { key: string; credential: Record<string, unknown> }) => call(`/v1/actions/${id}/approve`, ActionRecord, post(assertion ? { assertion } : {})),
   decline: (id: string) => call(`/v1/actions/${id}/decline`, ActionRecord, post()),
-  execute: (id: string) => call(`/v1/actions/${id}/execute`, ActionRecord, post()),
+  /** `secret` comes back once for the few actions that produce one (person.recover); it is never stored on the box. */
+  execute: (id: string) => call(`/v1/actions/${id}/execute`, ActionRecord.extend({ secret: z.string().optional() }), post()),
   pending: () => call("/v1/actions?status=prepared&limit=20", z.object({ actions: z.array(ActionRecord) })).then((r) => r.actions),
   recent: (limit = 20) => call(`/v1/actions?limit=${limit}`, z.object({ actions: z.array(ActionRecord) })).then((r) => r.actions),
 };

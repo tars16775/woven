@@ -142,6 +142,7 @@ export const EventType = z.enum([
   "household.created",
   "person.created",
   "person.removed",
+  "person.rescued",
   "session.started",
   "session.ended",
   "action.prepared",

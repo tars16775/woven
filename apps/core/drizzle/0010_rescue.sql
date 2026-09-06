@@ -1,0 +1,1 @@
+ALTER TABLE `credentials` ADD `expires_at` text;

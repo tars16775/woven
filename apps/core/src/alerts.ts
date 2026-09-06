@@ -27,7 +27,7 @@ export class Alerts {
 }
 
 /** The checks that raise or clear alerts from what the box already knows. */
-export function assess(alerts: Alerts, facts: { diskFreeBytes: number; diskTotalBytes: number; ledgerOk: boolean; objectsBad: number; mirrorConfigured: boolean; mirrorOk: boolean | null; certDaysLeft: number | null; gate: "open" | "closed" | "absent"; lastSnapshotAgeHours: number | null }): void {
+export function assess(alerts: Alerts, facts: { diskFreeBytes: number; diskTotalBytes: number; ledgerOk: boolean; objectsBad: number; mirrorConfigured: boolean; mirrorOk: boolean | null; certDaysLeft: number | null; gate: "open" | "closed" | "absent"; lastSnapshotAgeHours: number | null; lowCodes?: { name: string; left: number }[] }): void {
   const freePct = facts.diskTotalBytes ? (facts.diskFreeBytes / facts.diskTotalBytes) * 100 : 100;
   if (freePct < 3) alerts.raise("disk", "urgent", "The volume is almost full", `${freePct.toFixed(1)}% free. Backups and photos will stop landing.`);
   else if (freePct < 10) alerts.raise("disk", "warn", "The volume is filling up", `${freePct.toFixed(0)}% free. Add a drive or clear space soon.`);
@@ -52,4 +52,8 @@ export function assess(alerts: Alerts, facts: { diskFreeBytes: number; diskTotal
 
   if (facts.lastSnapshotAgeHours !== null && facts.lastSnapshotAgeHours > 48) alerts.raise("snapshot", "warn", "No recent snapshot", `The last one is ${Math.round(facts.lastSnapshotAgeHours / 24)} days old.`);
   else alerts.clear("snapshot");
+
+  const low = facts.lowCodes ?? [];
+  if (low.length) alerts.raise("recovery-codes", "info", "Recovery codes are running low", `${low.map((p) => `${p.name} has ${p.left}`).join(", ")}. Print a new set from Settings before they are gone.`);
+  else alerts.clear("recovery-codes");
 }
