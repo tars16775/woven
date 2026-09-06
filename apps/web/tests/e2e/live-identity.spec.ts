@@ -90,7 +90,7 @@ test("invite a member by link, join with a passkey, sign in by the screen code, 
   // A child without email signs in with the code on the box's screen (read from loopback, as the screen itself would).
   await page.getByTestId("invite").click();
   await page.getByRole("dialog").getByRole("textbox", { name: "Name" }).fill("Sam Junior");
-  await page.getByRole("combobox").selectOption("child");
+  await page.getByRole("dialog").getByRole("combobox").selectOption("child");
   await page.getByRole("button", { name: "Make an invitation link" }).click();
   await page.getByRole("button", { name: "Done" }).click();
   const code = await page.evaluate(async () => {

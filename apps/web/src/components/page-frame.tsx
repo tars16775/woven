@@ -61,7 +61,7 @@ export function Block({
 
 export function Code({ children }: { children: string }) {
   return (
-    <pre className="overflow-x-auto rounded-[12px] bg-graphite px-5 py-4 font-mono text-[12.5px] leading-relaxed text-bone">
+    <pre tabIndex={0} className="overflow-x-auto rounded-[12px] bg-graphite px-5 py-4 font-mono text-[12.5px] leading-relaxed text-bone focus:outline-none focus-visible:ring-2 focus-visible:ring-amber">
       <code>{children}</code>
     </pre>
   );
