@@ -43,7 +43,11 @@ Honest limits of the Mac phase: no Thread or Zigbee without a Linux radio bridge
 | 6 Site meets core | first pass · 2026-09-06 | dashboard discovers the core (woven.local, loopback :4002), "Connect to your Core" card, shell + Overview + Core + Activity read real status and ledger; remaining screens switch as their services land |
 | 7 Household model | done · 2026-09-06 | households, people, roles, soft removal, private namespaces (personal, health, financial, work) checked per owner; `/v1/household*`; every change a receipt |
 | 8 Passkeys | done · 2026-09-06 | SimpleWebAuthn registration and sign-in, rpID from the dashboard origin, httpOnly device sessions, recovery codes shown once, `/v1/auth/*`; signup and login talk to the Core when one is connected; Settings shows your keys; e2e with Chrome's virtual authenticator |
-| 9 Code on the screen | next | |
+| 9 Code on the screen | queued | |
+| 12 Capabilities | done · 2026-09-06 | registry in apps/core/src/actions/capabilities.ts: schemas, risk classes, readback, previews; `/v1/capabilities`, `/v1/actions/*` prepare, approve, decline, execute, run |
+| 13 Policy engine | done · 2026-09-06 | classes A to H against role, namespace, presence, bounds and the spend limit; approvals bound to a parameter hash (changed parameters never run); idempotency keys; expiry; 12 policy tests |
+| 14 Approvals | done · 2026-09-06 | receipts with planned, observed and who approved; presence from the dashboard until phones report it; strong authentication for class H is a fresh passkey assertion |
+| 15 The Gate | done · 2026-09-06 | separate process (child of the core on the Mac, Outside processor on the box), loopback + secret, allow list, open/close persisted, its own crossing log; the core's only egress is the Gate client (lint-enforced); closing makes an approved crossing fail with a receipt |
 
 ## Tracks and phases
 

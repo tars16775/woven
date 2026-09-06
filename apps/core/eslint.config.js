@@ -14,6 +14,7 @@ export default tseslint.config(
       "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { arguments: false } }],
       // ADR 0005: the core has no network egress of its own. Only the Gate client may reach out.
+      "no-restricted-globals": ["error", { name: "fetch", message: "Outbound HTTP goes through the Gate client (src/gate/client.ts)." }],
       "no-restricted-imports": [
         "error",
         {
@@ -27,5 +28,7 @@ export default tseslint.config(
       ],
     },
   },
+  // Tests match on shapes with expect.stringMatching and friends, which are typed `any` by design.
+  { files: ["test/**/*.ts"], rules: { "@typescript-eslint/no-unsafe-assignment": "off" } },
   { files: ["eslint.config.js", "tsup.config.ts", "vitest.config.ts"], extends: [tseslint.configs.disableTypeChecked] },
 );

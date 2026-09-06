@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { CoreClient, type CoreConfig, type CoreStatus, type LedgerRow } from "./client";
+import { CoreClient, type CoreConfig, type CoreStatus, type GateStatus, type LedgerRow } from "./client";
 import { LIVE, defaultCandidates, discover, normalize, probe, remember } from "./discovery";
 
 /**
@@ -15,7 +15,7 @@ import { LIVE, defaultCandidates, discover, normalize, probe, remember } from ".
 export type CoreState =
   | { phase: "off" }
   | { phase: "searching"; tried: string[] }
-  | { phase: "connected"; url: string; version: string; status: CoreStatus | null; config: CoreConfig | null; rows: LedgerRow[]; since: number }
+  | { phase: "connected"; url: string; version: string; status: CoreStatus | null; config: CoreConfig | null; gate: GateStatus | null; rows: LedgerRow[]; since: number }
   | { phase: "unreachable"; tried: string[]; reason: string };
 
 const initial: CoreState = LIVE ? { phase: "searching", tried: [] } : { phase: "off" };
@@ -45,6 +45,20 @@ export function useCore(): CoreState {
 /** The client for the connected Core, or null. */
 export function coreClient(): CoreClient | null {
   return client;
+}
+
+/** The current state outside React (event handlers, stores). */
+export function coreState(): CoreState {
+  return state;
+}
+
+/** Re-read status and the Gate now (after an action that changed them). */
+export async function refreshCore(): Promise<void> {
+  if (!client || state.phase !== "connected") return;
+  try {
+    const [status, gate] = await Promise.all([client.status(), client.gate().catch(() => null)]);
+    if (state.phase === "connected") set({ ...state, status, gate: gate ?? state.gate });
+  } catch {}
 }
 
 /** Begin looking, once. Safe to call from every mount. */
@@ -97,14 +111,14 @@ function attach(url: string, version: string) {
   const gen = ++generation;
   remember(url);
   client = new CoreClient(url);
-  set({ phase: "connected", url, version, status: null, config: null, rows: [], since: Date.now() });
+  set({ phase: "connected", url, version, status: null, config: null, gate: null, rows: [], since: Date.now() });
 
   const refresh = async () => {
     if (!client || gen !== generation) return;
     try {
-      const status = await client.status();
+      const [status, gate] = await Promise.all([client.status(), client.gate().catch(() => null)]);
       if (gen !== generation || state.phase !== "connected") return;
-      set({ ...state, status });
+      set({ ...state, status, gate: gate ?? state.gate });
     } catch {
       if (gen !== generation) return;
       lost("the Core stopped answering");

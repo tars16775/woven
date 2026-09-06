@@ -15,6 +15,12 @@ import { authRoutes } from "./routes/auth.ts";
 import { attachSession } from "./auth/guard.ts";
 import { HouseholdError } from "./household.ts";
 import { PasskeyError } from "./auth/passkeys.ts";
+import { ActionError } from "./actions/engine.ts";
+import { DeviceError } from "./home/adapter.ts";
+import { GateError } from "./gate/client.ts";
+import { actionRoutes } from "./routes/actions.ts";
+import { homeRoutes } from "./routes/home.ts";
+import { gateRoutes } from "./routes/gate.ts";
 import type { Services } from "./services.ts";
 import type { TlsMaterial } from "./tls.ts";
 import { healthRoutes } from "./routes/health.ts";
@@ -75,7 +81,7 @@ export async function buildApp(deps: AppDeps) {
   });
 
   app.setErrorHandler((err: FastifyError, req, reply) => {
-    if (err instanceof HouseholdError || err instanceof PasskeyError) {
+    if (err instanceof HouseholdError || err instanceof PasskeyError || err instanceof ActionError || err instanceof DeviceError || err instanceof GateError) {
       void reply.status(err.status).send({ error: err.message, requestId: req.id });
       return;
     }
@@ -93,6 +99,9 @@ export async function buildApp(deps: AppDeps) {
   await app.register(eventRoutes, { prefix: "/v1" });
   await app.register(householdRoutes, { prefix: "/v1" });
   await app.register(authRoutes, { prefix: "/v1" });
+  await app.register(actionRoutes, { prefix: "/v1" });
+  await app.register(homeRoutes, { prefix: "/v1" });
+  await app.register(gateRoutes, { prefix: "/v1" });
 
   return app;
 }

@@ -289,3 +289,86 @@ export const SessionView = z.object({
 });
 export type SessionView = z.infer<typeof SessionView>;
 
+/* Actions, approvals, the Gate (phases 12 to 15) ---------------------------- */
+
+export const ActionStatus = z.enum(["prepared", "approved", "declined", "executing", "succeeded", "failed", "expired"]);
+export type ActionStatus = z.infer<typeof ActionStatus>;
+
+/** An action as the dashboard sees it, from prepare to receipt. */
+export const ActionRecord = z.object({
+  id: Ulid,
+  householdId: Ulid,
+  actor: ActorRef,
+  capability: CapabilityName,
+  target: z.string(),
+  parameters: z.record(z.string(), z.unknown()),
+  riskClass: RiskClass,
+  namespace: Namespace,
+  status: ActionStatus,
+  /** One plain sentence the person reads before approving. */
+  preview: z.string().max(280),
+  decision: z.object({ outcome: z.enum(["allow", "approve", "deny"]), reason: z.string() }),
+  approval: z
+    .object({ by: z.enum(["self", "adult", "owner"]), factors: z.array(z.enum(["presence", "strong_auth"])), approvedBy: Ulid.nullable(), approvedAt: z.iso.datetime().nullable() })
+    .nullable(),
+  planned: z.record(z.string(), z.unknown()).nullable(),
+  observed: z.record(z.string(), z.unknown()).nullable(),
+  error: z.string().nullable(),
+  expiresAt: z.iso.datetime(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+});
+export type ActionRecord = z.infer<typeof ActionRecord>;
+
+/** POST /v1/actions/prepare */
+export const PrepareRequest = z.object({
+  capability: CapabilityName,
+  target: z.string().min(1).max(120),
+  parameters: z.record(z.string(), z.unknown()).default({}),
+  /** Same key, same action: a retried call returns the earlier record instead of acting twice. */
+  idempotencyKey: z.string().min(8).max(120).optional(),
+});
+export type PrepareRequest = z.infer<typeof PrepareRequest>;
+
+/** Class H approvals carry a fresh passkey assertion (strong authentication). */
+export const ApproveRequest = z.object({
+  assertion: z.object({ key: z.string(), credential: z.record(z.string(), z.unknown()) }).optional(),
+});
+
+/** A device as the Home page shows it, from whichever adapter owns it. */
+export const DeviceKind = z.enum(["light", "plug", "thermostat", "lock", "sensor", "camera", "robot", "speaker"]);
+export const HomeDevice = z.object({
+  id: z.string(),
+  roomId: z.string(),
+  name: z.string(),
+  kind: DeviceKind,
+  protocol: z.string(),
+  reachable: z.boolean(),
+  riskClass: RiskClass,
+  /** The adapter's current reading: on/off, brightness, setpoint, locked, a sensor value. */
+  state: z.record(z.string(), z.unknown()),
+  updatedAt: z.iso.datetime(),
+});
+export type HomeDevice = z.infer<typeof HomeDevice>;
+export const HomeRoom = z.object({ id: z.string(), name: z.string(), occupied: z.boolean() });
+export type HomeRoom = z.infer<typeof HomeRoom>;
+export const HomeState = z.object({
+  adapter: z.string(),
+  rooms: z.array(HomeRoom),
+  devices: z.array(HomeDevice),
+  /** Whether an adult is known to be home. Presence satisfies class D. */
+  presence: z.object({ adultsHome: z.boolean(), since: z.iso.datetime().nullable(), source: z.string() }),
+});
+export type HomeState = z.infer<typeof HomeState>;
+
+/** What the dashboard knows about the Gate. */
+export const GateStatus = z.object({
+  state: z.enum(["open", "closed", "absent"]),
+  changedAt: z.iso.datetime().nullable(),
+  changedBy: z.string().nullable(),
+  allowList: z.array(z.string()),
+  crossingsToday: z.number().int().nonnegative(),
+  bytesOutToday: z.number().int().nonnegative(),
+});
+export type GateStatus = z.infer<typeof GateStatus>;
+

@@ -77,13 +77,13 @@ describe("client", () => {
 
 describe("live values", () => {
   it("shows the machine's real numbers when connected and the preview otherwise", () => {
-    const live = deriveLive({ phase: "connected", url: "http://localhost:4002", version: "0.1.0", status: status as never, config: null, rows: [], since: 0 });
+    const live = deriveLive({ phase: "connected", url: "http://localhost:4002", version: "0.1.0", status: status as never, config: null, gate: null, rows: [], since: 0 });
     expect(live.connected).toBe(true);
     expect(live.host).toBe("localhost");
     expect(live.version).toBe("Woven Core 0.1.0");
     expect(live.memory).toEqual({ used: 7.5, total: 16, unit: "GB" });
     expect(live.storage).toMatchObject({ used: "312", usedUnit: "GB", total: "994", unit: "GB" });
-    const mixed = deriveLive({ phase: "connected", url: "http://localhost:4002", version: "0.1.0", status: { ...status, metrics: { ...status.metrics, diskUsedBytes: 4.37e9, diskTotalBytes: 1.61e12 } } as never, config: null, rows: [], since: 0 });
+    const mixed = deriveLive({ phase: "connected", url: "http://localhost:4002", version: "0.1.0", status: { ...status, metrics: { ...status.metrics, diskUsedBytes: 4.37e9, diskTotalBytes: 1.61e12 } } as never, config: null, gate: null, rows: [], since: 0 });
     expect(mixed.storage).toMatchObject({ used: "4", usedUnit: "GB", total: "1.6", unit: "TB" });
     expect(storageLabel(mixed)).toBe("4 GB / 1.6 TB");
     expect(storageLabel(live)).toBe("312 / 994 GB");

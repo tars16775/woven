@@ -10,6 +10,7 @@ import { activity, cameras, core, folders, people, photoStats, rooms, suggestion
 import { memoryLabel, storageLabel, storageUsedLabel, temperatureLabel, useLiveCore } from "@/lib/core/live";
 import { useCore } from "@/lib/core/store";
 import { toActivity } from "@/lib/core/activity";
+import { Approvals } from "@/components/dashboard/approvals";
 
 function greeting() {
   const h = new Date().getHours();
@@ -55,6 +56,10 @@ export function OverviewView() {
       <p className="mt-2 text-[14px] text-ash">
         {machine.connected ? `Everything is running at home · ${machine.model} · up ${machine.uptime}` : "Everything is running at home · Woven Core+"}
       </p>
+
+      <div className="mt-6">
+        <Approvals compact />
+      </div>
 
       {/* The one card that matters */}
       <div className="dash-lock mt-6 flex flex-col gap-4 rounded-[16px] bg-graphite p-5 text-bone ring-1 ring-white/8 md:flex-row md:items-center md:justify-between md:p-6">

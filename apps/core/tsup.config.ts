@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: { server: "src/server.ts" },
+  entry: { server: "src/server.ts", gate: "src/gate/process.ts" },
   format: ["esm"],
   target: "node22",
   platform: "node",

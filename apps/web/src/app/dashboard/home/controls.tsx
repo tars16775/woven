@@ -5,6 +5,9 @@ import { Button, Card, PageHeader, Pill } from "@/components/dashboard/ui";
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { rooms as initialRooms, routines as initialRoutines, type Device, type Room } from "@/lib/dashboard/data";
+import { useCore } from "@/lib/core/store";
+import { useSession } from "@/lib/auth";
+import { LiveHomeControls } from "./live";
 
 const kindLabel: Record<Device["kind"], string> = {
   light: "Light",
@@ -22,7 +25,15 @@ const kindLabel: Record<Device["kind"], string> = {
  * immediate, a lock asks first, sensors are read-only. Every change would
  * become a receipt.
  */
+/** Picks the live page when a Core issued the session, the preview otherwise. */
 export function HomeControls() {
+  const core = useCore();
+  const session = useSession();
+  if (core.phase === "connected" && session && !session.simulated) return <LiveHomeControls />;
+  return <PreviewHomeControls />;
+}
+
+function PreviewHomeControls() {
   const [rooms, setRooms] = useState<Room[]>(initialRooms);
   const [routines, setRoutines] = useState(initialRoutines);
   const [pending, setPending] = useState<{ room: string; device: string } | null>(null);

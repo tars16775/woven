@@ -101,14 +101,15 @@ export class Ledger extends EventEmitter<{ appended: [LedgerRow] }> {
         .returning({ seq: events.seq })
         .get();
       return LedgerRow.parse({ ...envelope, seq: inserted.seq, prevHash, hash });
-    });
+    }, { behavior: "immediate" });
     this.emit("appended", row);
     return row;
   }
 
-  /** Most recent rows first, for the Activity page. */
-  recent(householdId: string, limit = 50): LedgerRow[] {
-    const rows = this.db.select().from(events).where(eq(events.householdId, householdId)).orderBy(desc(events.seq)).limit(limit).all();
+  /** Most recent rows first, for the Activity page. Without a household, everything on the box. */
+  recent(householdId?: string, limit = 50): LedgerRow[] {
+    const q = this.db.select().from(events);
+    const rows = (householdId ? q.where(eq(events.householdId, householdId)) : q).orderBy(desc(events.seq)).limit(limit).all();
     return rows.map(toLedgerRow);
   }
 

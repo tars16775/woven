@@ -39,6 +39,8 @@ pnpm --filter ./apps/core seed                           # a demo household for 
 LIVE_CORE=1 pnpm --filter web test:e2e
 ```
 
+The Gate runs as a separate process the core starts (`WOVEN_GATE=spawn`, port 4010, loopback only). Crossings may only reach hosts in `WOVEN_GATE_ALLOW`; every one asks first and leaves a receipt saying what was sent. Closing the Gate from the dashboard makes crossings fail cleanly.
+
 Identity runs on the Core: `/signup` creates the household and the owner's first passkey (recovery codes are shown once), `/login` signs in with a passkey or a recovery code, and the session is an httpOnly cookie on the Core. Without a Core the pages fall back to the simulated preview.
 
 The dashboard looks for a Core at `https://woven.local:4000`, then this machine (`http://localhost:4002`, the core's loopback listener). Until one answers it shows preview data and a "Connect to your Core" card on the Core page. Build the marketing deploy with `NEXT_PUBLIC_WOVEN_LIVE=off` so it never looks.

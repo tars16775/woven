@@ -132,3 +132,44 @@ export const settings = sqliteTable("settings", {
   value: text("value").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
+
+/**
+ * Actions from prepare to receipt (phases 12 to 14). The ledger holds the
+ * receipts; this table holds the live state machine and the exact parameters
+ * an approval was given for (paramsHash), so nothing can change after "yes".
+ */
+export const actions = sqliteTable(
+  "actions",
+  {
+    id: text("id").primaryKey(),
+    householdId: text("household_id").notNull(),
+    actorKind: text("actor_kind").notNull(),
+    actorId: text("actor_id").notNull(),
+    capability: text("capability").notNull(),
+    target: text("target").notNull(),
+    parameters: text("parameters").notNull(),
+    paramsHash: text("params_hash").notNull(),
+    riskClass: text("risk_class").notNull(),
+    namespace: text("namespace").notNull(),
+    status: text("status", { enum: ["prepared", "approved", "declined", "executing", "succeeded", "failed", "expired"] }).notNull(),
+    preview: text("preview").notNull(),
+    decisionOutcome: text("decision_outcome", { enum: ["allow", "approve", "deny"] }).notNull(),
+    decisionReason: text("decision_reason").notNull(),
+    approvalBy: text("approval_by", { enum: ["self", "adult", "owner"] }),
+    approvalFactors: text("approval_factors"),
+    approvedBy: text("approved_by"),
+    approvedAt: text("approved_at"),
+    planned: text("planned"),
+    observed: text("observed"),
+    error: text("error"),
+    idempotencyKey: text("idempotency_key"),
+    expiresAt: text("expires_at").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [
+    index("actions_household_status_idx").on(t.householdId, t.status),
+    uniqueIndex("actions_idempotency_idx").on(t.householdId, t.actorId, t.idempotencyKey),
+  ],
+);
+

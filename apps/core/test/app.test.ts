@@ -7,6 +7,7 @@ import { buildApp } from "../src/app.ts";
 import { loadConfig } from "../src/config.ts";
 import { createLogger } from "../src/logger.ts";
 import { buildServices } from "../src/services.ts";
+import { GateClient } from "../src/gate/client.ts";
 import { openData, type Data } from "../src/data.ts";
 
 const dataRoot = mkdtempSync(`${os.tmpdir()}/woven-core-`);
@@ -23,7 +24,7 @@ beforeAll(async () => {
     logger: createLogger(config),
     hardware,
     data,
-    services: buildServices(data, config),
+    services: buildServices(data, config, new GateClient(null, "test")),
     version: "test",
     startedAt: new Date(),
   });

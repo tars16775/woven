@@ -8,6 +8,7 @@ import { loadConfig } from "../src/config.ts";
 import { openData, type Data } from "../src/data.ts";
 import { createLogger } from "../src/logger.ts";
 import { buildServices, type Services } from "../src/services.ts";
+import { GateClient } from "../src/gate/client.ts";
 import { OneTimeStore } from "../src/auth/challenges.ts";
 import { formatCode, normalizeCode } from "../src/auth/recovery.ts";
 import { SESSION_COOKIE } from "../src/auth/sessions.ts";
@@ -22,7 +23,7 @@ let services: Services;
 beforeAll(async () => {
   const hardware = detectHardware({ dataRoot });
   data = await openData(hardware.paths);
-  services = buildServices(data, config);
+  services = buildServices(data, config, new GateClient(null, "test"));
   app = await buildApp({ config, logger: createLogger(config), hardware, data, services, version: "test", startedAt: new Date() });
   await app.ready();
 });

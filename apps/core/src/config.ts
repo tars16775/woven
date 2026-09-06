@@ -22,6 +22,11 @@ const Env = z.object({
   WOVEN_TRUST_PORT: z.coerce.number().int().min(1).max(65535).default(4001),
   /** Plain-HTTP copy of the API bound to 127.0.0.1 only, so the dashboard on this same machine works before the CA is trusted. */
   WOVEN_LOCAL_PORT: z.coerce.number().int().min(0).max(65535).default(4002),
+  /** The Gate: "spawn" a child process (the Mac), "off", or the URL of a Gate running elsewhere (the box's Outside processor). */
+  WOVEN_GATE: z.string().default("spawn"),
+  WOVEN_GATE_PORT: z.coerce.number().int().min(1).max(65535).default(4010),
+  /** Hosts crossings may reach, comma-separated. Empty means the Gate refuses everything. */
+  WOVEN_GATE_ALLOW: z.string().default(""),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 });
 
@@ -37,6 +42,7 @@ export type Config = {
   trustPort: number;
   /** 0 disables the loopback listener. */
   localPort: number;
+  gate: { mode: string; port: number; allow: string };
   logLevel: z.infer<typeof Env>["LOG_LEVEL"];
 };
 
@@ -58,6 +64,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     tls: e.WOVEN_TLS === "on",
     trustPort: e.WOVEN_TRUST_PORT,
     localPort: e.WOVEN_LOCAL_PORT,
+    gate: { mode: e.WOVEN_GATE, port: e.WOVEN_GATE_PORT, allow: e.WOVEN_GATE_ALLOW },
     logLevel: e.LOG_LEVEL,
   };
 }

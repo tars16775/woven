@@ -20,8 +20,7 @@ export const systemRoutes: FastifyPluginAsync = async (raw) => {
         startedAt: startedAt.toISOString(),
         hardware: identity,
         metrics,
-        // The Gate process arrives in phase 15. Until it runs, say so.
-        gate: "absent",
+        gate: app.deps.services.gate.cached().state,
         dataRoot: config.dataRoot,
       });
     },

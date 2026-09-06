@@ -8,6 +8,7 @@ import { createLogger } from "./logger.ts";
 import { CORE_HOUSEHOLD_ID, openData } from "./data.ts";
 import { scheduleNightly } from "./maintenance.ts";
 import { buildServices } from "./services.ts";
+import { startGate } from "./gate/spawn.ts";
 import { coreDnsNames, lanAddresses } from "./network.ts";
 import { ensureHouseholdTls, type TlsMaterial } from "./tls.ts";
 import { buildTrustServer } from "./trust.ts";
@@ -52,8 +53,12 @@ async function main() {
     if (tls.issued) logger.info({ names: tls.server.dns, addresses: tls.server.ips, notAfter: tls.server.notAfter }, "issued the core's certificate");
   }
 
+  // The Gate: a separate process, the only way out (ADR 0005).
+  const gate = await startGate({ mode: config.gate.mode, port: config.gate.port, allow: config.gate.allow, dataRoot: config.dataRoot, logLevel: config.logLevel, logger });
+  logger.info({ gate: gate.client.cached().state, allow: config.gate.allow || "(nothing)" }, gate.client.cached().state === "absent" ? "no Gate running; crossings will fail" : "Gate attached");
+
   const startedAt = new Date();
-  const services = buildServices(data, config);
+  const services = buildServices(data, config, gate.client);
   const app = await buildApp({ config, logger, hardware, data, services, ...(tls ? { tls } : {}), version, startedAt });
   const scheme = tls ? "https" : "http";
   // The same API in plain HTTP, reachable only from this machine. Loopback
@@ -77,6 +82,7 @@ async function main() {
     stopNightly();
     bonjour?.unpublishAll(() => bonjour.destroy());
     await Promise.all([app.close(), trust?.close(), local?.close()]);
+    await gate.stop();
     data.close();
     process.exit(0);
   };

@@ -1,4 +1,4 @@
-import { CoreConfig, CoreStatus, LedgerRow } from "@woven/schema";
+import { CoreConfig, CoreStatus, GateStatus, LedgerRow } from "@woven/schema";
 import { z } from "zod";
 
 /**
@@ -41,6 +41,9 @@ export class CoreClient {
   integrity() {
     return this.get("/v1/ledger/integrity", Integrity);
   }
+  gate() {
+    return this.get("/v1/gate", GateStatus);
+  }
 
   /** ws(s):// address of the live event stream. */
   eventsUrl(): string {
@@ -73,4 +76,4 @@ async function safeText(res: Response): Promise<string> {
   }
 }
 
-export type { CoreConfig, CoreStatus, LedgerRow };
+export type { CoreConfig, CoreStatus, GateStatus, LedgerRow };

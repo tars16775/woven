@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Card, Meter, PageHeader, Pill, WherePill, whereRan } from "@/components/dashboard/ui";
 import { activity as preview, core, type Where } from "@/lib/dashboard/data";
-import { toActivity, type LiveActivityItem } from "@/lib/core/activity";
+import { receiptLines, toActivity, type LiveActivityItem } from "@/lib/core/activity";
 import { useCore } from "@/lib/core/store";
 
 const filters: { id: "all" | Where; label: string }[] = [
@@ -104,6 +104,12 @@ export function ActivityLedger() {
                         <dd>{whereRan[a.where]}</dd>
                         <dt className="text-ash">Sent</dt>
                         <dd>{a.sent ?? "Nothing left the box"}</dd>
+                        {receiptLines(a).map(([k, v]) => (
+                          <Fragment key={k}>
+                            <dt className="text-ash">{k}</dt>
+                            <dd className="break-words">{v}</dd>
+                          </Fragment>
+                        ))}
                         <dt className="text-ash">Receipt</dt>
                         <dd className="font-mono text-[12px]">{a.hash ? `#${a.seq} · ${a.hash.slice(0, 24)}…` : `rcp_${a.id}_${a.time.replace(":", "")}`}</dd>
                       </dl>

@@ -25,7 +25,8 @@ export const ledgerRoutes: FastifyPluginAsync = async (raw) => {
         response: { 200: z.object({ rows: z.array(LedgerRow) }) },
       },
     },
-    async (req) => ({ rows: app.deps.data.ledger.recent(CORE_HOUSEHOLD_ID, req.query.limit) }),
+    // One box, one household: the feed is everything the box did, its own start-ups included.
+    async (req) => ({ rows: app.deps.data.ledger.recent(undefined, req.query.limit) }),
   );
 
   app.get("/ledger/integrity", { schema: { response: { 200: Integrity } } }, async () => {

@@ -5,22 +5,24 @@ import { Button, Card, PageHeader, Pill } from "@/components/dashboard/ui";
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { setGateOpen, useGateOpen } from "@/components/dashboard/state";
+import { useCore } from "@/lib/core/store";
 import { network } from "@/lib/dashboard/data";
 
 export function NetworkView() {
   const gateOpen = useGateOpen();
+  const core = useCore();
   const [confirm, setConfirm] = useState(false);
   const say = useToast();
 
-  const closeGate = () => {
-    setGateOpen(false);
+  const closeGate = async () => {
     setConfirm(false);
-    say("The Gate is closed. Nothing crosses until you open it again.");
+    const problem = await setGateOpen(false);
+    say(problem ?? (core.phase === "connected" ? "The Gate is closed · receipt written. Nothing crosses until you open it again." : "The Gate is closed. Nothing crosses until you open it again."));
   };
 
-  const openGate = () => {
-    setGateOpen(true);
-    say("The Gate is open and asks first, as before.");
+  const openGate = async () => {
+    const problem = await setGateOpen(true);
+    say(problem ?? "The Gate is open and asks first, as before.");
   };
 
   return (

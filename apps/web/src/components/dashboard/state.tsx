@@ -1,6 +1,8 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { gate as gateApi, explainAction } from "@/lib/core/actions";
+import { coreState, refreshCore, useCore } from "@/lib/core/store";
 
 /**
  * Small shared stores for state that more than one dashboard surface shows
@@ -28,9 +30,29 @@ function createStore<T>(initial: T) {
 }
 
 const gate = createStore(true);
-/** Whether the Gate is open. Closed means nothing crosses until reopened. */
-export const useGateOpen = () => useSyncExternalStore(gate.subscribe, gate.get, () => gate.server);
-export const setGateOpen = gate.set;
+const usePreviewGateOpen = () => useSyncExternalStore(gate.subscribe, gate.get, () => gate.server);
+/** Whether the Gate is open: the real Gate when a Core is connected, the preview's switch otherwise. */
+export function useGateOpen(): boolean {
+  const preview = usePreviewGateOpen();
+  const core = useCore();
+  if (core.phase === "connected" && core.gate) return core.gate.state === "open";
+  return preview;
+}
+/** Open or close the Gate. On a Core this is the gate.set action and leaves a receipt; resolves to an error message or null. */
+export async function setGateOpen(open: boolean): Promise<string | null> {
+  if (coreState().phase === "connected") {
+    try {
+      await gateApi.set(open);
+      await refreshCore();
+      return null;
+    } catch (err) {
+      return explainAction(err);
+    }
+  }
+  gate.set(open);
+  return null;
+}
+
 
 const scheduled = createStore<string[]>([]);
 /** Device names whose backup is scheduled for tonight. */

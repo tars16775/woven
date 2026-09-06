@@ -50,7 +50,7 @@ function dayOf(iso: string, now = new Date()): ActivityItem["day"] | "earlier" {
   return same(d, y) ? "yesterday" : "earlier";
 }
 
-export type LiveActivityItem = Omit<ActivityItem, "day"> & { day: ActivityItem["day"] | "earlier"; seq: number; hash: string };
+export type LiveActivityItem = Omit<ActivityItem, "day"> & { day: ActivityItem["day"] | "earlier"; seq: number; hash: string; payload?: Record<string, unknown> };
 
 /** A ledger row as the Activity page shows it. */
 export function toActivity(row: LedgerRow, now = new Date()): LiveActivityItem {
@@ -66,5 +66,20 @@ export function toActivity(row: LedgerRow, now = new Date()): LiveActivityItem {
     ...(row.sent ? { sent: row.sent } : {}),
     seq: row.seq,
     hash: row.hash,
+    payload: row.payload,
   };
+}
+
+/** The receipt lines a person reads when they open an item: what was planned, what was observed, who said yes. */
+export function receiptLines(item: LiveActivityItem): [string, string][] {
+  const p = item.payload ?? {};
+  const out: [string, string][] = [];
+  const show = (v: unknown) => (v && typeof v === "object" ? Object.entries(v as Record<string, unknown>).map(([k, x]) => `${k} ${String(x)}`).join(" · ") || "nothing" : String(v));
+  if ("planned" in p) out.push(["Planned", show(p.planned)]);
+  if ("observed" in p) out.push(["Observed", show(p.observed)]);
+  if (typeof p.approvedBy === "string") out.push(["Approved by", p.approvedBy]);
+  if (typeof p.reason === "string") out.push(["Reason", p.reason]);
+  if (typeof p.preview === "string") out.push(["Preview", p.preview]);
+  if (typeof p.capability === "string") out.push(["Capability", p.capability]);
+  return out;
 }
