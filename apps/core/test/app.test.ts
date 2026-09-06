@@ -6,17 +6,22 @@ import { CoreStatus } from "@woven/schema";
 import { buildApp } from "../src/app.ts";
 import { loadConfig } from "../src/config.ts";
 import { createLogger } from "../src/logger.ts";
+import { openData, type Data } from "../src/data.ts";
 
 const dataRoot = mkdtempSync(`${os.tmpdir()}/woven-core-`);
 const config = loadConfig({ NODE_ENV: "test", WOVEN_DATA: dataRoot, LOG_LEVEL: "fatal", WOVEN_MDNS: "off" });
 
 let app: Awaited<ReturnType<typeof buildApp>>;
+let data: Data;
 
 beforeAll(async () => {
+  const hardware = detectHardware({ dataRoot });
+  data = await openData(hardware.paths);
   app = await buildApp({
     config,
     logger: createLogger(config),
-    hardware: detectHardware({ dataRoot }),
+    hardware,
+    data,
     version: "test",
     startedAt: new Date(),
   });
@@ -25,6 +30,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
+  data.close();
 });
 
 describe("core app", () => {
@@ -78,5 +84,23 @@ describe("config", () => {
   it("parses origins and trims them", () => {
     const c = loadConfig({ WOVEN_DATA: "/x", WOVEN_ORIGINS: " http://a , http://b " });
     expect(c.origins).toEqual(["http://a", "http://b"]);
+  });
+});
+
+describe("ledger routes", () => {
+  it("verifies an empty or short chain and records the check", async () => {
+    const first = await app.inject({ method: "GET", url: "/v1/ledger/integrity" });
+    expect(first.statusCode).toBe(200);
+    expect(first.json()).toMatchObject({ ok: true });
+    const recent = await app.inject({ method: "GET", url: "/v1/ledger/recent?limit=5" });
+    expect(recent.statusCode).toBe(200);
+    const { rows } = recent.json<{ rows: { type: string; prevHash: string }[] }>();
+    expect(rows[0]?.type).toBe("core.integrity_checked");
+    expect(rows[0]?.prevHash).toHaveLength(64);
+  });
+
+  it("rejects an out-of-range limit", async () => {
+    const res = await app.inject({ method: "GET", url: "/v1/ledger/recent?limit=5000" });
+    expect(res.statusCode).toBe(400);
   });
 });

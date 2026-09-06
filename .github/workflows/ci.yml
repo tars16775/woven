@@ -8,15 +8,59 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-defaults:
-  run:
-    working-directory: apps/web
-
 jobs:
+  core:
+    name: core (schema, hal, policy, core service)
+    runs-on: macos-latest
+    timeout-minutes: 20
+    env:
+      CI: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter "./packages/*" --filter "./apps/core"
+
+      - name: Typecheck
+        run: pnpm --filter "./packages/*" --filter "./apps/core" typecheck
+
+      - name: Lint
+        run: pnpm --filter "./apps/core" lint
+
+      - name: Tests
+        run: pnpm --filter "./packages/*" --filter "./apps/core" test
+
+      - name: Build
+        run: pnpm --filter "./apps/core" build
+
+      - name: Migrations are up to date
+        # drizzle-kit generate must be a no-op; a schema change without a checked-in migration fails here.
+        working-directory: apps/core
+        run: |
+          pnpm exec drizzle-kit generate --name ci_check
+          if git status --porcelain drizzle | grep -q .; then
+            echo "schema changed without a migration; run: pnpm --filter ./apps/core db:generate" >&2
+            git status --porcelain drizzle
+            exit 1
+          fi
+
   web:
     name: web (lint, typecheck, unit, build, e2e)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/web
     env:
       CI: true
       NEXT_TELEMETRY_DISABLED: 1

@@ -28,6 +28,11 @@ docs/backend-plan.md  the 50 phases
 pnpm install
 pnpm dev            # site on :3000 and core on :4000
 pnpm typecheck && pnpm lint && pnpm test
+
+# The core keeps its database, object store and snapshots under WOVEN_DATA.
+pnpm --filter ./apps/core snapshot                       # take a snapshot now
+pnpm --filter ./apps/core restore <snapshot-dir> [root]  # restore into an empty data root
+pnpm --filter ./apps/core db:generate                    # after editing apps/core/src/db/schema.ts
 ```
 
 Or double-click `Start Woven.command` on the LaCie. The site is at http://localhost:3000, the dashboard at `/dashboard`, the core at http://localhost:4000/v1/health.

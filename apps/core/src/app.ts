@@ -5,6 +5,8 @@ import { zodSerializerCompiler, zodValidatorCompiler, type ZodTypeProvider } fro
 import type { Hardware } from "@woven/hal";
 import type { Config } from "./config.ts";
 import type { Logger } from "./logger.ts";
+import type { Data } from "./data.ts";
+import { ledgerRoutes } from "./routes/ledger.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { systemRoutes } from "./routes/system.ts";
 
@@ -12,6 +14,7 @@ export type AppDeps = {
   config: Config;
   logger: Logger;
   hardware: Hardware;
+  data: Data;
   version: string;
   startedAt: Date;
 };
@@ -64,6 +67,7 @@ export async function buildApp(deps: AppDeps) {
 
   await app.register(healthRoutes, { prefix: "/v1" });
   await app.register(systemRoutes, { prefix: "/v1" });
+  await app.register(ledgerRoutes, { prefix: "/v1" });
 
   return app;
 }
