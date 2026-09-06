@@ -19,7 +19,7 @@ Screenshot*.png
 !.env.example
 
 # Reference mockups and deck (copies used by the site live in apps/web/public/media)
-files/
+/files/
 
 # machine-specific pnpm store location
 .npmrc
