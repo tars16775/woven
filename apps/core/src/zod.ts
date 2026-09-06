@@ -1,5 +1,5 @@
 import type { FastifySchemaCompiler, FastifySerializerCompiler, FastifyTypeProvider } from "fastify";
-import type { z, ZodType } from "zod";
+import { z, type ZodType } from "zod";
 
 /**
  * Fastify's validation and serialisation, backed by Zod schemas from
@@ -44,3 +44,7 @@ export const zodSerializerCompiler: FastifySerializerCompiler<ZodType> = ({ sche
     return JSON.stringify(result.data);
   };
 };
+
+/** "true"/"false"/"1"/"0" from a query string, as a boolean. z.coerce.boolean would make "false" true. */
+export const QueryBool = (fallback: boolean) => z.preprocess((v) => (v === undefined ? fallback : v === true || v === "true" || v === "1"), z.boolean());
+

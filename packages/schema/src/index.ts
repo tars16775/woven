@@ -612,3 +612,56 @@ export const RoutineRun = z.object({
 });
 export type RoutineRun = z.infer<typeof RoutineRun>;
 
+/* Memory (phase 36) ---------------------------------------------------------- */
+
+export const Memory = z.object({
+  id: Ulid,
+  personId: Ulid,
+  text: z.string().min(1).max(500),
+  kind: z.enum(["fact", "preference", "event", "routine"]),
+  status: z.enum(["candidate", "durable"]),
+  source: z.enum(["person", "tandem"]),
+  seen: z.number().int(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+  expiresAt: z.iso.datetime().nullable(),
+});
+export type Memory = z.infer<typeof Memory>;
+
+export const NewMemory = z.object({ text: z.string().trim().min(1).max(500), kind: Memory.shape.kind.default("fact") });
+export type NewMemory = z.infer<typeof NewMemory>;
+export const MemorySettings = z.object({
+  /** Days a durable memory is kept; null means until deleted. */
+  retentionDays: z.number().int().min(1).max(3650).nullable(),
+  /** Days a candidate waits for confirmation before it is forgotten. */
+  candidateDays: z.number().int().min(1).max(30),
+});
+export type MemorySettings = z.infer<typeof MemorySettings>;
+
+/* The screen and alerts (phases 44 and 47) ---------------------------------- */
+
+export const Alert = z.object({
+  id: z.string(),
+  level: z.enum(["info", "warn", "urgent"]),
+  title: z.string(),
+  detail: z.string(),
+  since: z.iso.datetime(),
+});
+export type Alert = z.infer<typeof Alert>;
+
+export const ScreenState = z.object({
+  household: z.string().nullable(),
+  name: z.string(),
+  state: z.enum(["ready", "restarting", "attention"]),
+  code: z.string(),
+  secondsLeft: z.number().int(),
+  presence: z.boolean(),
+  gate: z.enum(["open", "closed", "absent"]),
+  camerasPaused: z.boolean(),
+  /** Recent receipt titles, no content. */
+  activity: z.array(z.object({ at: z.iso.datetime(), title: z.string(), where: Where })),
+  alerts: z.array(Alert),
+  pendingApprovals: z.number().int(),
+});
+export type ScreenState = z.infer<typeof ScreenState>;
+

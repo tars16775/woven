@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { Person } from "@woven/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import type { Db } from "./db/index.ts";
-import { actions, credentials, events, files, households, invitations, people, sessions } from "./db/schema.ts";
+import { actions, credentials, events, files, households, invitations, memories, people, sessions } from "./db/schema.ts";
 import { HouseholdError, type HouseholdService } from "./household.ts";
 import type { Ledger } from "./ledger.ts";
 import type { ContentStore } from "./store/index.ts";
@@ -39,8 +39,10 @@ export class RightsService {
     const actionRows = (scope === "me" ? this.db.select().from(actions).where(eq(actions.actorId, by.id)) : this.db.select().from(actions).where(eq(actions.householdId, by.householdId))).all();
     const eventRows = (scope === "me" ? this.db.select().from(events).where(eq(events.actorId, by.id)) : this.db.select().from(events).where(eq(events.householdId, by.householdId))).all();
 
+    const memoryRows = (scope === "me" ? this.db.select().from(memories).where(and(eq(memories.personId, by.id), isNull(memories.deletedAt))) : this.db.select().from(memories).where(and(eq(memories.householdId, by.householdId), isNull(memories.deletedAt)))).all();
     const write = (name: string, value: unknown) => writeFile(join(dir, name), JSON.stringify(value, null, 2), { mode: 0o600 });
     await write("household.json", h);
+    await write("memory.json", scope === "me" ? memoryRows : memoryRows.filter((m) => m.personId === by.id)); // the owner's export never carries anyone else's memory
     await write("people.json", peopleRows);
     await write("files.json", fileRows);
     await write("actions.json", actionRows);
@@ -76,6 +78,7 @@ export class RightsService {
       tx.update(credentials).set({ revokedAt: now }).where(and(eq(credentials.personId, target.id), isNull(credentials.revokedAt))).run();
       tx.update(invitations).set({ revokedAt: now }).where(and(eq(invitations.personId, target.id), isNull(invitations.acceptedAt))).run();
       tx.update(files).set({ deletedAt: now }).where(and(eq(files.ownerId, target.id), isNull(files.deletedAt))).run();
+      tx.update(memories).set({ deletedAt: now, text: "" }).where(and(eq(memories.personId, target.id), isNull(memories.deletedAt))).run();
       tx.update(people).set({ removedAt: now, email: null }).where(eq(people.id, target.id)).run();
       this.ledger.append({ type: "person.removed", householdId: target.householdId, actor: { kind: "person", id: by.id }, where: "inside", target: target.id, sensitivity: "high", payload: { reason: "account deleted", files: owned.length } });
     });

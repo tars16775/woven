@@ -20,6 +20,9 @@ import { ModelStore } from "./models.ts";
 import { MediaService, mediaKind, type Tools } from "./media.ts";
 import { NetworkScanner } from "./network-scan.ts";
 import { RoutineService } from "./routines.ts";
+import { MemoryService } from "./memory.ts";
+import { Alerts } from "./alerts.ts";
+import { Metrics } from "./metrics.ts";
 import { detectHardware, type Hardware } from "@woven/hal";
 import { PhotoIndex, loadClip, type Embedder } from "./photo-index.ts";
 import type { Logger } from "./logger.ts";
@@ -49,6 +52,9 @@ export type Services = {
   media: MediaService;
   network: NetworkScanner;
   routines: RoutineService;
+  memory: MemoryService;
+  alerts: Alerts;
+  metrics: Metrics;
 };
 
 export type ServiceOptions = { home?: HomeAdapter; logger?: Logger; loadEmbedder?: (dir: string) => Promise<Embedder>; tools?: Tools; hardware?: Hardware; mdns?: boolean };
@@ -131,5 +137,8 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
     media: mediaService,
     network: new NetworkScanner(opts.hardware ?? detectHardware({ dataRoot: config.dataRoot }), logger, { mdns: opts.mdns ?? config.mdns }),
     routines,
+    memory: new MemoryService(db, data.ledger),
+    alerts: new Alerts(),
+    metrics: new Metrics(),
   };
 }

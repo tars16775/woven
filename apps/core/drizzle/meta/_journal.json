@@ -57,6 +57,13 @@
       "when": 1788707245734,
       "tag": "0007_routines",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1788707967653,
+      "tag": "0008_memories",
+      "breakpoints": true
     }
   ]
 }

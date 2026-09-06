@@ -3,7 +3,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireSession } from "../auth/guard.ts";
 import { FileError } from "../files.ts";
-import type { ZodTypeProvider } from "../zod.ts";
+import { QueryBool, type ZodTypeProvider } from "../zod.ts";
 
 const MAX_CHUNK = 4 * 1024 * 1024 + 1024;
 
@@ -35,7 +35,7 @@ export const fileRoutes: FastifyPluginAsync = async (raw) => {
     return entry;
   });
 
-  app.get("/files/:id/content", { preHandler: requireSession, schema: { params: z.object({ id: Ulid }), querystring: z.object({ download: z.coerce.boolean().default(false) }) } }, async (req, reply) => {
+  app.get("/files/:id/content", { preHandler: requireSession, schema: { params: z.object({ id: Ulid }), querystring: z.object({ download: QueryBool(false) }) } }, async (req, reply) => {
     const { entry } = services.files.open(req.session!.person, req.params.id);
     const disposition = req.query.download ? "attachment" : "inline";
     void reply

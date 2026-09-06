@@ -1,7 +1,7 @@
-import { BackupStatus, CoreConfig, CoreStatus, StorageHealth } from "@woven/schema";
+import { Alert, BackupStatus, CoreConfig, CoreStatus, StorageHealth } from "@woven/schema";
 import { z } from "zod";
 import { writeDiagnostics } from "../diagnostics.ts";
-import { requireRole } from "../auth/guard.ts";
+import { requireRole, requireSession } from "../auth/guard.ts";
 import { listSnapshots, restoreDrill } from "../integrity.ts";
 import { takeSnapshot } from "../snapshot.ts";
 import { mirrorSnapshot } from "../integrity.ts";
@@ -95,4 +95,8 @@ export const systemRoutes: FastifyPluginAsync = async (raw) => {
     void reply.status(202).send({ restarting: true as const });
     setTimeout(() => app.deps.restart?.(), 300).unref();
   });
+
+  /* Observability (phase 47): counts by route pattern, never by person or path. */
+  app.get("/system/metrics", { preHandler: requireRole("owner", "adult"), schema: { response: { 200: z.object({ uptimeSeconds: z.number().int(), requests: z.array(z.object({ key: z.string(), count: z.number().int(), avgMs: z.number(), maxMs: z.number() })), counters: z.record(z.string(), z.number()) }) } } }, async () => app.deps.services.metrics.snapshot());
+  app.get("/system/alerts", { preHandler: requireSession, schema: { response: { 200: z.object({ alerts: z.array(Alert) }) } } }, async () => ({ alerts: app.deps.services.alerts.list() }));
 };

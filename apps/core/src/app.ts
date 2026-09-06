@@ -27,6 +27,7 @@ import { modelRoutes } from "./routes/models.ts";
 import { mediaRoutes } from "./routes/media.ts";
 import { networkRoutes } from "./routes/network.ts";
 import { routineRoutes } from "./routes/routines.ts";
+import { memoryRoutes } from "./routes/memory.ts";
 import { FileError } from "./files.ts";
 import type { Services } from "./services.ts";
 import type { TlsMaterial } from "./tls.ts";
@@ -78,6 +79,11 @@ export async function buildApp(deps: AppDeps) {
   app.decorate("deps", deps);
   app.decorateRequest("session", null);
   app.addHook("onRequest", attachSession);
+  // Metrics by route pattern and status class only; never the path a person asked for.
+  app.addHook("onResponse", async (req, reply) => {
+    const route = req.routeOptions.url ?? "(none)";
+    deps.services.metrics.request(req.method, route, reply.statusCode, reply.elapsedTime);
+  });
 
   // Every response says who answered, and nothing about the machine leaks in headers.
   app.addHook("onSend", async (_req, reply) => {
@@ -119,6 +125,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(mediaRoutes, { prefix: "/v1" });
   await app.register(networkRoutes, { prefix: "/v1" });
   await app.register(routineRoutes, { prefix: "/v1" });
+  await app.register(memoryRoutes, { prefix: "/v1" });
 
   return app;
 }

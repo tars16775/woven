@@ -9,6 +9,8 @@ export type MaintenanceOptions = {
   /** A second location for snapshots. */
   mirror?: string | null;
   sweep?: () => Promise<number>;
+  /** Called with what the night found, so alerts can be raised or cleared. */
+  report?: (facts: { ledgerOk: boolean; objectsBad: number; mirrorOk: boolean | null }) => void;
   /** Local hour (0-23) to run. Default 3 in the morning, when the house is quiet. */
   hour?: number;
   /** How many snapshots to keep. Default 14. */
@@ -25,7 +27,7 @@ export function msUntilHour(hour: number, now: Date): number {
 }
 
 /** Verify the chain, snapshot the household, prune old snapshots. */
-export async function runNightly(data: Data, logger: Logger, keep = 14, opts: Pick<MaintenanceOptions, "mirror" | "sweep"> = {}): Promise<void> {
+export async function runNightly(data: Data, logger: Logger, keep = 14, opts: Pick<MaintenanceOptions, "mirror" | "sweep" | "report"> = {}): Promise<void> {
   if (opts.sweep) logger.info({ removed: await opts.sweep() }, "stale uploads swept");
   const report = data.ledger.verify();
   const objects = await verifyStore(data.database.db, data.store);
@@ -42,14 +44,18 @@ export async function runNightly(data: Data, logger: Logger, keep = 14, opts: Pi
 
   const snap = await takeSnapshot({ db: data.database, objectsDir: data.paths.store, snapshotsDir: data.paths.snapshots });
   logger.info({ dir: snap.dir, objects: snap.manifest.objects.count }, "snapshot taken");
+  let mirrorOk: boolean | null = null;
   if (opts.mirror) {
     try {
       const m = await mirrorSnapshot(snap.dir, opts.mirror);
       logger.info({ mirror: opts.mirror, copied: m.copied }, "snapshot mirrored");
+      mirrorOk = true;
     } catch (err) {
       logger.error({ err, mirror: opts.mirror }, "snapshot mirror FAILED; the second location is not reachable");
+      mirrorOk = false;
     }
   }
+  opts.report?.({ ledgerOk: report.ok, objectsBad: objects.corrupt.length + objects.missing.length, mirrorOk });
 
   await pruneSnapshots(data.paths.snapshots, keep);
 }
@@ -69,7 +75,7 @@ export function scheduleNightly(data: Data, logger: Logger, opts: MaintenanceOpt
   let timer: NodeJS.Timeout | null = null;
   const arm = () => {
     timer = setTimeout(() => {
-      runNightly(data, logger, opts.keep, { mirror: opts.mirror ?? null, ...(opts.sweep ? { sweep: opts.sweep } : {}) }).catch((err: unknown) => logger.error({ err }, "nightly maintenance failed"));
+      runNightly(data, logger, opts.keep, { mirror: opts.mirror ?? null, ...(opts.sweep ? { sweep: opts.sweep } : {}), ...(opts.report ? { report: opts.report } : {}) }).catch((err: unknown) => logger.error({ err }, "nightly maintenance failed"));
       arm();
     }, msUntilHour(hour, now()));
     timer.unref();

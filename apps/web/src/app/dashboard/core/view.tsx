@@ -13,6 +13,7 @@ import { BackupsCard } from "@/components/dashboard/backups-card";
 import { bytes, system } from "@/lib/core/files";
 import type { StorageHealth } from "@/lib/core/files";
 import { explainAction } from "@/lib/core/actions";
+import { identity, type Alert } from "@/lib/core/identity";
 import { memoryLabel, storageLabel, temperatureLabel, useLiveCore } from "@/lib/core/live";
 import { coreClient, useCore } from "@/lib/core/store";
 import type { Integrity } from "@/lib/core/client";
@@ -40,6 +41,18 @@ export function CoreView() {
   const connection = useCore();
   const live = useLiveCore();
   const [storage, setStorage] = useState<StorageHealth | null>(null);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  useEffect(() => {
+    if (connection.phase !== "connected") return;
+    let alive = true;
+    identity
+      .alerts()
+      .then((a) => alive && setAlerts(a))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [connection.phase]);
   const [diagnosing, setDiagnosing] = useState(false);
   useEffect(() => {
     if (connection.phase !== "connected") return;
@@ -182,6 +195,22 @@ export function CoreView() {
       />
 
       <ConnectCore />
+
+      {alerts.length > 0 && (
+        <Card className="mb-4" title="Needs a look" action={<Pill tone={alerts.some((a) => a.level === "urgent") ? "warn" : "neutral"}>{alerts.length}</Pill>}>
+          <ul className="divide-y divide-ink/6" data-testid="alerts">
+            {alerts.map((a) => (
+              <li key={a.id} className="py-2.5 text-[14px] first:pt-0 last:pb-0">
+                <div className="flex items-center gap-2">
+                  <Pill tone={a.level === "urgent" ? "warn" : a.level === "warn" ? "warn" : "neutral"}>{a.level}</Pill>
+                  <span className="font-medium">{a.title}</span>
+                </div>
+                <div className="mt-0.5 text-[13px] text-ash">{a.detail} · runbooks in docs/runbooks.md</div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
         <Card dark className="flex items-center justify-center py-8">

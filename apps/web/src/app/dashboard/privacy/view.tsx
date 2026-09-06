@@ -6,7 +6,9 @@ import { PrivacyPanel } from "@/components/privacy-panel";
 import { Button, Card, PageHeader, WherePill } from "@/components/dashboard/ui";
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
-import { signOut } from "@/lib/auth";
+import { signOut, useSession } from "@/lib/auth";
+import { useCore } from "@/lib/core/store";
+import { MemoryCard } from "@/components/dashboard/memory-card";
 import { activity, core, memories as initialMemories, privacyCategories } from "@/lib/dashboard/data";
 
 type Open = null | "export" | "memory" | "delete-1" | "delete-2";
@@ -24,6 +26,9 @@ export function PrivacyView() {
   const [open, setOpen] = useState<Open>(null);
   const [memories, setMemories] = useState(initialMemories);
   const crossings = activity.filter((a) => a.where === "cloud");
+  const connection = useCore();
+  const session = useSession();
+  const live = connection.phase === "connected" && !!session && !session.simulated;
 
   const close = () => setOpen(null);
 
@@ -46,6 +51,11 @@ export function PrivacyView() {
   return (
     <div className="mx-auto max-w-[1100px]">
       <PageHeader title="Privacy" sub={`${core.insideShare7d}% inside this week · ${core.crossings7d} crossings, all approved by you`} />
+      {live && (
+        <div className="mb-4">
+          <MemoryCard />
+        </div>
+      )}
       <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
         <PrivacyPanel />
         <div className="grid gap-4">

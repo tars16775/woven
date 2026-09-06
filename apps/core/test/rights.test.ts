@@ -71,7 +71,7 @@ describe("the code on the screen (phase 9)", () => {
   it("serves the screen only to the machine's own display", async () => {
     const local = await app.inject({ method: "GET", url: "/v1/screen", remoteAddress: "127.0.0.1" });
     expect(local.statusCode).toBe(200);
-    expect(local.body).toContain("Enter this code");
+    expect(local.body).toContain("Sign in with your name");
     const lan = await app.inject({ method: "GET", url: "/v1/screen", remoteAddress: "192.168.0.44" });
     expect(lan.statusCode).toBe(404);
     expect((await app.inject({ method: "GET", url: "/v1/screen/code", remoteAddress: "192.168.0.44" })).statusCode).toBe(404);

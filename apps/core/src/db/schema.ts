@@ -292,3 +292,28 @@ export const routines = sqliteTable(
   (t) => [index("routines_household_idx").on(t.householdId)],
 );
 
+/**
+ * Memory (phase 36): what Tandem may keep about one person. A memory starts
+ * as a candidate when the model noticed it; it becomes durable only when the
+ * person confirms it or it comes up again. Retention is the person's.
+ */
+export const memories = sqliteTable(
+  "memories",
+  {
+    id: text("id").primaryKey(),
+    householdId: text("household_id").notNull(),
+    personId: text("person_id").notNull().references(() => people.id),
+    text: text("text").notNull(),
+    kind: text("kind", { enum: ["fact", "preference", "event", "routine"] }).notNull(),
+    status: text("status", { enum: ["candidate", "durable"] }).notNull(),
+    source: text("source", { enum: ["person", "tandem"] }).notNull(),
+    /** How many times it came up; two makes a candidate durable. */
+    seen: integer("seen").notNull().default(1),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    expiresAt: text("expires_at"),
+    deletedAt: text("deleted_at"),
+  },
+  (t) => [index("memories_person_idx").on(t.personId)],
+);
+

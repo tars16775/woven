@@ -1,4 +1,4 @@
-import { Household, Person, SessionView, SetupHousehold } from "@woven/schema";
+import { Household, Person, ScreenState, SessionView, SetupHousehold } from "@woven/schema";
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { requireSession } from "../auth/guard.ts";
@@ -144,6 +144,23 @@ export const authRoutes: FastifyPluginAsync = async (raw) => {
     reply.type("text/html; charset=utf-8").header("cache-control", "no-store").send(screenPage(config.name, services.household.household()?.name ?? null)),
   );
   app.get("/screen/code", { preHandler: loopbackOnly, schema: { response: { 200: z.object({ code: z.string().length(6), secondsLeft: z.number().int() }) } } }, async () => services.screen.current());
+  app.get("/screen/state", { preHandler: loopbackOnly, schema: { response: { 200: ScreenState } } }, async () => {
+    const h = services.household.household();
+    const titles: Record<string, string> = { "core.started": "Core started", "core.integrity_checked": "Ledger verified", "action.executed": "Action ran", "action.prepared": "Waiting for a yes", "action.approved": "Approved", "action.declined": "Declined", "action.failed": "Action failed", "gate.crossing": "Crossing", "gate.closed": "Gate closed", "gate.opened": "Gate opened", "session.started": "Signed in", "session.ended": "Signed out", "person.created": "Person added", "person.removed": "Person removed", "household.created": "House set up", "memory.created": "Memory kept", "memory.deleted": "Memory forgotten" };
+    const alerts = services.alerts.list();
+    return ScreenState.parse({
+      household: h?.name ?? null,
+      name: config.name,
+      state: alerts.some((a) => a.level === "urgent") ? "attention" : "ready",
+      ...services.screen.current(),
+      presence: services.presence.get().adultsHome,
+      gate: services.gate.cached().state,
+      camerasPaused: false,
+      activity: app.deps.data.ledger.recent(undefined, 6).map((r) => ({ at: r.occurredAt, title: titles[r.type] ?? r.type, where: r.where })),
+      alerts,
+      pendingApprovals: h ? services.actions.list(h.id, "prepared").length : 0,
+    });
+  });
 
   app.post(
     "/auth/code/login",

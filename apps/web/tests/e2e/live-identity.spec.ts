@@ -112,3 +112,16 @@ test("invite a member by link, join with a passkey, sign in by the screen code, 
   await page.getByTestId("export-me").click();
   await expect(page.getByText(/Exported \d+ files and \d+ receipts to/)).toBeVisible({ timeout: 20_000 });
 });
+
+test("memory is the person's own: tell, keep, forget, and set retention", async ({ page }) => {
+  await signInWithOwnCode(page);
+  await page.goto("/dashboard/privacy");
+  await page.getByTestId("add-memory").click({ timeout: 30_000 });
+  await page.getByRole("textbox", { name: "In your words" }).fill("I take my coffee black");
+  await page.getByRole("button", { name: "Keep it" }).click();
+  await expect(page.getByTestId("memories")).toContainText("I take my coffee black", { timeout: 15_000 });
+  await page.getByRole("combobox", { name: "Retention" }).selectOption("forever");
+  await expect(page.getByTestId("memories")).toContainText("kept until you delete it", { timeout: 15_000 });
+  await page.getByRole("button", { name: "Forget: I take my coffee black" }).click();
+  await expect(page.getByTestId("no-memory")).toBeVisible({ timeout: 15_000 });
+});

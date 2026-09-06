@@ -1,6 +1,6 @@
 "use client";
 
-import { ActionRecord, HouseholdView, Invitation, SessionView, type NewInvitation, type Person } from "@woven/schema";
+import { ActionRecord, Alert, HouseholdView, Invitation, Memory, MemorySettings, SessionView, type NewInvitation, type Person } from "@woven/schema";
 import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
 import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser";
 import { z } from "zod";
@@ -107,6 +107,16 @@ export const identity = {
   addPerson: (input: { name: string; email?: string; role: "adult" | "child" | "guest" }) => call("/v1/household/people", z.custom<Person>(), post(input)),
   removePerson: (id: string) => call(`/v1/household/people/${id}`, z.custom<Person>(), { method: "DELETE" }),
 
+  /* Memory (phase 36) */
+  memories: () => call("/v1/memory?candidates=true", z.object({ memories: z.array(Memory), settings: MemorySettings })),
+  remember: (text: string, kind: "fact" | "preference" | "event" | "routine" = "fact") => call("/v1/memory", Memory, post({ text, kind })),
+  confirmMemory: (id: string) => call(`/v1/memory/${id}/confirm`, Memory, post({})),
+  editMemory: (id: string, text: string) => call(`/v1/memory/${id}`, Memory, { method: "PATCH", body: JSON.stringify({ text }) }),
+  forgetMemory: (id: string) => call(`/v1/memory/${id}`, z.object({ forgotten: z.literal(true) }), { method: "DELETE" }),
+  forgetAllMemories: () => call("/v1/memory", z.object({ forgotten: z.number() }), { method: "DELETE" }),
+  memorySettings: (s: MemorySettings) => call("/v1/memory/settings", MemorySettings, { method: "PUT", body: JSON.stringify(s) }),
+  alerts: () => call("/v1/system/alerts", z.object({ alerts: z.array(Alert) })).then((r) => r.alerts),
+
   /* Data rights (phase 11) */
   exportData: (scope: "me" | "household") => call("/v1/household/export", z.object({ dir: z.string(), takenAt: z.string(), counts: z.record(z.string(), z.number()) }), post({ scope })),
   deleteAccount: (personId: string) => call(`/v1/household/people/${personId}/account`, z.object({ files: z.number(), objects: z.number() }), { method: "DELETE" }),
@@ -135,6 +145,8 @@ export const identity = {
 };
 
 /** "Safari on Mac", "Chrome on Android": a label the person recognises in their passkey list. */
+export type { Memory, MemorySettings, Alert };
+
 export function deviceLabel(): string {
   if (typeof navigator === "undefined") return "This device";
   const ua = navigator.userAgent;

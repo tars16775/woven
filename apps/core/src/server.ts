@@ -10,6 +10,8 @@ import { CORE_HOUSEHOLD_ID, openData } from "./data.ts";
 import { scheduleNightly } from "./maintenance.ts";
 import { buildServices } from "./services.ts";
 import { MediaService } from "./media.ts";
+import { assess } from "./alerts.ts";
+import { listSnapshots } from "./integrity.ts";
 import { startGate } from "./gate/spawn.ts";
 import { coreDnsNames, lanAddresses } from "./network.ts";
 import { ensureHouseholdTls, type TlsMaterial } from "./tls.ts";
@@ -82,7 +84,31 @@ async function main() {
         coreUrl: `${scheme}://${config.name}:${config.port}/v1/health`,
       })
     : null;
-  const stopNightly = config.env === "production" || config.env === "development" ? scheduleNightly(data, logger, { mirror: config.snapshotMirror, sweep: () => services.files.sweepUploads() }) : () => undefined;
+  const stopNightly = config.env === "production" || config.env === "development" ? scheduleNightly(data, logger, {
+          mirror: config.snapshotMirror,
+          sweep: async () => (await services.files.sweepUploads()) + services.memory.sweep(),
+          report: (facts) => {
+            night = facts;
+            void reassess();
+          },
+        }) : () => undefined;
+
+  // Alerts: what the household should hear about, reassessed every ten minutes and after the nightly job.
+  let night: { ledgerOk: boolean; objectsBad: number; mirrorOk: boolean | null } = { ledgerOk: integrity.ok, objectsBad: 0, mirrorOk: null };
+  const reassess = async () => {
+    try {
+      const [storage, snaps] = await Promise.all([hardware.storage(), listSnapshots(paths.snapshots, config.snapshotMirror)]);
+      const certDaysLeft = tls ? Math.floor((new Date(tls.server.notAfter).getTime() - Date.now()) / 86400_000) : null;
+      const lastSnapshotAgeHours = snaps[0] ? (Date.now() - new Date(snaps[0].takenAt).getTime()) / 3600_000 : null;
+      assess(services.alerts, { diskFreeBytes: storage.freeBytes, diskTotalBytes: storage.totalBytes, ledgerOk: night.ledgerOk, objectsBad: night.objectsBad, mirrorConfigured: !!config.snapshotMirror, mirrorOk: night.mirrorOk, certDaysLeft, gate: services.gate.cached().state, lastSnapshotAgeHours });
+    } catch (err) {
+      logger.warn({ err }, "could not assess alerts");
+    }
+  };
+  services.alerts.onChange = (alerts) => logger.info({ alerts: alerts.map((a) => `${a.level}: ${a.title}`) }, "alerts changed");
+  void reassess();
+  const alertTimer = setInterval(() => void reassess(), 10 * 60_000);
+  alertTimer.unref();
 
   // Scheduled routines: once a minute, on the minute.
   const routineTimer = setInterval(() => void services.routines.tick().catch((err: unknown) => logger.warn({ err }, "routine tick failed")), 60_000);
@@ -93,6 +119,7 @@ async function main() {
     logger.info({ signal }, "stopping");
     stopNightly();
     clearInterval(routineTimer);
+    clearInterval(alertTimer);
     bonjour?.unpublishAll(() => bonjour.destroy());
     await Promise.all([app.close(), trust?.close(), local?.close()]);
     await gate.stop();
