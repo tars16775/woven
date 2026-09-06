@@ -38,7 +38,7 @@ export const mediaRoutes: FastifyPluginAsync = async (raw) => {
     const found = services.media.get(req.session!.person, req.params.id);
     if (!found) throw new FileError(404, "No such media.");
     if (found.item.playable) return reply.redirect(`/v1/files/${found.item.fileId}/content`, 307);
-    const t = services.media.transcode(found.sha256, found.item.kind);
+    const t = await services.media.transcode(found.sha256, found.item.kind);
     if (!t) throw new FileError(409, "This file needs transcoding and ffmpeg is not installed on the box.");
     req.raw.on("close", t.stop);
     return reply.type(t.mime).header("cache-control", "no-store").send(t.stream);

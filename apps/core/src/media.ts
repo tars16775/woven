@@ -71,14 +71,18 @@ export class MediaService {
     if (existing) return this.toItem(existing, f);
     let info: { durationS: number | null; width: number | null; height: number | null; videoCodec: string | null; audioCodec: string | null; container: string | null } = { durationS: null, width: null, height: null, videoCodec: null, audioCodec: null, container: null };
     if (this.tools.ffprobe) {
+      // Objects are encrypted on disk, so the probe reads a short-lived plain copy.
+      const copy = await this.store.plainCopy(f.sha256);
       try {
-        const { stdout } = await exec(this.tools.ffprobe, ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", this.store.pathFor(f.sha256)], { maxBuffer: 4 * 1024 * 1024 });
+        const { stdout } = await exec(this.tools.ffprobe, ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", copy.path], { maxBuffer: 4 * 1024 * 1024 });
         const j = JSON.parse(stdout) as { format?: { duration?: string; format_name?: string }; streams?: { codec_type?: string; codec_name?: string; width?: number; height?: number }[] };
         const v = j.streams?.find((s) => s.codec_type === "video" && !/mjpeg|png/.test(s.codec_name ?? ""));
         const a = j.streams?.find((s) => s.codec_type === "audio");
         info = { durationS: j.format?.duration ? Number(j.format.duration) : null, width: v?.width ?? null, height: v?.height ?? null, videoCodec: v?.codec_name ?? null, audioCodec: a?.codec_name ?? null, container: j.format?.format_name ?? null };
       } catch (err) {
         this.logger.warn({ err, file: fileId }, "ffprobe could not read a media file");
+      } finally {
+        await copy.done();
       }
     }
     const container = info.container ?? (f.mime ? f.mime.split("/")[1] ?? null : null);
@@ -105,9 +109,11 @@ export class MediaService {
   }
 
   /** Transcode to fragmented MP4 (H.264 + AAC) or AAC audio on the fly. Returns null when ffmpeg is missing. */
-  transcode(sha256: string, kind: "video" | "audio"): { stream: Readable; mime: string; stop: () => void } | null {
+  async transcode(sha256: string, kind: "video" | "audio"): Promise<{ stream: Readable; mime: string; stop: () => void } | null> {
     if (!this.tools.ffmpeg) return null;
-    const input = this.store.pathFor(sha256);
+    // ffmpeg seeks in its input, so it gets a plain copy that goes away when the stream ends.
+    const copy = await this.store.plainCopy(sha256);
+    const input = copy.path;
     const args =
       kind === "video"
         ? ["-v", "error", "-i", input, "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-vf", "scale='min(1920,iw)':-2", "-c:a", "aac", "-b:a", "160k", "-movflags", "frag_keyframe+empty_moov+default_base_moof", "-f", "mp4", "pipe:1"]
@@ -115,6 +121,7 @@ export class MediaService {
     const child = spawn(this.tools.ffmpeg, args, { stdio: ["ignore", "pipe", "pipe"] });
     child.stderr.on("data", (d: Buffer) => this.logger.debug({ ffmpeg: d.toString().trim() }, "ffmpeg"));
     child.on("error", (err) => this.logger.warn({ err }, "ffmpeg failed to start"));
+    child.on("close", () => void copy.done());
     return { stream: child.stdout, mime: kind === "video" ? "video/mp4" : "audio/mp4", stop: () => child.kill("SIGKILL") };
   }
 

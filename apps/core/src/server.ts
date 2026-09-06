@@ -7,6 +7,7 @@ import { buildApp } from "./app.ts";
 import { loadConfig } from "./config.ts";
 import { createLogger } from "./logger.ts";
 import { CORE_HOUSEHOLD_ID, openData } from "./data.ts";
+import { derive, KeyStore } from "./keystore.ts";
 import { scheduleNightly } from "./maintenance.ts";
 import { buildServices } from "./services.ts";
 import { MediaService } from "./media.ts";
@@ -32,8 +33,13 @@ async function main() {
   }
   await mkdir(paths.keys, { recursive: true, mode: 0o700 });
 
+  // The household data key: everything below is encrypted under keys derived from it (gap 5).
+  const key = await new KeyStore(config.keyStore, paths.keys, config.dataRoot).load();
+
   // Open the database (running migrations), the object store and the ledger.
-  const data = await openData(paths);
+  const data = await openData(paths, { key });
+  const migrated = await data.store.migratePlain((n) => logger.info({ n }, "encrypting objects written before encryption"));
+  if (migrated) logger.info({ objects: migrated }, "encrypted objects that were written before encryption at rest");
   const integrity = data.ledger.verify();
   if (!integrity.ok) {
     logger.fatal({ integrity }, "the ledger does not verify; refusing to start on a tampered or damaged database");
@@ -52,7 +58,7 @@ async function main() {
   // The household CA and this machine's certificate, created or renewed as needed.
   let tls: TlsMaterial | undefined;
   if (config.tls) {
-    tls = await ensureHouseholdTls({ keysDir: paths.keys, dns: coreDnsNames(config.name), ips: lanAddresses() });
+    tls = await ensureHouseholdTls({ keysDir: paths.keys, dns: coreDnsNames(config.name), ips: lanAddresses(), key: derive(key, "keys") });
     if (tls.createdCa) logger.warn({ fingerprint: tls.ca.fingerprint }, "created a new household certificate authority; devices must trust it once");
     if (tls.issued) logger.info({ names: tls.server.dns, addresses: tls.server.ips, notAfter: tls.server.notAfter }, "issued the core's certificate");
   }

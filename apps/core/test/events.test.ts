@@ -8,7 +8,7 @@ import { loadConfig } from "../src/config.ts";
 import { CORE_HOUSEHOLD_ID, openData, type Data } from "../src/data.ts";
 import { createLogger } from "../src/logger.ts";
 import { signPath } from "../src/auth/sessions.ts";
-import { auth, sessionOf, type Auth } from "./helpers.ts";
+import { auth, sessionOf, type Auth, TEST_KEY } from "./helpers.ts";
 import { buildServices } from "../src/services.ts";
 import { GateClient } from "../src/gate/client.ts";
 
@@ -21,7 +21,7 @@ let owner: Auth = { cookie: "", device: "" };
 
 beforeAll(async () => {
   const hardware = detectHardware({ dataRoot });
-  data = await openData(hardware.paths);
+  data = await openData(hardware.paths, { key: TEST_KEY });
   app = await buildApp({ config, logger: createLogger(config), hardware, data, services: buildServices(data, config, new GateClient(null, "test")), version: "test", startedAt: new Date() });
   await app.listen({ host: "127.0.0.1", port: 0 });
   port = (app.server.address() as { port: number }).port;

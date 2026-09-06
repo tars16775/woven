@@ -10,7 +10,7 @@ import { openData, type Data } from "../src/data.ts";
 import { createLogger } from "../src/logger.ts";
 import { buildServices, type Services } from "../src/services.ts";
 import { GateClient } from "../src/gate/client.ts";
-import { auth, sessionOf, type Auth } from "./helpers.ts";
+import { auth, sessionOf, type Auth, TEST_KEY } from "./helpers.ts";
 import { listSnapshots, restoreDrill, verifyStore } from "../src/integrity.ts";
 import { runNightly } from "../src/maintenance.ts";
 
@@ -24,7 +24,7 @@ let owner: Auth = { cookie: "", device: "" };
 
 beforeAll(async () => {
   const hardware = detectHardware({ dataRoot });
-  data = await openData(hardware.paths);
+  data = await openData(hardware.paths, { key: TEST_KEY });
   services = buildServices(data, config, new GateClient(null, "test"));
   app = await buildApp({ config, logger: createLogger(config), hardware, data, services, version: "test", startedAt: new Date() });
   await app.ready();
@@ -71,7 +71,7 @@ describe("integrity and restore (phase 23)", () => {
   });
 
   it("the restore drill restores the newest snapshot into scratch and verifies it", async () => {
-    const report = await restoreDrill(data.paths.snapshots, mirror);
+    const report = await restoreDrill(data.paths.snapshots, mirror, TEST_KEY);
     expect(report.ok).toBe(true);
     expect(report.ledger.rows).toBeGreaterThanOrEqual(3);
     expect(report.objects).toMatchObject({ checked: 5, corrupt: [], missing: [] });

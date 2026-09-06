@@ -11,7 +11,7 @@ import { openData, type Data } from "../src/data.ts";
 import { createLogger } from "../src/logger.ts";
 import { buildServices, type Services } from "../src/services.ts";
 import { GateClient } from "../src/gate/client.ts";
-import { auth, sessionOf, type Auth } from "./helpers.ts";
+import { auth, sessionOf, type Auth, TEST_KEY } from "./helpers.ts";
 import { mimeForName } from "../src/photos.ts";
 
 const dataRoot = mkdtempSync(`${os.tmpdir()}/woven-photos-`);
@@ -51,7 +51,7 @@ async function jpeg(w: number, h: number, exif?: { date?: string; make?: string;
 
 beforeAll(async () => {
   const hardware = detectHardware({ dataRoot });
-  data = await openData(hardware.paths);
+  data = await openData(hardware.paths, { key: TEST_KEY });
   services = buildServices(data, config, new GateClient(null, "test"));
   app = await buildApp({ config, logger: createLogger(config), hardware, data, services, version: "test", startedAt: new Date() });
   await app.ready();

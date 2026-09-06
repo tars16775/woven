@@ -66,7 +66,7 @@ export const systemRoutes: FastifyPluginAsync = async (raw) => {
 
   app.post("/system/backups/snapshot", { preHandler: requireRole("owner"), schema: { response: { 200: BackupStatus } } }, async (req) => {
     const { data, config } = app.deps;
-    const snap = await takeSnapshot({ db: data.database, objectsDir: data.paths.store, snapshotsDir: data.paths.snapshots });
+    const snap = await takeSnapshot({ db: data.database, objectsDir: data.paths.store, snapshotsDir: data.paths.snapshots, keysDir: data.paths.keys });
     let mirrored = false;
     if (config.snapshotMirror) mirrored = (await mirrorSnapshot(snap.dir, config.snapshotMirror).catch(() => ({ copied: false }))).copied;
     data.ledger.append({ type: "action.executed", householdId: req.session!.person.householdId || CORE_HOUSEHOLD_ID, actor: { kind: "person", id: req.session!.person.id }, where: "inside", target: "snapshot", sensitivity: "low", payload: { capability: "backup.snapshot", planned: {}, observed: { objects: snap.manifest.objects.count, mirrored } } });
@@ -75,7 +75,7 @@ export const systemRoutes: FastifyPluginAsync = async (raw) => {
 
   app.post("/system/backups/drill", { preHandler: requireRole("owner"), schema: { response: { 200: BackupStatus } } }, async (req) => {
     const { data, config } = app.deps;
-    const report = await restoreDrill(data.paths.snapshots, config.snapshotMirror);
+    const report = await restoreDrill(data.paths.snapshots, config.snapshotMirror, data.key);
     lastDrill = { ...report, at: new Date().toISOString() };
     data.ledger.append({ type: "core.integrity_checked", householdId: req.session!.person.householdId || CORE_HOUSEHOLD_ID, actor: { kind: "person", id: req.session!.person.id }, where: "inside", target: report.snapshot, sensitivity: "low", payload: { drill: true, ok: report.ok, rows: report.ledger.rows, objects: report.objects.checked, problem: report.problem } });
     return backupStatus();

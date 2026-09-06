@@ -1,5 +1,8 @@
 import { SESSION_COOKIE } from "../src/auth/sessions.ts";
 
+/** The household key every test opens its data with. */
+export const TEST_KEY = Buffer.alloc(32, 7);
+
 /** A signed-in device in tests: the cookie and the device secret the core hands over once. */
 export type Auth = { cookie: string; device: string };
 

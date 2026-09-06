@@ -1,3 +1,4 @@
+import { TEST_KEY } from "./helpers.ts";
 import { mkdtempSync } from "node:fs";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -24,7 +25,7 @@ beforeAll(async () => {
   await writeFile(join(site, "404.html"), "<h1>lost</h1>");
   const config = loadConfig({ NODE_ENV: "test", WOVEN_DATA: dataRoot, LOG_LEVEL: "fatal", WOVEN_MDNS: "off", WOVEN_TLS: "off", WOVEN_GATE: "off", WOVEN_SITE: site });
   const hardware = detectHardware({ dataRoot });
-  data = await openData(hardware.paths);
+  data = await openData(hardware.paths, { key: TEST_KEY });
   app = await buildApp({ config, logger: createLogger(config), hardware, data, services: buildServices(data, config, new GateClient(null, "test")), version: "test", startedAt: new Date() });
   await app.ready();
 });

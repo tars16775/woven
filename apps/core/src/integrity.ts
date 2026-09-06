@@ -7,6 +7,7 @@ import { files } from "./db/schema.ts";
 import { isNull } from "drizzle-orm";
 import { Ledger } from "./ledger.ts";
 import { restoreSnapshot } from "./snapshot.ts";
+import { derive } from "./keystore.ts";
 import { ContentStore } from "./store/index.ts";
 
 export type StoreReport = { checked: number; total: number; corrupt: string[]; missing: string[]; sampled: boolean };
@@ -91,7 +92,7 @@ export type DrillReport = {
  * folder, open the database, verify the chain and the objects, throw the
  * scratch away. A backup that has never been restored is a hope, not a plan.
  */
-export async function restoreDrill(snapshotsDir: string, mirrorDir: string | null = null): Promise<DrillReport> {
+export async function restoreDrill(snapshotsDir: string, mirrorDir: string | null, key: Buffer): Promise<DrillReport> {
   const started = Date.now();
   const [latest] = await listSnapshots(snapshotsDir, mirrorDir);
   if (!latest) throw new Error("There is no snapshot to restore yet.");
@@ -99,11 +100,12 @@ export async function restoreDrill(snapshotsDir: string, mirrorDir: string | nul
   try {
     const dbPath = join(scratch, "db", "woven.sqlite");
     const objectsDir = join(scratch, "store", "objects");
-    await restoreSnapshot({ snapshotDir: join(snapshotsDir, latest.name), dbPath, objectsDir });
-    const opened = openDatabase(dbPath);
+    const dbKey = derive(key, "database");
+    await restoreSnapshot({ snapshotDir: join(snapshotsDir, latest.name), dbPath, objectsDir, key: dbKey });
+    const opened = openDatabase(dbPath, dbKey);
     try {
       const ledger = new Ledger(opened.db).verify();
-      const store = new ContentStore(objectsDir, join(scratch, "store", "tmp"));
+      const store = new ContentStore(objectsDir, join(scratch, "store", "tmp"), derive(key, "objects"));
       const objects = await verifyStore(opened.db, store, { sampleAbove: 500, sample: 200 });
       const ok = ledger.ok && objects.corrupt.length === 0 && objects.missing.length === 0;
       return { snapshot: latest.name, takenAt: latest.takenAt, ok, ledger: { ok: ledger.ok, rows: ledger.rows }, objects, durationMs: Date.now() - started, problem: ok ? null : !ledger.ok ? "the restored ledger does not verify" : `${objects.corrupt.length} corrupt, ${objects.missing.length} missing objects` };

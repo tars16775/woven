@@ -11,7 +11,7 @@ import { buildServices, type Services } from "../src/services.ts";
 import { GateClient } from "../src/gate/client.ts";
 import { OneTimeStore } from "../src/auth/challenges.ts";
 import { formatCode, normalizeCode } from "../src/auth/recovery.ts";
-import { auth, sessionOf, type Auth } from "./helpers.ts";
+import { auth, sessionOf, type Auth, TEST_KEY } from "./helpers.ts";
 
 const dataRoot = mkdtempSync(`${os.tmpdir()}/woven-identity-`);
 const ORIGIN = "http://localhost:3000";
@@ -22,7 +22,7 @@ let services: Services;
 
 beforeAll(async () => {
   const hardware = detectHardware({ dataRoot });
-  data = await openData(hardware.paths);
+  data = await openData(hardware.paths, { key: TEST_KEY });
   services = buildServices(data, config, new GateClient(null, "test"));
   app = await buildApp({ config, logger: createLogger(config), hardware, data, services, version: "test", startedAt: new Date() });
   await app.ready();

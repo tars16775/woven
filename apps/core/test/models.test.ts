@@ -12,7 +12,7 @@ import { openData, type Data } from "../src/data.ts";
 import { createLogger } from "../src/logger.ts";
 import { buildServices, type Services } from "../src/services.ts";
 import { startGate, type GateHandle } from "../src/gate/spawn.ts";
-import { auth, sessionOf, type Auth } from "./helpers.ts";
+import { auth, sessionOf, type Auth, TEST_KEY } from "./helpers.ts";
 import { catalogue } from "../src/models.ts";
 import { cosine, type Embedder } from "../src/photo-index.ts";
 
@@ -63,7 +63,7 @@ beforeAll(async () => {
   const logger = createLogger(config);
   gate = await startGate({ mode: "spawn", port: gatePort, allow: config.gate.allow, dataRoot, logLevel: "fatal", logger });
   const hardware = detectHardware({ dataRoot });
-  data = await openData(hardware.paths);
+  data = await openData(hardware.paths, { key: TEST_KEY });
   services = buildServices(data, config, gate.client, { logger, loadEmbedder: async () => stub });
   app = await buildApp({ config, logger, hardware, data, services, version: "test", startedAt: new Date() });
   await app.ready();

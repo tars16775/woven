@@ -50,12 +50,16 @@ const Env = z.object({
   WOVEN_GATE_ALLOW: z.string().default(""),
   /** A second place for snapshots: another drive, or a folder the household chose. Empty means none yet. */
   WOVEN_SNAPSHOT_MIRROR: z.string().default(""),
+  /** Where the household data key lives: the login "keychain" (macOS) or a "file" in the keys folder. Defaults by platform. */
+  WOVEN_KEY: z.enum(["keychain", "file"]).optional(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 });
 
 export type Config = {
   env: "development" | "test" | "production";
   dataRoot: string;
+  /** Where the household data key is kept (gap 5). */
+  keyStore: "keychain" | "file";
   host: string;
   port: number;
   origins: string[];
@@ -82,6 +86,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
   return {
     env: e.NODE_ENV,
     dataRoot: e.WOVEN_DATA.replace(/\/+$/, ""),
+    keyStore: e.WOVEN_KEY ?? (e.NODE_ENV === "test" ? "file" : process.platform === "darwin" ? "keychain" : "file"),
     host: e.WOVEN_HOST,
     port: e.WOVEN_PORT,
     origins: e.WOVEN_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean),

@@ -7,6 +7,7 @@ import { detectHardware } from "@woven/hal";
 import { eq } from "drizzle-orm";
 import { loadConfig } from "../config.ts";
 import { openData } from "../data.ts";
+import { KeyStore } from "../keystore.ts";
 import { households, people } from "../db/schema.ts";
 import { RecoveryService } from "../auth/recovery.ts";
 import { buildServices } from "../services.ts";
@@ -17,7 +18,8 @@ export const DEMO_HOUSEHOLD_ID = "01J9Z0DEM0H0ME000000000001";
 
 const config = loadConfig();
 const { paths } = detectHardware({ dataRoot: config.dataRoot });
-const data = await openData(paths);
+const key = await new KeyStore(config.keyStore, paths.keys, config.dataRoot).load();
+const data = await openData(paths, { key });
 const services = buildServices(data, config, new GateClient(null, "seed"));
 try {
   const existing = data.database.db.select().from(households).all();

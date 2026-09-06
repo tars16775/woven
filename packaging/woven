@@ -68,6 +68,7 @@ case "${1:-}" in
     rm -f "$PLIST"
     rm -rf "$WOVEN_HOME/current" "$WOVEN_HOME/releases" "$WOVEN_HOME/node"
     echo "Woven is uninstalled. Your data is untouched at: $(datadir)"
+    echo "The household data key stays in your login Keychain (service woven); without it the data folder cannot be read."
     ;;
   *) usage; exit 1 ;;
 esac

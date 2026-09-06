@@ -2,6 +2,7 @@
 import { detectHardware } from "@woven/hal";
 import { loadConfig } from "../config.ts";
 import { openData } from "../data.ts";
+import { KeyStore } from "../keystore.ts";
 import { GateClient } from "../gate/client.ts";
 import { buildServices } from "../services.ts";
 
@@ -15,7 +16,8 @@ if (!folder || !ownerEmail) {
 }
 const config = loadConfig();
 const { paths } = detectHardware({ dataRoot: config.dataRoot });
-const data = await openData(paths);
+const key = await new KeyStore(config.keyStore, paths.keys, config.dataRoot).load();
+const data = await openData(paths, { key });
 const services = buildServices(data, config, new GateClient(null, "cli"));
 try {
   const owner = services.household.personByEmail(ownerEmail);

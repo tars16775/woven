@@ -12,7 +12,7 @@ import { openData, type Data } from "../src/data.ts";
 import { createLogger } from "../src/logger.ts";
 import { buildServices, type Services } from "../src/services.ts";
 import { GateClient } from "../src/gate/client.ts";
-import { auth, sessionOf, type Auth } from "./helpers.ts";
+import { auth, sessionOf, type Auth, TEST_KEY } from "./helpers.ts";
 import { MediaService, mediaKind } from "../src/media.ts";
 
 const exec = promisify(execFile);
@@ -29,7 +29,7 @@ type Item = { fileId: string; name: string; kind: string; playable: boolean; dur
 beforeAll(async () => {
   tools = await MediaService.detectTools();
   const hardware = detectHardware({ dataRoot });
-  data = await openData(hardware.paths);
+  data = await openData(hardware.paths, { key: TEST_KEY });
   services = buildServices(data, config, new GateClient(null, "test"), { tools });
   app = await buildApp({ config, logger: createLogger(config), hardware, data, services, version: "test", startedAt: new Date() });
   await app.ready();

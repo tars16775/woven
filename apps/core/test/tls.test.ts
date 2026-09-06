@@ -1,11 +1,11 @@
 import { mkdtempSync } from "node:fs";
-import { readFile, rm, stat } from "node:fs/promises";
+import { readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import { join } from "node:path";
 import tls from "node:tls";
 import Fastify from "fastify";
 import { afterAll, describe, expect, it } from "vitest";
-import { ensureHouseholdTls } from "../src/tls.ts";
+import { ensureHouseholdTls, openPrivateKey } from "../src/tls.ts";
 import { coreDnsNames, lanAddresses } from "../src/network.ts";
 
 const keysDir = mkdtempSync(`${os.tmpdir()}/woven-keys-`);
@@ -43,6 +43,24 @@ describe("household certificate authority", () => {
     const untrusted = await handshake(port, "", "woven.local");
     expect(untrusted.authorized).toBe(false);
     await app.close();
+  });
+
+  it("seals the private keys under the household key and opens them again", async () => {
+    const key = Buffer.alloc(32, 5);
+    const before = await readFile(join(keysDir, "ca.key"), "utf8");
+    expect(before).toMatch(/^-----BEGIN/);
+    const sealed = await ensureHouseholdTls({ keysDir, dns: ["woven.local", "localhost"], ips: ["192.168.0.12"], key });
+    expect(sealed.createdCa).toBe(false);
+    expect(sealed.issued).toBe(false);
+    const onDisk = await readFile(join(keysDir, "ca.key"), "utf8");
+    expect(onDisk.startsWith("WOVK1\n")).toBe(true);
+    expect(onDisk).not.toContain("BEGIN");
+    expect(openPrivateKey(onDisk, key)).toBe(before);
+    expect(() => openPrivateKey(onDisk, Buffer.alloc(32, 6))).toThrow();
+    await expect(ensureHouseholdTls({ keysDir, dns: ["woven.local", "localhost"], ips: ["192.168.0.12"] })).rejects.toThrow(/sealed/);
+    // Back to plain for the rest of the suite.
+    await writeFile(join(keysDir, "ca.key"), before, { mode: 0o600 });
+    await writeFile(join(keysDir, "server.key"), openPrivateKey(await readFile(join(keysDir, "server.key"), "utf8"), key), { mode: 0o600 });
   });
 
   it("keeps the CA and the certificate when nothing changed", async () => {

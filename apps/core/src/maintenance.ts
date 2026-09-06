@@ -42,7 +42,7 @@ export async function runNightly(data: Data, logger: Logger, keep = 14, opts: Pi
   if (!report.ok) logger.error({ report }, "ledger integrity check FAILED");
   if (objects.corrupt.length || objects.missing.length) logger.error({ corrupt: objects.corrupt, missing: objects.missing }, "object store integrity check FAILED");
 
-  const snap = await takeSnapshot({ db: data.database, objectsDir: data.paths.store, snapshotsDir: data.paths.snapshots });
+  const snap = await takeSnapshot({ db: data.database, objectsDir: data.paths.store, snapshotsDir: data.paths.snapshots, keysDir: data.paths.keys });
   logger.info({ dir: snap.dir, objects: snap.manifest.objects.count }, "snapshot taken");
   let mirrorOk: boolean | null = null;
   if (opts.mirror) {

@@ -10,7 +10,7 @@ import { openData, type Data } from "../src/data.ts";
 import { createLogger } from "../src/logger.ts";
 import { buildServices, type Services } from "../src/services.ts";
 import { GateClient } from "../src/gate/client.ts";
-import { auth, sessionOf, type Auth } from "./helpers.ts";
+import { auth, sessionOf, type Auth, TEST_KEY } from "./helpers.ts";
 import { scrub } from "../src/diagnostics.ts";
 
 const dataRoot = mkdtempSync(`${os.tmpdir()}/woven-mgmt-`);
@@ -23,7 +23,7 @@ let restarts = 0;
 
 beforeAll(async () => {
   const hardware = detectHardware({ dataRoot });
-  data = await openData(hardware.paths);
+  data = await openData(hardware.paths, { key: TEST_KEY });
   services = buildServices(data, config, new GateClient(null, "test"), { hardware, mdns: false });
   const logFile = join(dataRoot, "core.log");
   await writeFile(logFile, `{"level":30,"msg":"Ready.","email":"alex@example.com","ip":"192.168.0.12"}\n`);

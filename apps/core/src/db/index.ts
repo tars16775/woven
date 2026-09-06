@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import Database from "better-sqlite3";
+import Database from "better-sqlite3-multiple-ciphers";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import * as schema from "./schema.ts";
@@ -37,9 +37,25 @@ const migrationsFolder = findMigrations();
  * safe under WAL (a crash loses at most the last transaction, never
  * corrupts); foreign keys on; a busy timeout so writers wait instead of fail.
  */
-export function openDatabase(path: string): OpenedDatabase {
+export function openDatabase(path: string, key?: Buffer): OpenedDatabase {
   if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
-  const sqlite = new Database(path);
+  let sqlite = new Database(path);
+  if (key && path !== ":memory:") {
+    // Encrypted at rest (gap 5). A database written before encryption is rekeyed on first open.
+    sqlite.pragma(`key = '${key.toString("hex")}'`);
+    try {
+      sqlite.prepare("select count(*) from sqlite_master").get();
+    } catch {
+      sqlite.close();
+      sqlite = new Database(path);
+      sqlite.prepare("select count(*) from sqlite_master").get(); // plain: readable without a key
+      sqlite.pragma("journal_mode = DELETE"); // rekeying needs a rollback journal
+      sqlite.pragma(`rekey = '${key.toString("hex")}'`);
+      sqlite.close();
+      sqlite = new Database(path);
+      sqlite.pragma(`key = '${key.toString("hex")}'`);
+    }
+  }
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("synchronous = NORMAL");
   sqlite.pragma("foreign_keys = ON");

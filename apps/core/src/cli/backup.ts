@@ -15,6 +15,7 @@ import { detectHardware } from "@woven/hal";
 import { Namespace } from "@woven/schema";
 import { loadConfig } from "../config.ts";
 import { openData } from "../data.ts";
+import { KeyStore } from "../keystore.ts";
 import { GateClient } from "../gate/client.ts";
 import { buildServices } from "../services.ts";
 import { sha256File, walkFiles } from "../files.ts";
@@ -37,7 +38,8 @@ const root = resolve(folder);
 
 const config = loadConfig();
 const { paths } = detectHardware({ dataRoot: config.dataRoot });
-const data = await openData(paths);
+const key = await new KeyStore(config.keyStore, paths.keys, config.dataRoot).load();
+const data = await openData(paths, { key });
 const services = buildServices(data, config, new GateClient(null, "cli"));
 try {
   const owner = services.household.personByEmail(ownerEmail);

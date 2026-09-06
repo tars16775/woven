@@ -9,6 +9,7 @@
  */
 import "reflect-metadata";
 import { webcrypto, type webcrypto as WebCrypto } from "node:crypto";
+import { createCipheriv, createDecipheriv } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import * as x509 from "@peculiar/x509";
@@ -35,6 +36,8 @@ export type TlsMaterial = {
 
 export type EnsureTlsOptions = {
   keysDir: string;
+  /** Private keys on disk are sealed under this (derived from the household key); without it they are plain PEM. */
+  key?: Buffer;
   dns: string[];
   ips: string[];
   now?: Date;
@@ -55,12 +58,12 @@ export async function ensureHouseholdTls(opts: EnsureTlsOptions): Promise<TlsMat
 
   let createdCa = false;
   let caCertPem = await readOrNull(f.caCert);
-  let caKeyPem = await readOrNull(f.caKey);
+  let caKeyPem = await readPrivateKey(f.caKey, opts.key);
   if (!caCertPem || !caKeyPem) {
     const made = await createCa(now);
     caCertPem = made.certPem;
     caKeyPem = made.keyPem;
-    await writeFile(f.caKey, caKeyPem, { mode: 0o600 });
+    await writeFile(f.caKey, sealPrivateKey(caKeyPem, opts.key), { mode: 0o600 });
     await writeFile(f.caCert, caCertPem, { mode: 0o644 });
     createdCa = true;
   }
@@ -71,12 +74,12 @@ export async function ensureHouseholdTls(opts: EnsureTlsOptions): Promise<TlsMat
 
   let issued = false;
   let certPem = await readOrNull(f.serverCert);
-  let keyPem = await readOrNull(f.serverKey);
+  let keyPem = await readPrivateKey(f.serverKey, opts.key);
   if (!certPem || !keyPem || createdCa || needsReissue(new x509.X509Certificate(certPem), dns, ips, now)) {
     const made = await createServerCert({ caCert, caKeyPem, dns, ips, now });
     certPem = made.certPem;
     keyPem = made.keyPem;
-    await writeFile(f.serverKey, keyPem, { mode: 0o600 });
+    await writeFile(f.serverKey, sealPrivateKey(keyPem, opts.key), { mode: 0o600 });
     await writeFile(f.serverCert, certPem, { mode: 0o644 });
     issued = true;
   }
@@ -172,6 +175,35 @@ function serial(): string {
   const bytes = webcrypto.getRandomValues(new Uint8Array(16));
   bytes[0] = bytes[0]! & 0x7f; // positive integer
   return Buffer.from(bytes).toString("hex");
+}
+
+const SEALED = "WOVK1\n";
+
+/** A private key sealed under the keys key: AES-256-GCM, iv + ciphertext + tag, base64 after a marker line. */
+export function sealPrivateKey(pem: string, key: Buffer | undefined): string {
+  if (!key) return pem;
+  const iv = webcrypto.getRandomValues(new Uint8Array(12));
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const ct = Buffer.concat([cipher.update(pem, "utf8"), cipher.final()]);
+  return `${SEALED}${Buffer.concat([Buffer.from(iv), ct, cipher.getAuthTag()]).toString("base64")}\n`;
+}
+
+export function openPrivateKey(text: string, key: Buffer | undefined): string {
+  if (!text.startsWith(SEALED)) return text; // plain PEM from before sealing
+  if (!key) throw new Error("this private key is sealed under the household key, which is not available");
+  const raw = Buffer.from(text.slice(SEALED.length).trim(), "base64");
+  const decipher = createDecipheriv("aes-256-gcm", key, raw.subarray(0, 12));
+  decipher.setAuthTag(raw.subarray(raw.length - 16));
+  return Buffer.concat([decipher.update(raw.subarray(12, raw.length - 16)), decipher.final()]).toString("utf8");
+}
+
+/** Read a private key, sealing a plain one in place the first time a key is available. */
+async function readPrivateKey(path: string, key: Buffer | undefined): Promise<string | null> {
+  const text = await readOrNull(path);
+  if (text === null) return null;
+  const pem = openPrivateKey(text, key);
+  if (key && !text.startsWith(SEALED)) await writeFile(path, sealPrivateKey(pem, key), { mode: 0o600 });
+  return pem;
 }
 
 async function readOrNull(path: string): Promise<string | null> {

@@ -1,6 +1,6 @@
 import { constants, promises as fs, type Dirent } from "node:fs";
 import { join, relative } from "node:path";
-import Database from "better-sqlite3";
+import Database from "better-sqlite3-multiple-ciphers";
 import type { OpenedDatabase } from "./db/index.ts";
 
 export type SnapshotManifest = {
@@ -16,15 +16,24 @@ export type SnapshotManifest = {
  * file by file. On APFS the clone is copy-on-write, so a snapshot of a
  * terabyte of photos costs seconds and almost no space until files change.
  */
-export async function takeSnapshot(opts: { db: OpenedDatabase; objectsDir: string; snapshotsDir: string; now?: Date }): Promise<{ dir: string; manifest: SnapshotManifest }> {
+export async function takeSnapshot(opts: { db: OpenedDatabase; objectsDir: string; snapshotsDir: string; keysDir?: string; now?: Date }): Promise<{ dir: string; manifest: SnapshotManifest }> {
   const now = opts.now ?? new Date();
   const stamp = now.toISOString().replace(/[:.]/g, "-");
   const dir = join(opts.snapshotsDir, stamp);
   await fs.mkdir(join(dir, "objects"), { recursive: true });
 
   const dbFile = join(dir, "woven.sqlite");
-  await opts.db.sqlite.backup(dbFile);
+  // VACUUM INTO writes a consistent copy that keeps the database's encryption; the backup API cannot.
+  opts.db.sqlite.exec(`VACUUM INTO '${dbFile.replace(/'/g, "''")}'`);
   const dbBytes = (await fs.stat(dbFile)).size;
+  // The keys folder rides along: private keys in it are encrypted under the household key, which is not in the snapshot.
+  if (opts.keysDir) {
+    for await (const file of walk(opts.keysDir)) {
+      const dest = join(dir, "keys", relative(opts.keysDir, file));
+      await fs.mkdir(join(dest, ".."), { recursive: true, mode: 0o700 });
+      await fs.copyFile(file, dest);
+    }
+  }
 
   let count = 0;
   let bytes = 0;
@@ -52,7 +61,7 @@ export async function takeSnapshot(opts: { db: OpenedDatabase; objectsDir: strin
  * existing database: restoring over a live household is a decision a person
  * makes explicitly by moving the old one aside first.
  */
-export async function restoreSnapshot(opts: { snapshotDir: string; dbPath: string; objectsDir: string }): Promise<SnapshotManifest> {
+export async function restoreSnapshot(opts: { snapshotDir: string; dbPath: string; objectsDir: string; keysDir?: string; key?: Buffer }): Promise<SnapshotManifest> {
   const manifest = JSON.parse(await fs.readFile(join(opts.snapshotDir, "manifest.json"), "utf8")) as SnapshotManifest;
   if (manifest.version !== 1) throw new Error(`unknown snapshot version ${String(manifest.version)}`);
   if (await exists(opts.dbPath)) throw new Error(`refusing to overwrite existing database at ${opts.dbPath}`);
@@ -61,6 +70,7 @@ export async function restoreSnapshot(opts: { snapshotDir: string; dbPath: strin
   await fs.copyFile(join(opts.snapshotDir, manifest.database.file), opts.dbPath);
   // Sanity: the copied database must open and be intact.
   const check = new Database(opts.dbPath, { readonly: true });
+  if (opts.key) check.pragma(`key = '${opts.key.toString("hex")}'`);
   const result = check.pragma("integrity_check", { simple: true }) as string;
   check.close();
   if (result !== "ok") throw new Error(`restored database failed integrity check: ${result}`);
@@ -70,6 +80,15 @@ export async function restoreSnapshot(opts: { snapshotDir: string; dbPath: strin
     const dest = join(opts.objectsDir, relative(src, file));
     await fs.mkdir(join(dest, ".."), { recursive: true });
     await fs.copyFile(file, dest, constants.COPYFILE_FICLONE);
+  }
+  if (opts.keysDir) {
+    const keys = join(opts.snapshotDir, "keys");
+    for await (const file of walk(keys)) {
+      const dest = join(opts.keysDir, relative(keys, file));
+      if (await exists(dest)) continue; // never overwrite keys that are in use
+      await fs.mkdir(join(dest, ".."), { recursive: true, mode: 0o700 });
+      await fs.copyFile(file, dest);
+    }
   }
   return manifest;
 }

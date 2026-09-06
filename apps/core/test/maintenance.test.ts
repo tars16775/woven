@@ -1,3 +1,4 @@
+import { TEST_KEY } from "./helpers.ts";
 import { mkdtempSync } from "node:fs";
 import { mkdir, readdir } from "node:fs/promises";
 import os from "node:os";
@@ -22,7 +23,7 @@ describe("nightly maintenance", () => {
 
   it("verifies, snapshots and prunes", async () => {
     const paths = storagePaths(root);
-    const data = await openData(paths);
+    const data = await openData(paths, { key: TEST_KEY });
     const logger = createLogger(loadConfig({ WOVEN_DATA: root, NODE_ENV: "test", LOG_LEVEL: "fatal" }));
     data.ledger.append({ type: "core.started", householdId: CORE_HOUSEHOLD_ID, actor: { kind: "core", id: "core" }, where: "inside" });
     await data.store.put(Buffer.from("object"));
