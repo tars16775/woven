@@ -30,7 +30,7 @@ async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {
     ...init,
     credentials: "include",
     cache: "no-store",
-    headers: { "content-type": "application/json", ...(init.headers ?? {}) },
+    headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...(init.headers ?? {}) },
   });
   if (!res.ok) {
     let message = "";

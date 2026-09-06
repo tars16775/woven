@@ -71,3 +71,35 @@ test("the Home page runs real actions with receipts, and the Gate can be closed"
   await page.getByRole("button", { name: "Open the Gate" }).click();
   await expect(page.getByRole("heading", { name: "The Gate" }).locator("..")).toContainText("Open · asks first", { timeout: 15_000 });
 });
+
+const PNG_1x1 = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+
+test("Files uploads to the box in chunks, lists, serves and deletes; an image shows up in Photos", async ({ page }) => {
+  await signInWithPasskey(page);
+  await page.goto("/dashboard/files");
+  await expect(page.getByTestId("upload")).toBeVisible({ timeout: 30_000 });
+  await page.getByTestId("upload-input").setInputFiles([
+    { name: "hello.txt", mimeType: "text/plain", buffer: Buffer.from("hello from the dashboard") },
+    { name: "dot.png", mimeType: "image/png", buffer: PNG_1x1 },
+  ]);
+  const listing = page.getByTestId("listing");
+  await expect(listing).toContainText("hello.txt", { timeout: 30_000 });
+  await expect(listing).toContainText("dot.png");
+
+  // The bytes come back from the box, with the session cookie.
+  const href = await listing.getByRole("link", { name: "hello.txt" }).getAttribute("href");
+  const body = await page.evaluate(async (url) => (await fetch(url, { credentials: "include" })).text(), href!);
+  expect(body).toBe("hello from the dashboard");
+
+  await page.goto("/dashboard/photos");
+  await expect(page.getByRole("button", { name: "dot.png" })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "dot.png" }).click();
+  await expect(page.getByRole("dialog")).toContainText("dot.png");
+  await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+
+  await page.goto("/dashboard/files");
+  await page.getByRole("button", { name: "Delete hello.txt" }).click({ timeout: 30_000 });
+  await expect(page.getByTestId("listing")).not.toContainText("hello.txt", { timeout: 15_000 });
+  await page.getByRole("button", { name: "Delete dot.png" }).click();
+  await expect(page.getByTestId("empty")).toBeVisible({ timeout: 15_000 });
+});

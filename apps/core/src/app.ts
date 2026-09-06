@@ -21,6 +21,9 @@ import { GateError } from "./gate/client.ts";
 import { actionRoutes } from "./routes/actions.ts";
 import { homeRoutes } from "./routes/home.ts";
 import { gateRoutes } from "./routes/gate.ts";
+import { fileRoutes } from "./routes/files.ts";
+import { photoRoutes } from "./routes/photos.ts";
+import { FileError } from "./files.ts";
 import type { Services } from "./services.ts";
 import type { TlsMaterial } from "./tls.ts";
 import { healthRoutes } from "./routes/health.ts";
@@ -61,7 +64,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(cors, {
     origin: deps.config.origins,
     credentials: true,
-    methods: ["GET", "POST", "PATCH", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   });
 
   app.decorate("deps", deps);
@@ -81,7 +84,7 @@ export async function buildApp(deps: AppDeps) {
   });
 
   app.setErrorHandler((err: FastifyError, req, reply) => {
-    if (err instanceof HouseholdError || err instanceof PasskeyError || err instanceof ActionError || err instanceof DeviceError || err instanceof GateError) {
+    if (err instanceof HouseholdError || err instanceof PasskeyError || err instanceof ActionError || err instanceof DeviceError || err instanceof GateError || err instanceof FileError) {
       void reply.status(err.status).send({ error: err.message, requestId: req.id });
       return;
     }
@@ -102,6 +105,8 @@ export async function buildApp(deps: AppDeps) {
   await app.register(actionRoutes, { prefix: "/v1" });
   await app.register(homeRoutes, { prefix: "/v1" });
   await app.register(gateRoutes, { prefix: "/v1" });
+  await app.register(fileRoutes, { prefix: "/v1" });
+  await app.register(photoRoutes, { prefix: "/v1" });
 
   return app;
 }

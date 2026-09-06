@@ -34,6 +34,8 @@ pnpm --filter ./apps/core snapshot                       # take a snapshot now
 pnpm --filter ./apps/core restore <snapshot-dir> [root]  # restore into an empty data root
 pnpm --filter ./apps/core db:generate                    # after editing apps/core/src/db/schema.ts
 pnpm --filter ./apps/core seed                           # a demo household for development
+pnpm --filter ./apps/core backup ~/Documents --owner you@example.com   # bring a folder onto the box (dedup by hash)
+pnpm --filter ./apps/core photos "/Volumes/Woven/Photo export" --owner you@example.com   # import a photo library export
 
 # End-to-end against a real core (Playwright starts one on :4000 with TLS off):
 LIVE_CORE=1 pnpm --filter web test:e2e

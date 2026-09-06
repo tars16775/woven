@@ -49,6 +49,10 @@ Honest limits of the Mac phase: no Thread or Zigbee without a Linux radio bridge
 | 12 Capabilities | done · 2026-09-06 | registry in apps/core/src/actions/capabilities.ts: schemas, risk classes, readback, previews; `/v1/capabilities`, `/v1/actions/*` prepare, approve, decline, execute, run |
 | 13 Policy engine | done · 2026-09-06 | classes A to H against role, namespace, presence, bounds and the spend limit; approvals bound to a parameter hash (changed parameters never run); idempotency keys; expiry; 12 policy tests |
 | 14 Approvals | done · 2026-09-06 | receipts with planned, observed and who approved; presence from the dashboard until phones report it; strong authentication for class H is a fresh passkey assertion |
+| 18 Backup protocol | done · 2026-09-06 | chunked, resumable, content-addressed uploads with "already have it" by hash (`/v1/files/uploads`), per-person namespaces, `pnpm backup <folder> --owner` on the Mac; quotas are reported (usage per namespace and source), not yet enforced |
+| 19 Files dashboard | done · 2026-09-06 | browse by space and folder, upload, open or save, rename, move between spaces (a receipt), delete with object GC; namespace rules from the household |
+| 20 Photo ingest | done · 2026-09-06 | EXIF (date, camera, place) with exifr, 512 px thumbnails and 2048 px previews with sharp stored as objects, timeline by month, lightbox, import a folder on the box, uploaded images indexed on arrival; faces off |
+| 21 Photo index | next | on-device embeddings for "lake finds the lake trip" |
 | 15 The Gate | done · 2026-09-06 | separate process (child of the core on the Mac, Outside processor on the box), loopback + secret, allow list, open/close persisted, its own crossing log; the core's only egress is the Gate client (lint-enforced); closing makes an approved crossing fail with a receipt |
 
 ## Tracks and phases

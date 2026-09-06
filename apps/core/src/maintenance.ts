@@ -21,7 +21,8 @@ export function msUntilHour(hour: number, now: Date): number {
 }
 
 /** Verify the chain, snapshot the household, prune old snapshots. */
-export async function runNightly(data: Data, logger: Logger, keep = 14): Promise<void> {
+export async function runNightly(data: Data, logger: Logger, keep = 14, sweep?: () => Promise<number>): Promise<void> {
+  if (sweep) logger.info({ removed: await sweep() }, "stale uploads swept");
   const report = data.ledger.verify();
   data.ledger.append({
     type: "core.integrity_checked",

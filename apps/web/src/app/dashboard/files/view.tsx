@@ -1,5 +1,9 @@
 "use client";
 
+import { useCore } from "@/lib/core/store";
+import { useSession } from "@/lib/auth";
+import { LiveFiles } from "./live";
+
 import { useState } from "react";
 import { Card, Meter, PageHeader, Pill, Button } from "@/components/dashboard/ui";
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
@@ -13,7 +17,15 @@ function pairingCode() {
   return `${pick()}${pick()}${pick()} ${pick()}${pick()}${pick()}`;
 }
 
+/** The live page when a Core issued the session; the preview otherwise. */
 export function FilesView() {
+  const core = useCore();
+  const session = useSession();
+  if (core.phase === "connected" && session && !session.simulated) return <LiveFiles />;
+  return <PreviewFilesView />;
+}
+
+function PreviewFilesView() {
   const devices = folders.filter((f) => f.kind === "device");
   const shared = folders.filter((f) => f.kind === "folder");
   const scheduled = useScheduledBackups();

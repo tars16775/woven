@@ -6,7 +6,7 @@
  * stored as text and validated by `@woven/schema` at the boundary, never
  * trusted on read.
  */
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const households = sqliteTable("households", {
   id: text("id").primaryKey(),
@@ -121,12 +121,34 @@ export const files = sqliteTable(
     sha256: text("sha256").notNull().references(() => blobs.sha256),
     size: integer("size").notNull(),
     mime: text("mime"),
+    /** Where it came from: "dashboard", or "backup:<machine>" for the folder-watch client. */
+    source: text("source"),
     createdAt: text("created_at").notNull(),
     modifiedAt: text("modified_at").notNull(),
     deletedAt: text("deleted_at"),
   },
-  (t) => [index("files_owner_path_idx").on(t.ownerId, t.path), index("files_sha_idx").on(t.sha256)],
+  (t) => [index("files_owner_path_idx").on(t.ownerId, t.path), index("files_sha_idx").on(t.sha256), index("files_household_ns_idx").on(t.householdId, t.namespace)],
 );
+
+/** Resumable uploads (phase 18): chunks land in store/tmp/<id>/ until complete assembles them into one object. */
+export const uploads = sqliteTable("uploads", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull().references(() => people.id),
+  householdId: text("household_id").notNull(),
+  namespace: text("namespace").notNull(),
+  path: text("path").notNull(),
+  name: text("name").notNull(),
+  size: integer("size").notNull(),
+  mime: text("mime"),
+  /** What the client says the whole file hashes to; verified on completion when given. */
+  sha256: text("sha256"),
+  chunkSize: integer("chunk_size").notNull(),
+  /** JSON array of chunk indexes received so far. */
+  received: text("received").notNull().default("[]"),
+  source: text("source"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
 
 /**
  * Invitations (phase 10). The person row is created up front (pending until
@@ -193,5 +215,29 @@ export const actions = sqliteTable(
     index("actions_household_status_idx").on(t.householdId, t.status),
     uniqueIndex("actions_idempotency_idx").on(t.householdId, t.actorId, t.idempotencyKey),
   ],
+);
+
+/** Photos (phase 20): one row per image file, with what EXIF said and the derived thumbnail and preview objects. */
+export const photos = sqliteTable(
+  "photos",
+  {
+    id: text("id").primaryKey(),
+    fileId: text("file_id").notNull().references(() => files.id),
+    householdId: text("household_id").notNull(),
+    ownerId: text("owner_id").notNull(),
+    namespace: text("namespace").notNull(),
+    sha256: text("sha256").notNull(),
+    takenAt: text("taken_at").notNull(),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    camera: text("camera"),
+    lat: real("lat"),
+    lon: real("lon"),
+    thumbSha: text("thumb_sha").notNull(),
+    previewSha: text("preview_sha").notNull(),
+    createdAt: text("created_at").notNull(),
+    deletedAt: text("deleted_at"),
+  },
+  (t) => [uniqueIndex("photos_file_idx").on(t.fileId), index("photos_household_taken_idx").on(t.householdId, t.takenAt)],
 );
 

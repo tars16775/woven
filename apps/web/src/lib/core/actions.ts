@@ -14,7 +14,7 @@ import { NoCoreError } from "./identity";
 async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
   const c = coreClient();
   if (!c) throw new NoCoreError();
-  const res = await fetch(`${c.base}${path}`, { ...init, credentials: "include", cache: "no-store", headers: { "content-type": "application/json", ...(init.headers ?? {}) } });
+  const res = await fetch(`${c.base}${path}`, { ...init, credentials: "include", cache: "no-store", headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...(init.headers ?? {}) } });
   if (!res.ok) {
     let message = "";
     try {

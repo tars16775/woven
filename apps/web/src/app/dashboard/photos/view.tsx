@@ -1,5 +1,9 @@
 "use client";
 
+import { useCore } from "@/lib/core/store";
+import { useSession } from "@/lib/auth";
+import { LivePhotos } from "./live";
+
 import { useState } from "react";
 import { Card, PageHeader, Pill } from "@/components/dashboard/ui";
 import { photoStats } from "@/lib/dashboard/data";
@@ -57,7 +61,15 @@ const filters: { id: Filter; label: string }[] = [
   { id: "dates", label: "Dates" },
 ];
 
+/** The live page when a Core issued the session; the preview otherwise. */
 export function PhotosView() {
+  const core = useCore();
+  const session = useSession();
+  if (core.phase === "connected" && session && !session.simulated) return <LivePhotos />;
+  return <PreviewPhotosView />;
+}
+
+function PreviewPhotosView() {
   const [filter, setFilter] = useState<Filter | null>(null);
   const toggle = (f: Filter) => setFilter((cur) => (cur === f ? null : f));
 

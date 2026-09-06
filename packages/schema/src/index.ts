@@ -395,3 +395,96 @@ export const GateStatus = z.object({
 });
 export type GateStatus = z.infer<typeof GateStatus>;
 
+/* Files (phases 18 and 19) --------------------------------------------------- */
+
+export const FileEntry = z.object({
+  id: Ulid,
+  ownerId: Ulid,
+  namespace: Namespace,
+  /** Folder, always starting with "/" and never ending with one except the root. */
+  path: z.string(),
+  name: z.string(),
+  sha256: z.string().length(64),
+  size: z.number().int().nonnegative(),
+  mime: z.string().nullable(),
+  source: z.string().nullable(),
+  createdAt: z.iso.datetime(),
+  modifiedAt: z.iso.datetime(),
+});
+export type FileEntry = z.infer<typeof FileEntry>;
+
+export const FolderEntry = z.object({ name: z.string(), path: z.string(), items: z.number().int(), bytes: z.number().int() });
+export type FolderEntry = z.infer<typeof FolderEntry>;
+
+/** One folder's listing: subfolders (derived from paths) and the files directly in it. */
+export const FileListing = z.object({
+  namespace: Namespace,
+  path: z.string(),
+  folders: z.array(FolderEntry),
+  files: z.array(FileEntry),
+});
+export type FileListing = z.infer<typeof FileListing>;
+
+/** Totals the Files and Overview pages show. */
+export const FilesSummary = z.object({
+  byNamespace: z.array(z.object({ namespace: Namespace, items: z.number().int(), bytes: z.number().int() })),
+  sources: z.array(z.object({ source: z.string(), items: z.number().int(), bytes: z.number().int(), lastAt: z.iso.datetime() })),
+  totalBytes: z.number().int(),
+  uniqueBytes: z.number().int(),
+  disk: z.object({ usedBytes: z.number().int(), totalBytes: z.number().int() }),
+});
+export type FilesSummary = z.infer<typeof FilesSummary>;
+
+export const UploadSession = z.object({
+  id: Ulid,
+  chunkSize: z.number().int().positive(),
+  chunks: z.number().int().nonnegative(),
+  received: z.array(z.number().int()),
+  /** True when the box already holds these bytes: no chunks needed, just complete. */
+  alreadyStored: z.boolean(),
+});
+export type UploadSession = z.infer<typeof UploadSession>;
+
+export const StartUpload = z.object({
+  name: z.string().trim().min(1).max(255),
+  path: z.string().default("/"),
+  namespace: Namespace.default("personal"),
+  size: z.number().int().nonnegative().max(64 * 1024 ** 3),
+  mime: z.string().max(120).optional(),
+  sha256: z.string().length(64).optional(),
+  source: z.string().max(80).optional(),
+});
+export type StartUpload = z.infer<typeof StartUpload>;
+
+/* Photos (phase 20) ---------------------------------------------------------- */
+
+export const Photo = z.object({
+  id: Ulid,
+  fileId: Ulid,
+  ownerId: Ulid,
+  namespace: Namespace,
+  name: z.string(),
+  takenAt: z.iso.datetime(),
+  width: z.number().int(),
+  height: z.number().int(),
+  camera: z.string().nullable(),
+  place: z.object({ lat: z.number(), lon: z.number() }).nullable(),
+});
+export type Photo = z.infer<typeof Photo>;
+
+export const PhotoTimeline = z.object({
+  photos: z.array(Photo),
+  /** Pass back to get older photos; null at the end. */
+  cursor: z.string().nullable(),
+  total: z.number().int(),
+});
+export type PhotoTimeline = z.infer<typeof PhotoTimeline>;
+
+export const PhotoStats = z.object({
+  total: z.number().int(),
+  newThisWeek: z.number().int(),
+  withPlace: z.number().int(),
+  months: z.array(z.object({ month: z.string(), count: z.number().int() })),
+});
+export type PhotoStats = z.infer<typeof PhotoStats>;
+
