@@ -613,6 +613,54 @@ export const RoutineRun = z.object({
 });
 export type RoutineRun = z.infer<typeof RoutineRun>;
 
+/* Ask, privacy summary and pilot numbers (gaps 11, 15, 30) ------------------- */
+
+/** What Ask answers with. `engine` says what produced it: rules until a model runs on the box. */
+export const AskAnswer = z.object({
+  text: z.string(),
+  source: z.string(),
+  where: z.literal("local"),
+  ms: z.number().int().nonnegative(),
+  engine: z.enum(["rules", "model"]),
+  /** When the question changed something, the action that did it or is waiting for approval. */
+  action: ActionRecord.nullable(),
+  items: z.array(z.object({ title: z.string(), detail: z.string(), href: z.string().nullable() })),
+});
+export type AskAnswer = z.infer<typeof AskAnswer>;
+
+/** The Privacy page's numbers, from the ledger and nothing else. */
+export const PrivacySummary = z.object({
+  days: z.number().int().positive(),
+  since: z.iso.datetime(),
+  events: z.number().int().nonnegative(),
+  inside: z.number().int().nonnegative(),
+  crossings: z.number().int().nonnegative(),
+  /** Percent of receipts in the window that never left the box, one decimal. */
+  insideShare: z.number(),
+  bytesCrossedToday: z.number().int().nonnegative(),
+  byType: z.array(z.object({ type: z.string(), count: z.number().int() })),
+  crossings7d: z.array(z.object({ at: z.iso.datetime(), host: z.string().nullable(), sent: z.string().nullable(), bytesOut: z.number().int(), approvedBy: z.string().nullable(), capability: z.string().nullable() })),
+});
+export type PrivacySummary = z.infer<typeof PrivacySummary>;
+
+/** Numbers computed on the box at the moment they are asked for. */
+export const PilotNumbers = z.object({
+  computedAt: z.iso.datetime(),
+  uptimeSeconds: z.number().int().nonnegative(),
+  people: z.number().int().nonnegative(),
+  files: z.object({ items: z.number().int(), bytes: z.number().int(), uniqueBytes: z.number().int() }),
+  photos: z.number().int().nonnegative(),
+  ledgerRows: z.number().int().nonnegative(),
+  snapshots: z.object({ count: z.number().int(), lastAt: z.iso.datetime().nullable(), mirrored: z.number().int() }),
+  crossings7d: z.number().int().nonnegative(),
+  insideShare7d: z.number(),
+  bytesCrossedToday: z.number().int().nonnegative(),
+  alerts: z.number().int().nonnegative(),
+  gate: z.enum(["open", "closed", "absent"]),
+  storage: z.object({ usedBytes: z.number().int(), totalBytes: z.number().int(), freeBytes: z.number().int() }),
+});
+export type PilotNumbers = z.infer<typeof PilotNumbers>;
+
 /* Memory (phase 36) ---------------------------------------------------------- */
 
 export const Memory = z.object({

@@ -14,6 +14,22 @@ import { Dialog } from "./dialog";
 import { ToastProvider } from "./toast";
 import { ThemeStyle, useDocumentTheme, useTheme } from "./theme";
 import { useGateOpen } from "./state";
+import type { LedgerRow } from "@woven/schema";
+
+/** Bytes that left through the Gate since midnight, from the receipts on hand. */
+function bytesCrossedToday(rows: LedgerRow[]): number {
+  const midnight = new Date();
+  midnight.setHours(0, 0, 0, 0);
+  const since = midnight.toISOString();
+  let n = 0;
+  for (const r of rows) {
+    if (r.type !== "gate.crossing" || r.occurredAt < since) continue;
+    const observed = (r.payload as { observed?: { bytesOut?: unknown } }).observed;
+    if (observed && typeof observed.bytesOut === "number") n += observed.bytesOut;
+  }
+  return n;
+}
+const formatBytes = (n: number) => (n < 1e3 ? `${n} bytes` : n < 1e6 ? `${(n / 1e3).toFixed(1)} KB` : `${(n / 1e6).toFixed(1)} MB`);
 
 const items = [
   { href: "/dashboard", label: "Overview" },
@@ -121,9 +137,12 @@ export function Shell({ children }: { children: ReactNode }) {
       </Link>
     );
 
+  const isLive = connection.phase === "connected" && !session.simulated;
+  // What crossed today, summed from the receipts the shell already holds; the preview's number otherwise.
+  const crossedToday = isLive ? bytesCrossedToday(connection.rows) : core.bytesCrossedToday;
   const gateChip = gateOpen ? (
-    <span className="rounded-full bg-local-bg px-2.5 py-1 font-medium text-local">
-      {core.bytesCrossedToday === 0 ? "0 bytes crossed the Gate today" : `${core.bytesCrossedToday} crossed the Gate today`}
+    <span className="rounded-full bg-local-bg px-2.5 py-1 font-medium text-local" data-testid="gate-chip">
+      {crossedToday === 0 ? "0 bytes crossed the Gate today" : `${formatBytes(crossedToday)} crossed the Gate today`}
     </span>
   ) : (
     <span className="rounded-full bg-ask-bg px-2.5 py-1 font-medium text-ask">Gate closed · nothing crosses</span>
@@ -157,6 +176,19 @@ export function Shell({ children }: { children: ReactNode }) {
 
         {/* Main */}
         <div className="flex min-w-0 flex-1 flex-col">
+          {!isLive && (
+            <div className="flex items-center justify-center gap-2 bg-ask-bg px-4 py-1.5 text-center text-[12px] text-ask" data-testid="preview-badge" role="status">
+              <span className="font-medium">Preview house.</span>
+              <span>The people, files and numbers here are made up.</span>
+              <Link href="/mac" className="font-medium underline underline-offset-2">
+                Run Woven on your Mac
+              </Link>
+              <span>or</span>
+              <Link href="/dashboard/core#connect" className="font-medium underline underline-offset-2">
+                connect your Core
+              </Link>
+            </div>
+          )}
           <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-ink/8 bg-bone/80 px-4 backdrop-blur-md lg:px-8">
             <div className="flex items-center gap-3 lg:hidden">
               <button

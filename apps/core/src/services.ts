@@ -3,6 +3,7 @@ import type { Data } from "./data.ts";
 import { OneTimeStore } from "./auth/challenges.ts";
 import { PasskeyService } from "./auth/passkeys.ts";
 import { RecoveryService } from "./auth/recovery.ts";
+import { Ask } from "./ask.ts";
 import { SessionService } from "./auth/sessions.ts";
 import { HouseholdService } from "./household.ts";
 import { ActionEngine } from "./actions/engine.ts";
@@ -55,6 +56,7 @@ export type Services = {
   memory: MemoryService;
   alerts: Alerts;
   metrics: Metrics;
+  ask: Ask;
 };
 
 export type ServiceOptions = { home?: HomeAdapter; logger?: Logger; loadEmbedder?: (dir: string) => Promise<Embedder>; tools?: Tools; hardware?: Hardware; mdns?: boolean };
@@ -127,7 +129,8 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
   const routines = new RoutineService(db, data.ledger, household, actions, logger);
   // Presence changes run the routines that wait for them (Leaving, Arrive).
   presence.onChange = (adultsHome) => void routines.onPresence(adultsHome).catch(() => undefined);
-  return {
+  const disk = async () => (opts.hardware ? await opts.hardware.storage() : { usedBytes: 0, totalBytes: 0, freeBytes: 0 });
+  const services: Services = {
     household,
     sessions: new SessionService(db, data.ledger),
     passkeys,
@@ -150,5 +153,7 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
     memory: new MemoryService(db, data.ledger),
     alerts: new Alerts(),
     metrics: new Metrics(),
-  };
+  } as Services;
+  services.ask = new Ask(services, data.ledger, disk);
+  return services;
 }

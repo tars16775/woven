@@ -27,7 +27,7 @@ const faq: [string, string][] = [
   ],
   [
     "Is my data encrypted?",
-    "Yes, at rest by default. Keys live in the secure element and are released only to an attested compute module. A drive removed from the chassis cannot be read without them.",
+    "Yes, at rest by default: the database, every file and the box's private keys are encrypted under a household key. On the Woven box that key lives in the secure element and is released only to an attested compute module; on a Mac running Woven Core it lives in your login Keychain. A drive removed from the chassis, or a copied data folder, cannot be read without it.",
   ],
   [
     "What do you collect?",

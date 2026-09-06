@@ -16,6 +16,7 @@ import { explainAction } from "@/lib/core/actions";
 import { identity, type Alert } from "@/lib/core/identity";
 import { memoryLabel, storageLabel, temperatureLabel, useLiveCore } from "@/lib/core/live";
 import { coreClient, useCore } from "@/lib/core/store";
+import { PilotCard } from "@/components/dashboard/pilot-card";
 import type { Integrity } from "@/lib/core/client";
 
 const upgradeSteps = [
@@ -173,7 +174,7 @@ export function CoreView() {
             <span className="text-ask">Restarting · back in a moment</span>
           ) : (
             <>
-              <span data-testid="core-version">{live.version}</span> · <span data-testid="core-uptime">up {uptime}</span> · {core.update.channel} channel
+              <span data-testid="core-version">{live.version}</span> · <span data-testid="core-uptime">up {uptime}</span>{connection.phase !== "connected" && ` · ${core.update.channel} channel`}
             </>
           )
         }
@@ -283,6 +284,9 @@ export function CoreView() {
             </Card>
           )}
 
+          {connection.phase === "connected" ? (
+            <PilotCard />
+          ) : (
           <Card title="Compute module">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -300,6 +304,7 @@ export function CoreView() {
               Household data, device pairings, permissions and automations live on the chassis. Swapping the module does not touch them.
             </p>
           </Card>
+          )}
         </div>
       </div>
 
@@ -317,6 +322,9 @@ export function CoreView() {
               </div>
             </div>
           )}
+          {connection.phase === "connected" ? (
+            <p className="text-[13px] text-ash">This machine&apos;s own drive. Bays, sleds and SMART per drive arrive with the box.</p>
+          ) : (
           <ul className="divide-y divide-ink/6">
             {core.drives.map((d) => (
               <li key={d.bay} className="py-2.5 first:pt-0 last:pb-0">
@@ -337,8 +345,10 @@ export function CoreView() {
               </li>
             ))}
           </ul>
+          )}
         </Card>
 
+        {connection.phase !== "connected" && (
         <Card title="Radios">
           <ul className="divide-y divide-ink/6">
             {core.radios.map((r) => (
@@ -349,7 +359,9 @@ export function CoreView() {
             ))}
           </ul>
         </Card>
+        )}
 
+        {connection.phase !== "connected" && (
         <Card
           title="Network"
           action={
@@ -370,6 +382,7 @@ export function CoreView() {
             ))}
           </ul>
         </Card>
+        )}
       </div>
 
       {connection.phase === "connected" && (
@@ -379,18 +392,29 @@ export function CoreView() {
       )}
 
       <Card title="Updates" className="mt-4">
-        <div className="flex flex-wrap items-center justify-between gap-4 text-[14px]">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{core.version}</span>
-              <Pill tone="good">Up to date</Pill>
-            </div>
-            <div className="mt-1 text-[13px] text-ash">
-              Installed {core.update.lastInstalled} · slot {core.update.slot} · signed, rolls back on its own
+        {connection.phase === "connected" ? (
+          <div className="flex flex-wrap items-center justify-between gap-4 text-[14px]">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{live.version}</span>
+              </div>
+              <div className="mt-1 text-[13px] text-ash">Updates arrive as signed releases and install with the woven command; the Core checks for them and rolls back on its own if a new version fails to start.</div>
             </div>
           </div>
-          <div className="text-[13px] text-ash">Security support until at least 2031</div>
-        </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-4 text-[14px]">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{core.version}</span>
+                <Pill tone="good">Up to date</Pill>
+              </div>
+              <div className="mt-1 text-[13px] text-ash">
+                Installed {core.update.lastInstalled} · slot {core.update.slot} · signed, rolls back on its own
+              </div>
+            </div>
+            <div className="text-[13px] text-ash">Security support until at least 2031</div>
+          </div>
+        )}
       </Card>
 
       <Dialog open={confirmRestart} onClose={() => setConfirmRestart(false)} kicker="Class C · about a minute" title="Restart the Core?" tone="ask">

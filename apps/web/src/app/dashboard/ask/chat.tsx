@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { PageHeader, whereLabel } from "@/components/dashboard/ui";
+import { PageHeader, Pill, whereLabel } from "@/components/dashboard/ui";
+import { useSession } from "@/lib/auth";
+import { useCore } from "@/lib/core/store";
+import { LiveAskChat } from "./live";
 
 type Msg =
   | { id: number; role: "user"; text: string }
@@ -40,7 +43,15 @@ const starters = [
   "Compare heat pumps for this house",
 ];
 
+/** The live engine when a Core issued the session; the scripted preview otherwise. */
 export function AskChat() {
+  const core = useCore();
+  const session = useSession();
+  if (core.phase === "connected" && session && !session.simulated) return <LiveAskChat />;
+  return <PreviewAskChat />;
+}
+
+function PreviewAskChat() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -76,7 +87,15 @@ export function AskChat() {
 
   return (
     <div className="mx-auto flex h-[calc(100svh-7.5rem)] max-w-[860px] flex-col">
-      <PageHeader title="Ask" sub="Answers from the household, on the box. Crosses the Gate only if you approve it." />
+      <PageHeader
+        title="Ask"
+        sub="Answers from the household, on the box. Crosses the Gate only if you approve it."
+        action={
+          <Pill tone="warn">
+            <span data-testid="ask-preview">Preview · scripted answers</span>
+          </Pill>
+        }
+      />
 
       <div className="flex-1 overflow-y-auto rounded-[14px] bg-white p-4 ring-1 ring-ink/5 md:p-6">
         {msgs.length === 0 && (

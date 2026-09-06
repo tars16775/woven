@@ -38,6 +38,7 @@ import type { Services } from "./services.ts";
 import type { TlsMaterial } from "./tls.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { systemRoutes } from "./routes/system.ts";
+import { askRoutes } from "./routes/ask.ts";
 
 export type AppDeps = {
   config: Config;
@@ -138,6 +139,7 @@ export async function buildApp(deps: AppDeps) {
 
   await app.register(healthRoutes, { prefix: "/v1" });
   await app.register(systemRoutes, { prefix: "/v1" });
+  await app.register(askRoutes, { prefix: "/v1" });
   await app.register(ledgerRoutes, { prefix: "/v1" });
   await app.register(eventRoutes, { prefix: "/v1" });
   await app.register(householdRoutes, { prefix: "/v1" });

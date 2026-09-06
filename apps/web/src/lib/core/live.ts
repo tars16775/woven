@@ -50,10 +50,30 @@ export function deriveLive(state: CoreState): LiveCore {
       dataRoot: status.dataRoot,
     };
   }
+  if (state.phase === "connected") {
+    // Connected, status not in yet: blanks, never the preview's numbers (gap 12).
+    return {
+      connected: true,
+      phase: state.phase,
+      host: hostOf(state.url),
+      version: `Woven Core ${state.version}`,
+      model: "…",
+      cpu: null,
+      os: null,
+      memory: { used: 0, total: 0, unit: "GB" },
+      storage: { used: "…", usedUnit: "GB", total: "…", unit: "GB", usedBytes: 0, totalBytes: 0 },
+      temperatureC: null,
+      fan: "…",
+      uptime: "…",
+      gate: state.gate?.state ?? "absent",
+      dataRoot: null,
+    };
+  }
+  // Not connected: the preview house, and every screen says so (the shell's preview badge).
   return {
-    connected: state.phase === "connected",
+    connected: false,
     phase: state.phase,
-    host: state.phase === "connected" ? hostOf(state.url) : null,
+    host: null,
     version: preview.version,
     model: preview.model,
     cpu: null,

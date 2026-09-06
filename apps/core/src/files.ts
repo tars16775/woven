@@ -91,6 +91,21 @@ export class FilesService {
     };
   }
 
+  /** Files whose name contains the words asked for, across every namespace the reader may see. Names only: nothing reads inside documents. */
+  search(reader: Person, needle: string, limit = 20): FileEntry[] {
+    const words = needle.toLowerCase().split(/\s+/).filter((w) => w.length > 1);
+    if (!words.length) return [];
+    const out: FileEntry[] = [];
+    for (const namespace of this.household.namespacesFor(reader.role)) {
+      const rows = this.db.select().from(files).where(this.visible(reader, namespace)).all();
+      for (const f of rows) {
+        const name = f.name.toLowerCase();
+        if (words.every((w) => name.includes(w))) out.push(toEntry(f));
+      }
+    }
+    return out.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt)).slice(0, limit);
+  }
+
   get(reader: Person, id: string) {
     const row = this.db.select().from(files).where(and(eq(files.id, id), isNull(files.deletedAt))).get();
     if (!row || row.householdId !== reader.householdId) throw new FileError(404, "No such file.");

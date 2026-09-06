@@ -12,7 +12,7 @@ import { deviceHeaders } from "./device";
  * 15). Every call carries the session cookie. Nothing here runs without a
  * Core; the preview pages keep their own local state.
  */
-async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
+export async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
   const c = coreClient();
   if (!c) throw new NoCoreError();
   const res = await fetch(`${c.base}${path}`, { ...init, credentials: "include", cache: "no-store", headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...deviceHeaders(), ...(init.headers ?? {}) } });

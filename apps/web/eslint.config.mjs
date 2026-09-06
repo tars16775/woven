@@ -10,6 +10,7 @@ const eslintConfig = defineConfig([
     // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
+    "out-build/**",
     "build/**",
     "next-env.d.ts",
     // AppleDouble sidecars written by macOS on the ExFAT volume.

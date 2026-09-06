@@ -37,9 +37,14 @@ export function AgentsList() {
         title="Agents"
         sub={`${active} active · every action passes the permission engine and leaves a receipt`}
         action={
-          <Button kind="primary" className="px-5 py-2" onClick={() => setInstalling(true)}>
-            Install an agent
-          </Button>
+          <div className="flex items-center gap-2">
+            <Pill tone="warn">
+              <span data-testid="agents-preview">Preview · no agent runtime yet</span>
+            </Pill>
+            <Button kind="primary" className="px-5 py-2" onClick={() => setInstalling(true)}>
+              Install an agent
+            </Button>
+          </div>
         }
       />
 

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { EventEnvelope, LedgerRow, type EventType, type Where } from "@woven/schema";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
 import { monotonicFactory } from "ulid";
 import type { Db } from "./db/index.ts";
 import { events } from "./db/schema.ts";
@@ -110,6 +110,13 @@ export class Ledger extends EventEmitter<{ appended: [LedgerRow] }> {
   recent(householdId?: string, limit = 50): LedgerRow[] {
     const q = this.db.select().from(events);
     const rows = (householdId ? q.where(eq(events.householdId, householdId)) : q).orderBy(desc(events.seq)).limit(limit).all();
+    return rows.map(toLedgerRow);
+  }
+
+  /** Every row since an instant, oldest first; the privacy summary and Ask read from here. */
+  since(iso: string, householdId?: string): LedgerRow[] {
+    const q = this.db.select().from(events);
+    const rows = (householdId ? q.where(and(gte(events.occurredAt, iso), eq(events.householdId, householdId))) : q.where(gte(events.occurredAt, iso))).orderBy(events.seq).all();
     return rows.map(toLedgerRow);
   }
 
