@@ -12,7 +12,7 @@ describe("@woven/hal", () => {
     expect(p.keys).toBe("/data/keys");
   });
 
-  it.runIf(process.platform === "darwin")("reports a valid identity and metrics on macOS", async () => {
+  it.runIf(process.platform === "darwin")("reports a valid identity, metrics and the network on macOS", async () => {
     const root = mkdtempSync(`${os.tmpdir()}/woven-hal-`);
     const hw = detectHardware({ dataRoot: root });
     const id = HardwareIdentity.parse(await hw.identity());
@@ -23,6 +23,9 @@ describe("@woven/hal", () => {
     expect(m.memoryUsedBytes).toBeLessThanOrEqual(m.memoryTotalBytes);
     expect(m.diskTotalBytes).toBeGreaterThan(0);
     expect(m.temperatureC).toBeNull();
+    const n = await hw.network();
+    expect(n.router).toBe(false);
+    expect(Array.isArray(n.neighbours)).toBe(true);
   });
 
   it("reports a valid identity and metrics on any machine through the generic layer", async () => {

@@ -1,7 +1,12 @@
 import { createHash } from "node:crypto";
 import { readFile, statfs } from "node:fs/promises";
 import os from "node:os";
-import type { HardwareIdentity, HardwareKind, Metrics } from "@woven/schema";
+import type { HardwareIdentity, HardwareKind, Metrics, NetworkObservation } from "@woven/schema";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { parseIpNeigh, parseIpRoute } from "./netparse.ts";
+
+const exec = promisify(execFile);
 import type { Hardware, StoragePaths } from "./index.ts";
 
 /**
@@ -34,6 +39,23 @@ export function genericHardware(paths: StoragePaths, kind: HardwareKind = "linux
         features: { radios: [], screen: false, router: false, gate: "process" },
       };
       return identity;
+    },
+
+    async network(): Promise<NetworkObservation> {
+      let gateway: string | null = null;
+      let iface: string | null = null;
+      let neighbours: NetworkObservation["neighbours"] = [];
+      try {
+        ({ gateway, iface } = parseIpRoute((await exec("ip", ["route", "show", "default"])).stdout));
+        neighbours = parseIpNeigh((await exec("ip", ["neigh"])).stdout);
+      } catch {
+        // no iproute2 (a container, a BSD): nothing to report
+      }
+      const addresses = Object.values(os.networkInterfaces())
+        .flat()
+        .filter((a): a is os.NetworkInterfaceInfo => !!a && a.family === "IPv4" && !a.internal)
+        .map((a) => a.address);
+      return { gateway, interface: iface, ssid: null, addresses, neighbours, router: false };
     },
 
     async metrics() {

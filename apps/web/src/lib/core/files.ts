@@ -1,6 +1,6 @@
 "use client";
 
-import { ActionRecord, FileEntry, FileListing, FilesSummary, MediaItem, Photo, PhotoStats, PhotoTimeline, type Namespace } from "@woven/schema";
+import { ActionRecord, FileEntry, FileListing, FilesSummary, MediaItem, NetworkView, Photo, PhotoStats, PhotoTimeline, type Namespace } from "@woven/schema";
 import { z } from "zod";
 import { CoreError } from "./client";
 import { NoCoreError } from "./identity";
@@ -96,4 +96,9 @@ export const media = {
 };
 
 export type { MediaItem };
+
+export const network = {
+  scan: () => call("/v1/network", NetworkView),
+};
+export type { NetworkView };
 

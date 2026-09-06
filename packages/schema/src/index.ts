@@ -519,3 +519,40 @@ export const MediaItem = z.object({
 });
 export type MediaItem = z.infer<typeof MediaItem>;
 
+/* Network, honestly (phase 43) --------------------------------------------- */
+
+export const Neighbour = z.object({
+  ip: z.string(),
+  mac: z.string().nullable(),
+  /** From ARP, mDNS or reverse DNS; null when nothing named it. */
+  name: z.string().nullable(),
+  /** What it looks like from the services it announces. */
+  kind: z.string(),
+  services: z.array(z.string()),
+  seenAt: z.iso.datetime(),
+});
+export type Neighbour = z.infer<typeof Neighbour>;
+
+export const NetworkView = z.object({
+  /** "observed": the Mac sits on someone else's router and only watches. "owned": the box is the router. */
+  mode: z.enum(["observed", "owned"]),
+  gateway: z.string().nullable(),
+  interface: z.string().nullable(),
+  ssid: z.string().nullable(),
+  addresses: z.array(z.string()),
+  neighbours: z.array(Neighbour),
+  scannedAt: z.iso.datetime(),
+});
+export type NetworkView = z.infer<typeof NetworkView>;
+
+/** What the hardware layer can see about the network without owning it. */
+export const NetworkObservation = z.object({
+  gateway: z.string().nullable(),
+  interface: z.string().nullable(),
+  ssid: z.string().nullable(),
+  addresses: z.array(z.string()),
+  neighbours: z.array(z.object({ ip: z.string(), mac: z.string().nullable(), name: z.string().nullable() })),
+  router: z.boolean(),
+});
+export type NetworkObservation = z.infer<typeof NetworkObservation>;
+

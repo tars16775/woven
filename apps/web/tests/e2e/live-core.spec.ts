@@ -62,8 +62,10 @@ test("the Home page runs real actions with receipts, and the Gate can be closed"
   await ran.getByRole("button").click();
   await expect(ran.getByText("Observed")).toBeVisible();
 
-  // The Gate: close it (an action with a receipt), see the shell agree, open it again.
+  // The Gate: close it (an action with a receipt), see the shell agree, open it again. The Inside card reads the real network.
   await page.goto("/dashboard/network");
+  await expect(page.getByText(/Observed on the Mac|Owned by the box/)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("neighbours")).toBeVisible();
   await page.getByRole("button", { name: "Close the Gate" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Close the Gate" }).click();
   await expect(page.getByRole("heading", { name: "The Gate" }).locator("..")).toContainText("Closed · nothing crosses", { timeout: 15_000 });

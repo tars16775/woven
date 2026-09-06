@@ -18,6 +18,8 @@ import { FilesService } from "./files.ts";
 import { PhotoService } from "./photos.ts";
 import { ModelStore } from "./models.ts";
 import { MediaService, mediaKind, type Tools } from "./media.ts";
+import { NetworkScanner } from "./network-scan.ts";
+import { detectHardware, type Hardware } from "@woven/hal";
 import { PhotoIndex, loadClip, type Embedder } from "./photo-index.ts";
 import type { Logger } from "./logger.ts";
 import pino from "pino";
@@ -44,9 +46,10 @@ export type Services = {
   models: ModelStore;
   photoIndex: PhotoIndex;
   media: MediaService;
+  network: NetworkScanner;
 };
 
-export type ServiceOptions = { home?: HomeAdapter; logger?: Logger; loadEmbedder?: (dir: string) => Promise<Embedder>; tools?: Tools };
+export type ServiceOptions = { home?: HomeAdapter; logger?: Logger; loadEmbedder?: (dir: string) => Promise<Embedder>; tools?: Tools; hardware?: Hardware; mdns?: boolean };
 
 export function buildServices(data: Data, config: Config, gate: GateClient, opts: ServiceOptions = {}): Services {
   const home = opts.home ?? new SimulatedAdapter();
@@ -121,5 +124,6 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
     models,
     photoIndex,
     media: mediaService,
+    network: new NetworkScanner(opts.hardware ?? detectHardware({ dataRoot: config.dataRoot }), logger, { mdns: opts.mdns ?? config.mdns }),
   };
 }

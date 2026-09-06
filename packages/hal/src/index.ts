@@ -5,11 +5,12 @@
  * this layer for identity, paths, metrics and features; it never asks the
  * operating system directly. See ADR 0003.
  */
-import type { HardwareIdentity, HardwareKind, Metrics } from "@woven/schema";
+import type { HardwareIdentity, HardwareKind, Metrics, NetworkObservation } from "@woven/schema";
 import { genericHardware } from "./generic.ts";
 import { macosHardware } from "./macos.ts";
 
-export type { HardwareIdentity, Metrics } from "@woven/schema";
+export type { HardwareIdentity, Metrics, NetworkObservation } from "@woven/schema";
+export { parseArp, parseRouteGet, parseIpNeigh, parseIpRoute } from "./netparse.ts";
 
 export interface StoragePaths {
   /** The data root, e.g. /Volumes/Woven/Woven Data. */
@@ -25,6 +26,8 @@ export interface StoragePaths {
 export interface Hardware {
   identity(): Promise<HardwareIdentity>;
   metrics(): Promise<Metrics>;
+  /** The router, this machine's addresses, and who else is on the LAN (ARP). Observed on the Mac; owned on the box. */
+  network(): Promise<NetworkObservation>;
   paths: StoragePaths;
 }
 

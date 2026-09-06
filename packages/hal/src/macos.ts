@@ -3,7 +3,8 @@ import { execFile } from "node:child_process";
 import { statfs } from "node:fs/promises";
 import os from "node:os";
 import { promisify } from "node:util";
-import type { HardwareIdentity, Metrics } from "@woven/schema";
+import type { HardwareIdentity, Metrics, NetworkObservation } from "@woven/schema";
+import { parseArp, parseRouteGet } from "./netparse.ts";
 import type { Hardware, StoragePaths } from "./index.ts";
 
 const exec = promisify(execFile);
@@ -79,6 +80,36 @@ export function macosHardware(paths: StoragePaths): Hardware {
         },
       };
       return identity;
+    },
+
+    async network(): Promise<NetworkObservation> {
+      let gateway: string | null = null;
+      let iface: string | null = null;
+      let ssid: string | null = null;
+      let neighbours: NetworkObservation["neighbours"] = [];
+      try {
+        ({ gateway, iface } = parseRouteGet((await exec("/sbin/route", ["-n", "get", "default"])).stdout));
+      } catch {
+        // no default route: the Mac is offline
+      }
+      if (iface) {
+        try {
+          const { stdout } = await exec("/usr/sbin/ipconfig", ["getsummary", iface]);
+          ssid = /^\s*SSID\s*:\s*(.+)$/m.exec(stdout)?.[1]?.trim() ?? null;
+        } catch {
+          ssid = null;
+        }
+      }
+      try {
+        neighbours = parseArp((await exec("/usr/sbin/arp", ["-a"])).stdout);
+      } catch {
+        neighbours = [];
+      }
+      const addresses = Object.values(os.networkInterfaces())
+        .flat()
+        .filter((a): a is os.NetworkInterfaceInfo => !!a && a.family === "IPv4" && !a.internal)
+        .map((a) => a.address);
+      return { gateway, interface: iface, ssid, addresses, neighbours, router: false };
     },
 
     async metrics() {

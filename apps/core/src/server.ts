@@ -61,7 +61,7 @@ async function main() {
   const startedAt = new Date();
   const tools = await MediaService.detectTools();
   logger.info({ ffmpeg: tools.ffmpeg ?? "not found", ffprobe: tools.ffprobe ?? "not found" }, "media tools");
-  const services = buildServices(data, config, gate.client, { logger, tools });
+  const services = buildServices(data, config, gate.client, { logger, tools, hardware });
   const app = await buildApp({ config, logger, hardware, data, services, ...(tls ? { tls } : {}), version, startedAt });
   const scheme = tls ? "https" : "http";
   // The same API in plain HTTP, reachable only from this machine. Loopback

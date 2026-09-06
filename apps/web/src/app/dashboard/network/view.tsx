@@ -6,11 +6,16 @@ import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { setGateOpen, useGateOpen } from "@/components/dashboard/state";
 import { useCore } from "@/lib/core/store";
+import { useSession } from "@/lib/auth";
+import { LiveInside, LiveOutside, useNetworkScan } from "./live-cards";
 import { network } from "@/lib/dashboard/data";
 
 export function NetworkView() {
   const gateOpen = useGateOpen();
   const core = useCore();
+  const session = useSession();
+  const live = core.phase === "connected" && !!session && !session.simulated;
+  const scan = useNetworkScan(live);
   const [confirm, setConfirm] = useState(false);
   const say = useToast();
 
@@ -34,6 +39,7 @@ export function NetworkView() {
       />
 
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.6fr_1fr]">
+        {live ? <LiveInside view={scan.view} error={scan.error} /> : (
         <Card dark title="Inside">
           <div className="flex items-center justify-between text-[14px]">
             <span className="font-medium">{network.inside.ssid}</span>
@@ -55,6 +61,7 @@ export function NetworkView() {
             ))}
           </ul>
         </Card>
+        )}
 
         <section
           aria-labelledby="gate-title"
@@ -79,6 +86,7 @@ export function NetworkView() {
           </ul>
         </section>
 
+        {live ? <LiveOutside view={scan.view} /> : (
         <Card title="Outside · router">
           <div className="text-[14px]">
             <div className="flex items-center justify-between">
@@ -113,6 +121,7 @@ export function NetworkView() {
             ))}
           </ul>
         </Card>
+        )}
       </div>
 
       <Card className="mt-4">
