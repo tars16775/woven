@@ -24,6 +24,7 @@ import { gateRoutes } from "./routes/gate.ts";
 import { fileRoutes } from "./routes/files.ts";
 import { photoRoutes } from "./routes/photos.ts";
 import { modelRoutes } from "./routes/models.ts";
+import { mediaRoutes } from "./routes/media.ts";
 import { FileError } from "./files.ts";
 import type { Services } from "./services.ts";
 import type { TlsMaterial } from "./tls.ts";
@@ -109,6 +110,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(fileRoutes, { prefix: "/v1" });
   await app.register(photoRoutes, { prefix: "/v1" });
   await app.register(modelRoutes, { prefix: "/v1" });
+  await app.register(mediaRoutes, { prefix: "/v1" });
 
   return app;
 }

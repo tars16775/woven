@@ -253,3 +253,23 @@ export const photoEmbeddings = sqliteTable(
   (t) => [uniqueIndex("photo_embeddings_idx").on(t.photoId, t.model)],
 );
 
+/** Media (phase 22): what ffprobe said about a video or audio file, and whether a browser can play it as is. */
+export const media = sqliteTable(
+  "media",
+  {
+    fileId: text("file_id").primaryKey().references(() => files.id),
+    householdId: text("household_id").notNull(),
+    kind: text("kind", { enum: ["video", "audio"] }).notNull(),
+    durationS: real("duration_s"),
+    width: integer("width"),
+    height: integer("height"),
+    videoCodec: text("video_codec"),
+    audioCodec: text("audio_codec"),
+    container: text("container"),
+    /** True when a browser plays the file as it is; false means the box transcodes on the fly. */
+    playable: integer("playable", { mode: "boolean" }).notNull(),
+    probedAt: text("probed_at").notNull(),
+  },
+  (t) => [index("media_household_kind_idx").on(t.householdId, t.kind)],
+);
+

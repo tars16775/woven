@@ -3,7 +3,8 @@ import os from "node:os";
 import { join } from "node:path";
 import type { Db } from "./db/index.ts";
 import { openDatabase } from "./db/index.ts";
-import { blobs } from "./db/schema.ts";
+import { files } from "./db/schema.ts";
+import { isNull } from "drizzle-orm";
 import { Ledger } from "./ledger.ts";
 import { restoreSnapshot } from "./snapshot.ts";
 import { ContentStore } from "./store/index.ts";
@@ -16,7 +17,8 @@ export type StoreReport = { checked: number; total: number; corrupt: string[]; m
  * stays short on a terabyte of photos and still catches a failing drive.
  */
 export async function verifyStore(db: Db, store: ContentStore, opts: { sampleAbove?: number; sample?: number } = {}): Promise<StoreReport> {
-  const all = db.select({ sha256: blobs.sha256 }).from(blobs).all().map((b) => b.sha256);
+  // Only bytes a live file still points at; tombstoned files release their objects on purpose.
+  const all = [...new Set(db.select({ sha256: files.sha256 }).from(files).where(isNull(files.deletedAt)).all().map((b) => b.sha256))];
   const sampleAbove = opts.sampleAbove ?? 2000;
   const sampled = all.length > sampleAbove;
   const picked = sampled ? shuffle(all).slice(0, opts.sample ?? 500) : all;

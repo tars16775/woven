@@ -8,8 +8,10 @@
  * this process runs on the Outside processor; on the Mac it is a child of
  * the core with no access to the household database.
  */
-import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { createHash } from "node:crypto";
+import { createWriteStream } from "node:fs";
+import { appendFile, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import Fastify from "fastify";
 import { z } from "zod";
 
@@ -163,11 +165,7 @@ app.post("/fetch", async (req, reply) => {
       await record({ kind: "failed", actionId: f.actionId, host: hops[0], reason: `HTTP ${res?.status ?? 0}` });
       return reply.status(502).send({ error: `The download answered ${res?.status ?? "nothing"}.` });
     }
-    const { createHash } = await import("node:crypto");
-    const { createWriteStream } = await import("node:fs");
-    const { mkdir: mk, rename, rm } = await import("node:fs/promises");
-    const { dirname } = await import("node:path");
-    await mk(dirname(f.dest), { recursive: true });
+    await mkdir(dirname(f.dest), { recursive: true });
     const tmp = `${f.dest}.part`;
     const hash = createHash("sha256");
     let bytesIn = 0;

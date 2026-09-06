@@ -69,8 +69,9 @@ export class ContentStore {
     }
   }
 
-  open(sha256: string): Readable {
-    return createReadStream(this.pathFor(sha256));
+  /** Read an object, or part of one (inclusive byte range) for media seeking. */
+  open(sha256: string, range?: { start: number; end: number }): Readable {
+    return createReadStream(this.pathFor(sha256), range ? { start: range.start, end: range.end } : {});
   }
 
   async size(sha256: string): Promise<number> {

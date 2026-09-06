@@ -1,5 +1,9 @@
 "use client";
 
+import { useCore } from "@/lib/core/store";
+import { useSession } from "@/lib/auth";
+import { LiveTV } from "./live";
+
 import { useState } from "react";
 import { Button, Card, PageHeader, Pill } from "@/components/dashboard/ui";
 import { useToast } from "@/components/dashboard/toast";
@@ -26,7 +30,15 @@ const modes: Record<string, Now> = {
   Ask: { kind: "Ask", title: "Listening on the screen", detail: "Say “Tandem” or type on the remote" },
 };
 
+/** The live page when a Core issued the session; the preview otherwise. */
 export function TVView() {
+  const core = useCore();
+  const session = useSession();
+  if (core.phase === "connected" && session && !session.simulated) return <LiveTV />;
+  return <PreviewTVView />;
+}
+
+function PreviewTVView() {
   const say = useToast();
   const [now, setNow] = useState<Now>({ ...tv.now, rail: "Photos" });
   const [playing, setPlaying] = useState(true);

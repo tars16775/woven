@@ -36,14 +36,30 @@ export const fileRoutes: FastifyPluginAsync = async (raw) => {
   });
 
   app.get("/files/:id/content", { preHandler: requireSession, schema: { params: z.object({ id: Ulid }), querystring: z.object({ download: z.coerce.boolean().default(false) }) } }, async (req, reply) => {
-    const { entry, stream } = services.files.open(req.session!.person, req.params.id);
+    const { entry } = services.files.open(req.session!.person, req.params.id);
     const disposition = req.query.download ? "attachment" : "inline";
-    return reply
+    void reply
       .type(entry.mime ?? "application/octet-stream")
-      .header("content-length", String(entry.size))
+      .header("accept-ranges", "bytes")
       .header("content-disposition", `${disposition}; filename*=UTF-8''${encodeURIComponent(entry.name)}`)
-      .header("cache-control", "private, max-age=31536000, immutable")
-      .send(stream);
+      .header("cache-control", "private, max-age=31536000, immutable");
+    // Byte ranges so video and audio players can seek (phase 22).
+    const range = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range ?? ""));
+    if (range && entry.size > 0) {
+      let start = range[1] ? Number(range[1]) : NaN;
+      let end = range[2] ? Number(range[2]) : NaN;
+      if (Number.isNaN(start)) {
+        start = Math.max(0, entry.size - end);
+        end = entry.size - 1;
+      } else if (Number.isNaN(end) || end >= entry.size) end = entry.size - 1;
+      if (start > end || start >= entry.size) return reply.status(416).header("content-range", `bytes */${entry.size}`).send();
+      return reply
+        .status(206)
+        .header("content-range", `bytes ${start}-${end}/${entry.size}`)
+        .header("content-length", String(end - start + 1))
+        .send(app.deps.data.store.open(entry.sha256, { start, end }));
+    }
+    return reply.header("content-length", String(entry.size)).send(app.deps.data.store.open(entry.sha256));
   });
 
   app.post(

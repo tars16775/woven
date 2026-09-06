@@ -113,3 +113,25 @@ test("the owner runs a restore drill from the Core page", async ({ page }) => {
   await page.getByTestId("restore-drill").click();
   await expect(page.getByTestId("drill-result")).toContainText("Restored and verified", { timeout: 60_000 });
 });
+
+test("the TV page lists media from the box and plays it", async ({ page }) => {
+  await signInWithPasskey(page);
+  await page.goto("/dashboard/files");
+  await expect(page.getByTestId("upload")).toBeVisible({ timeout: 30_000 });
+  // A tiny but valid MP4 is more than this test needs; a WAV is trivial to write by hand.
+  const wav = Buffer.alloc(44 + 8000);
+  wav.write("RIFF", 0); wav.writeUInt32LE(36 + 8000, 4); wav.write("WAVE", 8); wav.write("fmt ", 12); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22); wav.writeUInt32LE(8000, 24); wav.writeUInt32LE(8000, 28); wav.writeUInt16LE(1, 32); wav.writeUInt16LE(8, 34); wav.write("data", 36); wav.writeUInt32LE(8000, 40);
+  for (let i = 0; i < 8000; i += 1) wav[44 + i] = 128 + Math.round(100 * Math.sin(i / 6));
+  await page.getByTestId("upload-input").setInputFiles([{ name: "tone.wav", mimeType: "audio/wav", buffer: wav }]);
+  await expect(page.getByTestId("listing")).toContainText("tone.wav", { timeout: 30_000 });
+
+  await page.goto("/dashboard/tv");
+  await expect(page.getByTestId("music")).toContainText("tone.wav", { timeout: 30_000 });
+  await page.getByRole("button", { name: "tone.wav" }).click();
+  const player = page.getByTestId("player");
+  await expect(player).toBeVisible();
+  await expect.poll(async () => player.evaluate((el) => (el as HTMLMediaElement).readyState), { timeout: 20_000 }).toBeGreaterThanOrEqual(1);
+  await page.goto("/dashboard/files");
+  await page.getByRole("button", { name: "Delete tone.wav" }).click({ timeout: 30_000 });
+  await expect(page.getByTestId("listing")).not.toContainText("tone.wav", { timeout: 15_000 }).catch(() => undefined);
+});

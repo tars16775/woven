@@ -1,6 +1,6 @@
 "use client";
 
-import { ActionRecord, FileEntry, FileListing, FilesSummary, Photo, PhotoStats, PhotoTimeline, type Namespace } from "@woven/schema";
+import { ActionRecord, FileEntry, FileListing, FilesSummary, MediaItem, Photo, PhotoStats, PhotoTimeline, type Namespace } from "@woven/schema";
 import { z } from "zod";
 import { CoreError } from "./client";
 import { NoCoreError } from "./identity";
@@ -87,3 +87,13 @@ export function bytes(n: number): string {
 }
 
 export type { FileEntry, FileListing, FilesSummary, Photo, PhotoStats };
+
+export const media = {
+  list: (kind?: "video" | "audio") => call(`/v1/media${kind ? `?kind=${kind}` : ""}`, z.object({ items: z.array(MediaItem), tools: z.object({ ffmpeg: z.boolean(), ffprobe: z.boolean() }) })),
+  index: () => call("/v1/media/index", z.object({ probed: z.number() }), post({})),
+  /** What a <video> or <audio> element plays; the box redirects to the original or transcodes. */
+  streamUrl: (fileId: string) => `${base()}/v1/media/${fileId}/stream`,
+};
+
+export type { MediaItem };
+

@@ -501,3 +501,21 @@ export const BackupStatus = z.object({
 });
 export type BackupStatus = z.infer<typeof BackupStatus>;
 
+/* Media (phase 22) ----------------------------------------------------------- */
+
+export const MediaItem = z.object({
+  fileId: Ulid,
+  name: z.string(),
+  kind: z.enum(["video", "audio"]),
+  size: z.number().int(),
+  durationS: z.number().nullable(),
+  width: z.number().int().nullable(),
+  height: z.number().int().nullable(),
+  codec: z.string().nullable(),
+  /** False means the box transcodes on the fly; seeking is limited. */
+  playable: z.boolean(),
+  modifiedAt: z.iso.datetime(),
+  namespace: Namespace,
+});
+export type MediaItem = z.infer<typeof MediaItem>;
+

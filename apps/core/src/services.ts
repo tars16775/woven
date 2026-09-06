@@ -17,6 +17,7 @@ import { RightsService } from "./rights.ts";
 import { FilesService } from "./files.ts";
 import { PhotoService } from "./photos.ts";
 import { ModelStore } from "./models.ts";
+import { MediaService, mediaKind, type Tools } from "./media.ts";
 import { PhotoIndex, loadClip, type Embedder } from "./photo-index.ts";
 import type { Logger } from "./logger.ts";
 import pino from "pino";
@@ -42,9 +43,10 @@ export type Services = {
   photos: PhotoService;
   models: ModelStore;
   photoIndex: PhotoIndex;
+  media: MediaService;
 };
 
-export type ServiceOptions = { home?: HomeAdapter; logger?: Logger; loadEmbedder?: (dir: string) => Promise<Embedder> };
+export type ServiceOptions = { home?: HomeAdapter; logger?: Logger; loadEmbedder?: (dir: string) => Promise<Embedder>; tools?: Tools };
 
 export function buildServices(data: Data, config: Config, gate: GateClient, opts: ServiceOptions = {}): Services {
   const home = opts.home ?? new SimulatedAdapter();
@@ -65,9 +67,16 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
     embedTimer = setTimeout(() => void photoIndex.indexPending().catch(() => undefined), 1500);
     embedTimer.unref();
   };
+  const mediaService = new MediaService(db, data.store, household, logger, opts.tools ?? { ffmpeg: null, ffprobe: null });
   photos.onIndexed = embedSoon;
-  files.onAdded = (entry) => void photos.index(entry.id).catch(() => undefined);
-  files.onRemoved = (fileId) => photos.forget(fileId);
+  files.onAdded = (entry) => {
+    void photos.index(entry.id).catch(() => undefined);
+    if (mediaKind(entry.mime, entry.name)) void mediaService.probe(entry.id).catch(() => undefined);
+  };
+  files.onRemoved = async (fileId) => {
+    await photos.forget(fileId);
+    mediaService.forget(fileId);
+  };
   const actions = new ActionEngine({
     db,
     ledger: data.ledger,
@@ -111,5 +120,6 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
     photos,
     models,
     photoIndex,
+    media: mediaService,
   };
 }

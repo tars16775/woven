@@ -8,6 +8,7 @@ import { createLogger } from "./logger.ts";
 import { CORE_HOUSEHOLD_ID, openData } from "./data.ts";
 import { scheduleNightly } from "./maintenance.ts";
 import { buildServices } from "./services.ts";
+import { MediaService } from "./media.ts";
 import { startGate } from "./gate/spawn.ts";
 import { coreDnsNames, lanAddresses } from "./network.ts";
 import { ensureHouseholdTls, type TlsMaterial } from "./tls.ts";
@@ -58,7 +59,9 @@ async function main() {
   logger.info({ gate: gate.client.cached().state, allow: config.gate.allow || "(nothing)" }, gate.client.cached().state === "absent" ? "no Gate running; crossings will fail" : "Gate attached");
 
   const startedAt = new Date();
-  const services = buildServices(data, config, gate.client, { logger });
+  const tools = await MediaService.detectTools();
+  logger.info({ ffmpeg: tools.ffmpeg ?? "not found", ffprobe: tools.ffprobe ?? "not found" }, "media tools");
+  const services = buildServices(data, config, gate.client, { logger, tools });
   const app = await buildApp({ config, logger, hardware, data, services, ...(tls ? { tls } : {}), version, startedAt });
   const scheme = tls ? "https" : "http";
   // The same API in plain HTTP, reachable only from this machine. Loopback
