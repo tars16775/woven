@@ -39,7 +39,16 @@ if [ -n "${WOVEN_RELEASE_FILE:-}" ]; then
 else
   say "Fetching the newest Woven release…"
   release="$WOVEN_HOME/tmp/woven-macos.tar.gz"
-  curl -fsSL -o "$release" "${WOVEN_RELEASE_URL:-https://github.com/$REPO/releases/latest/download/woven-macos.tar.gz}"
+  url="${WOVEN_RELEASE_URL:-https://github.com/$REPO/releases/latest/download/woven-macos.tar.gz}"
+  if ! curl -fsSL -o "$release" "$url"; then
+    # A private repository: GitHub's command-line tool can fetch the release with your login.
+    if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
+      gh release download --repo "$REPO" --pattern woven-macos.tar.gz --output "$release" --clobber
+    else
+      echo "Could not fetch $url. If the repository is private, sign in with 'gh auth login' and run this again, or set WOVEN_RELEASE_FILE to a downloaded tarball."
+      exit 1
+    fi
+  fi
 fi
 stage="$WOVEN_HOME/tmp/stage"
 rm -rf "$stage"; mkdir -p "$stage"
