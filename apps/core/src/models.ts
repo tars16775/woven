@@ -16,7 +16,8 @@ export type ModelSpec = {
   purpose: string;
   repo: string;
   revision: string;
-  files: string[];
+  /** Every file with the hash it must have; a download that differs is refused before it is used. */
+  files: Record<string, string>;
   approxBytes: number;
 };
 
@@ -27,7 +28,15 @@ export const catalogue: readonly ModelSpec[] = [
     purpose: "Finds photos by what is in them: 'the lake trip', 'a red bicycle'. Runs entirely on the box.",
     repo: "Xenova/clip-vit-base-patch32",
     revision: "main",
-    files: ["config.json", "preprocessor_config.json", "tokenizer.json", "tokenizer_config.json", "special_tokens_map.json", "onnx/vision_model_quantized.onnx", "onnx/text_model_quantized.onnx"],
+    files: {
+      "config.json": "493ef57ff783e42d1530c91b53469b7fdf8db8a9c1408e86998fcb7899a4f495",
+      "preprocessor_config.json": "6f638fb9401a6d6296feff533ee7efe657b787c49f954f82f5906b36ef2a1b1f",
+      "tokenizer.json": "f7f3b7af117d467b58374797691a6438d3e6b9e9cef800dfd5dced7f697a90cd",
+      "tokenizer_config.json": "60ba2912bc6344c94bc16bbdec27fa1209409167b6f2fdf3cfe9e65462ea3967",
+      "special_tokens_map.json": "c4864a9376a8401918425bed71fc14fc0e81f9b59ec45c1cf96cccb2df508eac",
+      "onnx/vision_model_quantized.onnx": "583fd1110a514667812fee7d684952aaf82a99b959760c8d7dca7e0ab9839299",
+      "onnx/text_model_quantized.onnx": "73baab855d406190da9faa498cfedf65f15cf309f4cc7385b7b032e6d08e5c3a",
+    },
     approxBytes: 180 * 1024 * 1024,
   },
 ];
@@ -83,15 +92,19 @@ export class ModelStore {
       existing = null;
     }
     const files: Manifest["files"] = {};
-    for (const file of spec.files) {
+    for (const [file, expected] of Object.entries(spec.files)) {
       const dest = join(root, file);
       const known = existing?.files[file];
-      if (known && (await stat(dest).catch(() => null))?.size === known.bytes) {
+      if (known && known.sha256 === expected && (await stat(dest).catch(() => null))?.size === known.bytes) {
         files[file] = known;
         continue;
       }
       const url = `${process.env.WOVEN_MODEL_SOURCE ?? "https://huggingface.co"}/${spec.repo}/resolve/${spec.revision}/${file}`;
       const r = await this.gate.download({ actionId, url, dest, maxBytes: 2 * 1024 ** 3 });
+      if (process.env.WOVEN_MODEL_SOURCE === undefined && r.sha256 !== expected) {
+        await rm(dest, { force: true });
+        throw new Error(`${file} did not match the hash Woven pinned for it; the download was discarded.`);
+      }
       files[file] = { sha256: r.sha256, bytes: r.bytesIn };
       onFile?.(file, r.bytesIn);
     }

@@ -7,6 +7,7 @@ import { buildApp } from "../src/app.ts";
 import { loadConfig } from "../src/config.ts";
 import { createLogger } from "../src/logger.ts";
 import { buildServices } from "../src/services.ts";
+import { auth, sessionOf, type Auth } from "./helpers.ts";
 import { GateClient } from "../src/gate/client.ts";
 import { openData, type Data } from "../src/data.ts";
 
@@ -15,6 +16,7 @@ const config = loadConfig({ NODE_ENV: "test", WOVEN_DATA: dataRoot, LOG_LEVEL: "
 
 let app: Awaited<ReturnType<typeof buildApp>>;
 let data: Data;
+let owner: Auth = { cookie: "", device: "" };
 
 beforeAll(async () => {
   const hardware = detectHardware({ dataRoot });
@@ -29,6 +31,8 @@ beforeAll(async () => {
     startedAt: new Date(),
   });
   await app.ready();
+  const setup = await app.inject({ method: "POST", url: "/v1/household/setup", payload: { household: "H", owner: { name: "Alex", email: "alex@example.com" } } });
+  owner = sessionOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "alex@example.com", code: setup.json<{ recoveryCodes: string[] }>().recoveryCodes[0] } }));
 });
 
 afterAll(async () => {
@@ -46,7 +50,7 @@ describe("core app", () => {
   });
 
   it.runIf(process.platform === "darwin")("reports status that validates against the shared schema", async () => {
-    const res = await app.inject({ method: "GET", url: "/v1/system/status" });
+    const res = await app.inject({ method: "GET", url: "/v1/system/status", headers: auth(owner) });
     expect(res.statusCode).toBe(200);
     const status = CoreStatus.parse(res.json());
     expect(status.hardware.kind).toBe("macos");
@@ -92,10 +96,10 @@ describe("config", () => {
 
 describe("ledger routes", () => {
   it("verifies an empty or short chain and records the check", async () => {
-    const first = await app.inject({ method: "GET", url: "/v1/ledger/integrity" });
+    const first = await app.inject({ method: "GET", url: "/v1/ledger/integrity", headers: auth(owner) });
     expect(first.statusCode).toBe(200);
     expect(first.json()).toMatchObject({ ok: true });
-    const recent = await app.inject({ method: "GET", url: "/v1/ledger/recent?limit=5" });
+    const recent = await app.inject({ method: "GET", url: "/v1/ledger/recent?limit=5", headers: auth(owner) });
     expect(recent.statusCode).toBe(200);
     const { rows } = recent.json<{ rows: { type: string; prevHash: string }[] }>();
     expect(rows[0]?.type).toBe("core.integrity_checked");
@@ -103,7 +107,7 @@ describe("ledger routes", () => {
   });
 
   it("rejects an out-of-range limit", async () => {
-    const res = await app.inject({ method: "GET", url: "/v1/ledger/recent?limit=5000" });
+    const res = await app.inject({ method: "GET", url: "/v1/ledger/recent?limit=5000", headers: auth(owner) });
     expect(res.statusCode).toBe(400);
   });
 });

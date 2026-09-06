@@ -29,8 +29,8 @@ export function SignupForm() {
     if (!connected) return;
     let alive = true;
     identity
-      .household()
-      .then((h) => alive && setExisting(h.setup ? h.household.name : null))
+      .setupState()
+      .then((h) => alive && setExisting(h.setup ? h.name : null))
       .catch(() => undefined);
     return () => {
       alive = false;

@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { AuthMethod, Person } from "@woven/schema";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { monotonicFactory } from "ulid";
@@ -10,7 +10,7 @@ const nextId = monotonicFactory();
 export const SESSION_COOKIE = "woven_session";
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 
-export type IssuedSession = { token: string; id: string; expiresAt: string };
+export type IssuedSession = { token: string; id: string; expiresAt: string; deviceSecret: string };
 export type ResolvedSession = {
   id: string;
   personId: string;
@@ -18,6 +18,7 @@ export type ResolvedSession = {
   createdAt: string;
   expiresAt: string;
   person: Person;
+  deviceSecret: string | null;
 };
 
 /** The token itself only ever lives in the cookie; the database holds its hash. */
@@ -39,12 +40,13 @@ export class SessionService {
 
   issue(person: Person, method: AuthMethod, deviceLabel: string | null): IssuedSession {
     const token = randomBytes(32).toString("base64url");
+    const deviceSecret = randomBytes(32).toString("base64url");
     const id = nextId();
     const created = this.now();
     const expiresAt = new Date(created.getTime() + THIRTY_DAYS).toISOString();
     this.db.transaction((tx) => {
       tx.insert(sessions)
-        .values({ id, personId: person.id, tokenHash: hashToken(token), deviceLabel, method, createdAt: created.toISOString(), expiresAt })
+        .values({ id, personId: person.id, tokenHash: hashToken(token), deviceSecret, deviceLabel, method, createdAt: created.toISOString(), expiresAt })
         .run();
       this.ledger.append({
         type: "session.started",
@@ -55,7 +57,7 @@ export class SessionService {
         payload: { method, device: deviceLabel ?? "unknown device" },
       });
     });
-    return { token, id, expiresAt };
+    return { token, id, expiresAt, deviceSecret };
   }
 
   resolve(token: string | undefined): ResolvedSession | null {
@@ -76,6 +78,7 @@ export class SessionService {
       createdAt: row.s.createdAt,
       expiresAt: row.s.expiresAt,
       person: row.p,
+      deviceSecret: row.s.deviceSecret,
     };
   }
 
@@ -123,3 +126,22 @@ export function sessionCookie(token: string, expiresAt: string, opts: { secure: 
 }
 
 export type CookieOptions = { path: string; httpOnly: boolean; secure: boolean; sameSite: "none" | "lax" | "strict"; expires: Date };
+
+/**
+ * A signed address for things a browser fetches without headers (images,
+ * video, downloads): HMAC of the path and an expiry under the device
+ * secret, so a stolen cookie cannot fetch them either.
+ */
+export function signPath(deviceSecret: string, path: string, expiresAtSeconds: number): string {
+  return createHmac("sha256", deviceSecret).update(`${path}|${expiresAtSeconds}`).digest("base64url");
+}
+export function verifySignedPath(deviceSecret: string, path: string, exp: string | undefined, sig: string | undefined, now = Date.now()): boolean {
+  if (!exp || !sig || !/^\d+$/.test(exp)) return false;
+  const e = Number(exp);
+  if (e * 1000 < now) return false;
+  const want = signPath(deviceSecret, path, e);
+  const a = Buffer.from(want);
+  const b = Buffer.from(sig);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+

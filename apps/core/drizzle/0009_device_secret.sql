@@ -1,0 +1,1 @@
+ALTER TABLE `sessions` ADD `device_secret` text;

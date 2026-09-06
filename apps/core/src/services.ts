@@ -105,7 +105,7 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
       if (!spec) throw new Error(`no model called ${model}`);
       const state = await models.install(model, actionId);
       embedSoon();
-      return { bytes: state.bytes, files: spec.files.length };
+      return { bytes: state.bytes, files: Object.keys(spec.files).length };
     },
     transferOwnership: (fromId, toId) => {
       const from = household.person(fromId);

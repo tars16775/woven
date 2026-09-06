@@ -6,13 +6,14 @@ import { useToast } from "@/components/dashboard/toast";
 import { explainAction } from "@/lib/core/actions";
 import { bytes } from "@/lib/core/files";
 import { coreClient } from "@/lib/core/store";
+import { deviceHeaders } from "@/lib/core/device";
 import { useSession } from "@/lib/auth";
 import { BackupStatus } from "@woven/schema";
 
 async function call(path: string, init: RequestInit = {}) {
   const c = coreClient();
   if (!c) throw new Error("No Core is connected.");
-  const res = await fetch(`${c.base}${path}`, { ...init, credentials: "include", cache: "no-store" });
+  const res = await fetch(`${c.base}${path}`, { ...init, credentials: "include", cache: "no-store", headers: deviceHeaders() });
   if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? `HTTP ${res.status}`);
   return BackupStatus.parse(await res.json());
 }

@@ -7,7 +7,12 @@ import type { FastifyPluginAsync } from "fastify";
  * every 30 seconds so idle connections through routers stay open.
  */
 export const eventRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/events", { websocket: true }, (socket) => {
+  app.get("/events", { websocket: true }, (socket, req) => {
+    // The stream carries every receipt title: a session is required, and browsers cannot send headers on a WebSocket, so the address is signed.
+    if (!req.session) {
+      socket.close(4401, "sign in first");
+      return;
+    }
     const { ledger } = app.deps.data;
     const send = (msg: unknown) => {
       if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(msg));

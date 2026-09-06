@@ -52,6 +52,18 @@ export class GateClient {
     return { state: this.lastStatus.state };
   }
 
+  /** Owner-only, class H on the core's side: add or remove a host crossings may reach. */
+  async setAllowed(host: string, allowed: boolean, by: string): Promise<GateStatus> {
+    if (!this.url) throw new GateError(503, "No Gate is running.");
+    this.lastStatus = (await this.call("POST", allowed ? "/allow" : "/disallow", { host, by })) as GateStatus;
+    return this.lastStatus;
+  }
+
+  isAllowed(host: string): boolean {
+    const h = host.toLowerCase();
+    return this.lastStatus.allowList.some((a) => (a.startsWith("*.") ? h === a.slice(2) || h.endsWith(a.slice(1)) : h === a));
+  }
+
   async cross(req: CrossRequest): Promise<CrossResult> {
     if (!this.url) throw new GateError(503, "No Gate is running; nothing can cross.");
     return (await this.call("POST", "/cross", req)) as CrossResult;

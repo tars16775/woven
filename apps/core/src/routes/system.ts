@@ -18,7 +18,7 @@ export const systemRoutes: FastifyPluginAsync = async (raw) => {
   const app = raw.withTypeProvider<ZodTypeProvider>();
   app.get(
     "/system/status",
-    { schema: { response: { 200: CoreStatus } } },
+    { preHandler: requireSession, schema: { response: { 200: CoreStatus } } },
     async () => {
       const { hardware, version, startedAt, config } = app.deps;
       const [identity, metrics] = await Promise.all([hardware.identity(), hardware.metrics()]);
@@ -33,7 +33,7 @@ export const systemRoutes: FastifyPluginAsync = async (raw) => {
     },
   );
 
-  app.get("/system/config", { schema: { response: { 200: CoreConfig } } }, async () => {
+  app.get("/system/config", { preHandler: requireSession, schema: { response: { 200: CoreConfig } } }, async () => {
     const { config, version, tls } = app.deps;
     return CoreConfig.parse({
       version,

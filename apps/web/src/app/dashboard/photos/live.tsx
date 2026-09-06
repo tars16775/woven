@@ -7,6 +7,7 @@ import { useToast } from "@/components/dashboard/toast";
 import { explainAction } from "@/lib/core/actions";
 import { models as modelsApi, photos as api, type ModelView, type Photo, type PhotoStats } from "@/lib/core/files";
 import { actions, describe } from "@/lib/core/actions";
+import { identity } from "@/lib/core/identity";
 import { Approvals } from "@/components/dashboard/approvals";
 import { useSession } from "@/lib/auth";
 
@@ -82,10 +83,26 @@ export function LivePhotos() {
     }
   };
 
+  /** The model host must be on the Gate's allow list first: a class H action the owner confirms with a passkey. */
+  const allowHost = async (host: string) => {
+    const prepared = await actions.prepare({ capability: "gate.allow", target: "gate", parameters: { host, reason: "photo search model" } });
+    if (prepared.status !== "prepared") return prepared;
+    const assertion = await identity.assert(session?.email || undefined);
+    const approved = await actions.approve(prepared.id, assertion);
+    return approved.status === "approved" ? actions.execute(prepared.id) : approved;
+  };
+
   const turnOnSearch = async () => {
     if (asking) return;
     setAsking(true);
     try {
+      for (const host of ["huggingface.co", "*.hf.co"]) {
+        const r = await allowHost(host);
+        if (r.status !== "succeeded") {
+          say(describe(r));
+          return;
+        }
+      }
       const prepared = await modelsApi.install("photo-search");
       if (prepared.status === "prepared") {
         // The owner approves the crossing; the download then runs on the box.
@@ -121,7 +138,7 @@ export function LivePhotos() {
       {model && !model.installed && canImport && stats && stats.total > 0 && (
         <Card dark className="mb-4" title="Find photos by what is in them" action={<Pill tone="dark">On the box</Pill>}>
           <p className="text-[14px] text-ash-2">
-            {model.purpose} The model is about {Math.round(model.approxBytes / 1024 / 1024)} MB and comes in once through the Gate; after that nothing about your photos ever leaves.
+            {model.purpose} The model is about {Math.round(model.approxBytes / 1024 / 1024)} MB. Turning it on asks you, with your passkey, to allow huggingface.co on the Gate, then the files come in once; after that nothing about your photos ever leaves.
           </p>
           <div className="mt-3">
             <Button kind="primary" onClick={turnOnSearch} disabled={asking} aria-busy={asking} data-testid="turn-on-search">

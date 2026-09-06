@@ -11,7 +11,7 @@ import { openData, type Data } from "../src/data.ts";
 import { createLogger } from "../src/logger.ts";
 import { buildServices, type Services } from "../src/services.ts";
 import { startGate, type GateHandle } from "../src/gate/spawn.ts";
-import { SESSION_COOKIE } from "../src/auth/sessions.ts";
+import { auth, sessionOf, type Auth } from "./helpers.ts";
 
 const dataRoot = mkdtempSync(`${os.tmpdir()}/woven-gate-`);
 const ORIGIN = "http://localhost:3000";
@@ -31,14 +31,9 @@ let gate: GateHandle;
 let app: Awaited<ReturnType<typeof buildApp>>;
 let data: Data;
 let services: Services;
-let owner = "";
+let owner: Auth = { cookie: "", device: "" };
 let householdId = "";
 
-const cookieOf = (res: { headers: Record<string, unknown> }) => {
-  const raw = res.headers["set-cookie"] as string | string[] | undefined;
-  const list: string[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
-  return list.find((x) => x.startsWith(`${SESSION_COOKIE}=`))?.split(";")[0] ?? "";
-};
 
 beforeAll(async () => {
   await new Promise<void>((r) => outside.listen(0, "127.0.0.1", r));
@@ -65,7 +60,7 @@ beforeAll(async () => {
   const setup = await app.inject({ method: "POST", url: "/v1/household/setup", payload: { household: "H", owner: { name: "Alex", email: "alex@example.com" } } });
   const body = setup.json<{ recoveryCodes: string[]; household: { id: string } }>();
   householdId = body.household.id;
-  owner = cookieOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "alex@example.com", code: body.recoveryCodes[0] } }));
+  owner = sessionOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "alex@example.com", code: body.recoveryCodes[0] } }));
 }, 60_000);
 
 afterAll(async () => {
@@ -80,15 +75,15 @@ type GateView = { state: string; allowList?: string[]; crossingsToday?: number; 
 type Rec = { id: string; status: string; preview?: string; observed?: Record<string, unknown>; decision?: { reason: string }; approval?: { by: string } };
 type Err = { error: string };
 const cross = (params: Record<string, unknown>) =>
-  app.inject({ method: "POST", url: "/v1/actions/prepare", headers: { cookie: owner }, payload: { capability: "gate.cross", target: `127.0.0.1:${outsidePort}`, parameters: { host: `127.0.0.1:${outsidePort}`, purpose: "test", sent: "Task text only. No names.", method: "POST", path: "/task", body: JSON.stringify({ q: "compare heat pumps" }), ...params } } });
-const approve = (id: string) => app.inject({ method: "POST", url: `/v1/actions/${id}/approve`, headers: { cookie: owner }, payload: {} });
-const execute = (id: string) => app.inject({ method: "POST", url: `/v1/actions/${id}/execute`, headers: { cookie: owner } });
+  app.inject({ method: "POST", url: "/v1/actions/prepare", headers: auth(owner), payload: { capability: "gate.cross", target: `127.0.0.1:${outsidePort}`, parameters: { host: `127.0.0.1:${outsidePort}`, purpose: "test", sent: "Task text only. No names.", method: "POST", path: "/task", body: JSON.stringify({ q: "compare heat pumps" }), ...params } } });
+const approve = (id: string) => app.inject({ method: "POST", url: `/v1/actions/${id}/approve`, headers: auth(owner), payload: {} });
+const execute = (id: string) => app.inject({ method: "POST", url: `/v1/actions/${id}/execute`, headers: auth(owner) });
 
 describe("the Gate (phase 15)", () => {
   it("is a separate process that refuses callers without the secret", async () => {
     expect(gate.child?.pid).toBeGreaterThan(0);
     expect(gate.child?.pid).not.toBe(process.pid);
-    const status = await app.inject({ method: "GET", url: "/v1/gate" });
+    const status = await app.inject({ method: "GET", url: "/v1/gate", headers: auth(owner) });
     expect(status.json<GateView>()).toMatchObject({ state: "open", allowList: [`127.0.0.1:${outsidePort}`], crossingsToday: 0 });
     // eslint-disable-next-line no-restricted-globals -- the test plays an intruder on loopback
     const intruder = await fetch(`${gate.client.url!}/status`);
@@ -112,7 +107,7 @@ describe("the Gate (phase 15)", () => {
     expect(crossing.sensitivity).toBe("high");
     const log = await readFile(join(dataRoot, "gate", "crossings.log"), "utf8");
     expect(log).toMatch(/"kind":"crossed"/);
-    expect((await app.inject({ method: "GET", url: "/v1/gate" })).json<GateView>()).toMatchObject({ crossingsToday: 1 });
+    expect((await app.inject({ method: "GET", url: "/v1/gate", headers: auth(owner) })).json<GateView>()).toMatchObject({ crossingsToday: 1 });
   });
 
   it("refuses hosts that are not on the allow list", async () => {
@@ -130,7 +125,7 @@ describe("the Gate (phase 15)", () => {
     const prepared = await cross({});
     const id = prepared.json<{ id: string }>().id;
     await approve(id);
-    const closed = await app.inject({ method: "POST", url: "/v1/gate", headers: { cookie: owner }, payload: { open: false } });
+    const closed = await app.inject({ method: "POST", url: "/v1/gate", headers: auth(owner), payload: { open: false } });
     expect(closed.json<GateView>()).toMatchObject({ state: "closed", changedBy: expect.any(String) });
     expect(data.ledger.recent(householdId, 3).map((r) => r.type)).toContain("action.executed");
 
@@ -144,17 +139,17 @@ describe("the Gate (phase 15)", () => {
     // New crossings are refused at prepare time while closed.
     const whileClosed = await cross({});
     expect(whileClosed.json<Rec>()).toMatchObject({ status: "declined", decision: { reason: expect.stringMatching(/Gate is closed/) } });
-    const status = await app.inject({ method: "GET", url: "/v1/system/status" });
+    const status = await app.inject({ method: "GET", url: "/v1/system/status", headers: auth(owner) });
     expect(status.json<{ gate: string }>()).toMatchObject({ gate: "closed" });
 
-    const reopened = await app.inject({ method: "POST", url: "/v1/gate", headers: { cookie: owner }, payload: { open: true } });
+    const reopened = await app.inject({ method: "POST", url: "/v1/gate", headers: auth(owner), payload: { open: true } });
     expect(reopened.json<GateView>()).toMatchObject({ state: "open" });
   });
 
   it("remembers its state across a restart of the Gate process", async () => {
-    await app.inject({ method: "POST", url: "/v1/gate", headers: { cookie: owner }, payload: { open: false } });
+    await app.inject({ method: "POST", url: "/v1/gate", headers: auth(owner), payload: { open: false } });
     const stateFile = JSON.parse(await readFile(join(dataRoot, "gate", "state.json"), "utf8")) as { state: string };
     expect(stateFile.state).toBe("closed");
-    await app.inject({ method: "POST", url: "/v1/gate", headers: { cookie: owner }, payload: { open: true } });
+    await app.inject({ method: "POST", url: "/v1/gate", headers: auth(owner), payload: { open: true } });
   });
 });

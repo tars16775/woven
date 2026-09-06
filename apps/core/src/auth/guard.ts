@@ -1,5 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { SESSION_COOKIE, type ResolvedSession } from "./sessions.ts";
+import { SESSION_COOKIE, verifySignedPath, type ResolvedSession } from "./sessions.ts";
+
+export const DEVICE_HEADER = "x-woven-device";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -8,10 +10,26 @@ declare module "fastify" {
   }
 }
 
-/** Resolve the session cookie on every request; routes decide whether to insist. */
+/**
+ * Resolve the session cookie on every request; routes decide whether to insist.
+ * The cookie alone is not enough: the browser also holds a device secret and
+ * sends it as a header, or signs the address for things it fetches without
+ * headers (images, media, downloads, the event stream). Older sessions with
+ * no secret keep working until they expire.
+ */
 export async function attachSession(req: FastifyRequest) {
   const token = req.cookies[SESSION_COOKIE];
-  req.session = token ? req.server.deps.services.sessions.resolve(token) : null;
+  const session = token ? req.server.deps.services.sessions.resolve(token) : null;
+  if (session?.deviceSecret) {
+    const header = req.headers[DEVICE_HEADER];
+    const q = req.query as Record<string, string | undefined>;
+    const path = req.url.split("?")[0]!;
+    const ok = (typeof header === "string" && header === session.deviceSecret) || verifySignedPath(session.deviceSecret, path, q.dexp, q.dsig);
+    req.session = ok ? session : null;
+    if (!ok) req.log.info({ path, hasHeader: typeof header === "string" }, "session cookie without its device secret");
+    return;
+  }
+  req.session = session;
 }
 
 export async function requireSession(req: FastifyRequest, reply: FastifyReply) {

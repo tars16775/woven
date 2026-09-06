@@ -12,7 +12,7 @@ import { openData, type Data } from "../src/data.ts";
 import { createLogger } from "../src/logger.ts";
 import { buildServices, type Services } from "../src/services.ts";
 import { startGate, type GateHandle } from "../src/gate/spawn.ts";
-import { SESSION_COOKIE } from "../src/auth/sessions.ts";
+import { auth, sessionOf, type Auth } from "./helpers.ts";
 import { catalogue } from "../src/models.ts";
 import { cosine, type Embedder } from "../src/photo-index.ts";
 
@@ -22,7 +22,7 @@ let gate: GateHandle;
 let app: Awaited<ReturnType<typeof buildApp>>;
 let data: Data;
 let services: Services;
-let owner = "";
+let owner: Auth = { cookie: "", device: "" };
 let servedBytes = 0;
 const hits: string[] = [];
 
@@ -53,11 +53,6 @@ const stub: Embedder = {
   text: async (q) => Float32Array.from([/red/i.test(q) ? 1 : 0, /green/i.test(q) ? 1 : 0, /blue/i.test(q) ? 1 : 0]),
 };
 
-const cookieOf = (res: { headers: Record<string, unknown> }) => {
-  const raw = res.headers["set-cookie"] as string | string[] | undefined;
-  const list: string[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
-  return list.find((x) => x.startsWith(`${SESSION_COOKIE}=`))?.split(";")[0] ?? "";
-};
 
 beforeAll(async () => {
   await new Promise<void>((r) => outside.listen(0, "127.0.0.1", r));
@@ -73,7 +68,7 @@ beforeAll(async () => {
   app = await buildApp({ config, logger, hardware, data, services, version: "test", startedAt: new Date() });
   await app.ready();
   const setup = await app.inject({ method: "POST", url: "/v1/household/setup", payload: { household: "H", owner: { name: "Alex", email: "alex@example.com" } } });
-  owner = cookieOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "alex@example.com", code: setup.json<{ recoveryCodes: string[] }>().recoveryCodes[0] } }));
+  owner = sessionOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "alex@example.com", code: setup.json<{ recoveryCodes: string[] }>().recoveryCodes[0] } }));
 }, 60_000);
 
 afterAll(async () => {
@@ -87,20 +82,20 @@ afterAll(async () => {
 
 describe("models through the Gate (phase 21)", () => {
   it("lists the catalogue, uninstalled", async () => {
-    expect(catalogue.find((m) => m.name === "photo-search")?.files).toHaveLength(7);
-    const res = await app.inject({ method: "GET", url: "/v1/models", headers: { cookie: owner } });
+    expect(Object.keys(catalogue.find((m) => m.name === "photo-search")?.files ?? {})).toHaveLength(7);
+    const res = await app.inject({ method: "GET", url: "/v1/models", headers: auth(owner) });
     expect(res.json<{ models: { name: string; installed: boolean }[] }>().models).toEqual([expect.objectContaining({ name: "photo-search", installed: false })]);
-    expect((await app.inject({ method: "GET", url: "/v1/photos/search?q=lake", headers: { cookie: owner } })).json()).toMatchObject({ ready: false, results: [] });
+    expect((await app.inject({ method: "GET", url: "/v1/photos/search?q=lake", headers: auth(owner) })).json()).toMatchObject({ ready: false, results: [] });
   });
 
   it("installing is a crossing that asks first; every file arrives through the Gate, redirects included, and is pinned", async () => {
-    const prepared = await app.inject({ method: "POST", url: "/v1/models/photo-search/install", headers: { cookie: owner } });
+    const prepared = await app.inject({ method: "POST", url: "/v1/models/photo-search/install", headers: auth(owner) });
     expect(prepared.statusCode).toBe(201);
     const rec = prepared.json<{ id: string; status: string; preview: string }>();
     expect(rec.status).toBe("prepared");
     expect(rec.preview).toMatch(/Download the photo search model/);
-    expect((await app.inject({ method: "POST", url: `/v1/actions/${rec.id}/approve`, headers: { cookie: owner }, payload: {} })).json<{ status: string }>().status).toBe("approved");
-    const done = await app.inject({ method: "POST", url: `/v1/actions/${rec.id}/execute`, headers: { cookie: owner } });
+    expect((await app.inject({ method: "POST", url: `/v1/actions/${rec.id}/approve`, headers: auth(owner), payload: {} })).json<{ status: string }>().status).toBe("approved");
+    const done = await app.inject({ method: "POST", url: `/v1/actions/${rec.id}/execute`, headers: auth(owner) });
     expect(done.statusCode).toBe(200);
     expect(done.json<{ status: string; observed: { files: number } }>()).toMatchObject({ status: "succeeded", observed: { files: 7 } });
     expect(hits.filter((h) => h.includes("/resolve/main/"))).toHaveLength(7);
@@ -108,7 +103,7 @@ describe("models through the Gate (phase 21)", () => {
     const crossing = data.ledger.recent(undefined, 5).find((r) => r.type === "gate.crossing")!;
     expect(crossing.sent).toMatch(/Nothing about the household/);
 
-    const state = await app.inject({ method: "GET", url: "/v1/models", headers: { cookie: owner } });
+    const state = await app.inject({ method: "GET", url: "/v1/models", headers: auth(owner) });
     expect(state.json<{ models: { installed: boolean; bytes: number }[] }>().models[0]).toMatchObject({ installed: true, bytes: servedBytes });
     const spec = services.models.spec("photo-search")!;
     const manifest = JSON.parse(await readFile(join(services.models.pathFor(spec), "woven-manifest.json"), "utf8")) as { files: Record<string, { sha256: string }> };
@@ -128,10 +123,10 @@ describe("models through the Gate (phase 21)", () => {
       await services.photoIndex.indexPending();
       await new Promise((r) => setTimeout(r, 50));
     }
-    const blue = await app.inject({ method: "GET", url: "/v1/photos/search?q=a%20blue%20sky", headers: { cookie: owner } });
+    const blue = await app.inject({ method: "GET", url: "/v1/photos/search?q=a%20blue%20sky", headers: auth(owner) });
     expect(blue.json<{ ready: boolean; indexed: number }>()).toMatchObject({ ready: true, indexed: 3 });
     expect(blue.json<{ results: { name: string }[] }>().results[0]?.name).toBe("sky.jpg");
-    const red = await app.inject({ method: "GET", url: "/v1/photos/search?q=red%20barn", headers: { cookie: owner } });
+    const red = await app.inject({ method: "GET", url: "/v1/photos/search?q=red%20barn", headers: auth(owner) });
     expect(red.json<{ results: { name: string }[] }>().results[0]?.name).toBe("barn.jpg");
     expect(cosine(Float32Array.from([1, 0]), Float32Array.from([1, 0]))).toBe(1);
   });

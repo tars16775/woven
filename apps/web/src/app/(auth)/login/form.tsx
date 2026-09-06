@@ -55,7 +55,7 @@ export function LoginForm() {
     if (!connected) return;
     let alive = true;
     identity
-      .household()
+      .setupState()
       .then((h) => alive && setHouseReady(h.setup))
       .catch(() => alive && setHouseReady(null));
     return () => {

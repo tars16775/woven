@@ -46,8 +46,8 @@ const Env = z.object({
   /** The Gate: "spawn" a child process (the Mac), "off", or the URL of a Gate running elsewhere (the box's Outside processor). */
   WOVEN_GATE: z.string().default("spawn"),
   WOVEN_GATE_PORT: z.coerce.number().int().min(1).max(65535).default(4010),
-  /** Hosts crossings may reach, comma-separated; "*.host" allows subdomains. The default is what model downloads need. */
-  WOVEN_GATE_ALLOW: z.string().default("huggingface.co,*.hf.co"),
+  /** Hosts crossings may reach at first boot, comma-separated; "*.host" allows subdomains. Empty: the owner allows hosts one by one from the dashboard (class H). */
+  WOVEN_GATE_ALLOW: z.string().default(""),
   /** A second place for snapshots: another drive, or a folder the household chose. Empty means none yet. */
   WOVEN_SNAPSHOT_MIRROR: z.string().default(""),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),

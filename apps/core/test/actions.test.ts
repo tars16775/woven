@@ -9,7 +9,7 @@ import { openData, type Data } from "../src/data.ts";
 import { createLogger } from "../src/logger.ts";
 import { buildServices, type Services } from "../src/services.ts";
 import { GateClient } from "../src/gate/client.ts";
-import { SESSION_COOKIE } from "../src/auth/sessions.ts";
+import { auth, sessionOf, type Auth } from "./helpers.ts";
 import { ActionError, hashParams } from "../src/actions/engine.ts";
 import { actions } from "../src/db/schema.ts";
 import { eq } from "drizzle-orm";
@@ -20,16 +20,11 @@ const config = loadConfig({ NODE_ENV: "test", WOVEN_DATA: dataRoot, LOG_LEVEL: "
 let app: Awaited<ReturnType<typeof buildApp>>;
 let data: Data;
 let services: Services;
-let owner = "";
-let adult = "";
-let child = "";
+let owner: Auth = { cookie: "", device: "" };
+let adult: Auth = { cookie: "", device: "" };
+let child: Auth = { cookie: "", device: "" };
 let householdId = "";
 
-const cookieOf = (res: { headers: Record<string, unknown> }) => {
-  const raw = res.headers["set-cookie"] as string | string[] | undefined;
-  const list: string[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
-  return list.find((x) => x.startsWith(`${SESSION_COOKIE}=`))?.split(";")[0] ?? "";
-};
 
 beforeAll(async () => {
   const hardware = detectHardware({ dataRoot });
@@ -40,15 +35,15 @@ beforeAll(async () => {
   const setup = await app.inject({ method: "POST", url: "/v1/household/setup", payload: { household: "H", owner: { name: "Alex", email: "alex@example.com" } } });
   const codes = setup.json<{ recoveryCodes: string[]; household: { id: string } }>();
   householdId = codes.household.id;
-  owner = cookieOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "alex@example.com", code: codes.recoveryCodes[0] } }));
+  owner = sessionOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "alex@example.com", code: codes.recoveryCodes[0] } }));
   for (const [name, email, role] of [
     ["Maya", "maya@example.com", "adult"],
     ["Sam", "sam@example.com", "child"],
   ] as const) {
-    await app.inject({ method: "POST", url: "/v1/household/people", headers: { cookie: owner }, payload: { name, email, role } });
+    await app.inject({ method: "POST", url: "/v1/household/people", headers: auth(owner), payload: { name, email, role } });
     const person = services.household.personByEmail(email)!;
     const code = services.recovery.issue(person)[0]!;
-    const cookie = cookieOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email, code } }));
+    const cookie = sessionOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email, code } }));
     if (role === "adult") adult = cookie;
     else child = cookie;
   }
@@ -60,7 +55,7 @@ afterAll(async () => {
 });
 
 type Rec = { id: string; status: string; riskClass?: string; observed?: Record<string, unknown>; decision: { outcome: string; reason: string }; approval?: { by?: string; factors?: string[]; approvedBy?: string | null } | null; error?: string | null };
-const run = (cookie: string, body: Record<string, unknown>) => app.inject({ method: "POST", url: "/v1/actions/run", headers: { cookie }, payload: body });
+const run = (who: Auth, body: Record<string, unknown>) => app.inject({ method: "POST", url: "/v1/actions/run", headers: auth(who), payload: body });
 
 describe("capabilities and one-tap actions", () => {
   it("publishes the registry", async () => {
@@ -106,17 +101,17 @@ describe("policy (phase 13)", () => {
     expect(asChild.json<Rec>()).toMatchObject({ status: "declined", decision: { outcome: "deny", reason: expect.stringMatching(/security/) } });
     const asAdult = await run(adult, { capability: "lock.unlock", target: "entry.front-door", parameters: {} });
     expect(asAdult.json<Rec>()).toMatchObject({ status: "prepared", approval: { by: "adult", factors: ["presence"] } });
-    const approveNobodyHome = await app.inject({ method: "POST", url: `/v1/actions/${asAdult.json<{ id: string }>().id}/approve`, headers: { cookie: owner }, payload: {} });
+    const approveNobodyHome = await app.inject({ method: "POST", url: `/v1/actions/${asAdult.json<{ id: string }>().id}/approve`, headers: auth(owner), payload: {} });
     expect(approveNobodyHome.statusCode).toBe(403);
     expect(approveNobodyHome.json<Rec>()).toMatchObject({ error: expect.stringMatching(/Nobody is confirmed home/) });
 
-    const childApproves = await app.inject({ method: "POST", url: `/v1/actions/${asAdult.json<{ id: string }>().id}/approve`, headers: { cookie: child }, payload: {} });
+    const childApproves = await app.inject({ method: "POST", url: `/v1/actions/${asAdult.json<{ id: string }>().id}/approve`, headers: auth(child), payload: {} });
     expect(childApproves.statusCode).toBe(403);
 
-    await app.inject({ method: "POST", url: "/v1/home/presence", headers: { cookie: owner }, payload: { adultsHome: true } });
-    const approved = await app.inject({ method: "POST", url: `/v1/actions/${asAdult.json<{ id: string }>().id}/approve`, headers: { cookie: owner }, payload: {} });
+    await app.inject({ method: "POST", url: "/v1/home/presence", headers: auth(owner), payload: { adultsHome: true } });
+    const approved = await app.inject({ method: "POST", url: `/v1/actions/${asAdult.json<{ id: string }>().id}/approve`, headers: auth(owner), payload: {} });
     expect(approved.json<Rec>()).toMatchObject({ status: "approved", approval: { approvedBy: expect.any(String) } });
-    const executed = await app.inject({ method: "POST", url: `/v1/actions/${asAdult.json<{ id: string }>().id}/execute`, headers: { cookie: adult } });
+    const executed = await app.inject({ method: "POST", url: `/v1/actions/${asAdult.json<{ id: string }>().id}/execute`, headers: auth(adult) });
     expect(executed.json<Rec>()).toMatchObject({ status: "succeeded", observed: { locked: false } });
     const receipt = data.ledger.recent(householdId, 3).find((r) => r.type === "action.executed")!;
     expect(receipt.payload).toMatchObject({ planned: {}, observed: { locked: false }, approvedBy: expect.any(String) });
@@ -140,7 +135,7 @@ describe("policy (phase 13)", () => {
     expect(asChild.json<Rec>()).toMatchObject({ status: "declined" });
     const asOwner = await run(owner, { capability: "core.factory_reset", target: "core", parameters: { confirm: "erase everything" } });
     expect(asOwner.json<Rec>()).toMatchObject({ status: "prepared", approval: { by: "owner", factors: ["strong_auth"] } });
-    const noKey = await app.inject({ method: "POST", url: `/v1/actions/${asOwner.json<{ id: string }>().id}/approve`, headers: { cookie: owner }, payload: {} });
+    const noKey = await app.inject({ method: "POST", url: `/v1/actions/${asOwner.json<{ id: string }>().id}/approve`, headers: auth(owner), payload: {} });
     expect(noKey.statusCode).toBe(403);
     expect(noKey.json<Rec>()).toMatchObject({ error: expect.stringMatching(/passkey/) });
   });
@@ -148,10 +143,10 @@ describe("policy (phase 13)", () => {
   it("refuses to run an action whose parameters changed after approval", async () => {
     const hot = await run(owner, { capability: "climate.set_temperature", target: "living.thermostat", parameters: { setpointC: 30 } });
     const id = hot.json<{ id: string }>().id;
-    expect((await app.inject({ method: "POST", url: `/v1/actions/${id}/approve`, headers: { cookie: owner }, payload: {} })).json<Rec>()).toMatchObject({ status: "approved" });
+    expect((await app.inject({ method: "POST", url: `/v1/actions/${id}/approve`, headers: auth(owner), payload: {} })).json<Rec>()).toMatchObject({ status: "approved" });
     // Someone edits the stored parameters behind the policy's back.
     data.database.db.update(actions).set({ parameters: JSON.stringify({ setpointC: 45 }) }).where(eq(actions.id, id)).run();
-    const res = await app.inject({ method: "POST", url: `/v1/actions/${id}/execute`, headers: { cookie: owner } });
+    const res = await app.inject({ method: "POST", url: `/v1/actions/${id}/execute`, headers: auth(owner) });
     expect(res.statusCode).toBe(409);
     expect(res.json<Rec>()).toMatchObject({ error: expect.stringMatching(/changed after it was approved/) });
     expect(services.home.device("living.thermostat")?.state).not.toMatchObject({ setpointC: 45 });
@@ -162,20 +157,20 @@ describe("policy (phase 13)", () => {
     const hot = await run(owner, { capability: "climate.set_temperature", target: "living.thermostat", parameters: { setpointC: 29 } });
     const id = hot.json<{ id: string }>().id;
     data.database.db.update(actions).set({ expiresAt: new Date(Date.now() - 1000).toISOString() }).where(eq(actions.id, id)).run();
-    const res = await app.inject({ method: "POST", url: `/v1/actions/${id}/approve`, headers: { cookie: owner }, payload: {} });
+    const res = await app.inject({ method: "POST", url: `/v1/actions/${id}/approve`, headers: auth(owner), payload: {} });
     expect(res.statusCode).toBe(409);
-    expect((await app.inject({ method: "GET", url: `/v1/actions/${id}`, headers: { cookie: owner } })).json<Rec>()).toMatchObject({ status: "expired" });
-    const pending = await app.inject({ method: "GET", url: "/v1/actions?status=prepared", headers: { cookie: owner } });
+    expect((await app.inject({ method: "GET", url: `/v1/actions/${id}`, headers: auth(owner) })).json<Rec>()).toMatchObject({ status: "expired" });
+    const pending = await app.inject({ method: "GET", url: "/v1/actions?status=prepared", headers: auth(owner) });
     expect(pending.json<{ actions: { id: string }[] }>().actions.map((a) => a.id)).not.toContain(id);
   });
 
   it("the engine never runs a capability twice for the same non-idempotent approval", async () => {
     const hot = await run(owner, { capability: "climate.set_temperature", target: "living.thermostat", parameters: { setpointC: 28.5 } });
     const id = hot.json<{ id: string }>().id;
-    await app.inject({ method: "POST", url: `/v1/actions/${id}/approve`, headers: { cookie: owner }, payload: {} });
-    const first = await app.inject({ method: "POST", url: `/v1/actions/${id}/execute`, headers: { cookie: owner } });
+    await app.inject({ method: "POST", url: `/v1/actions/${id}/approve`, headers: auth(owner), payload: {} });
+    const first = await app.inject({ method: "POST", url: `/v1/actions/${id}/execute`, headers: auth(owner) });
     expect(first.json<Rec>()).toMatchObject({ status: "succeeded" });
-    const again = await app.inject({ method: "POST", url: `/v1/actions/${id}/execute`, headers: { cookie: owner } });
+    const again = await app.inject({ method: "POST", url: `/v1/actions/${id}/execute`, headers: auth(owner) });
     expect(again.json<Rec>()).toMatchObject({ status: "succeeded" }); // idempotent capability: same record, nothing re-run
     await expect(services.actions.execute(id, { kind: "person", id: "x" })).resolves.toMatchObject({ status: "succeeded" });
     expect(() => services.actions.decline(id, services.household.personByEmail("alex@example.com")!)).toThrow(ActionError);
@@ -185,11 +180,11 @@ describe("policy (phase 13)", () => {
 describe("home", () => {
   it("lists rooms, devices and presence for the signed in", async () => {
     expect((await app.inject({ method: "GET", url: "/v1/home" })).statusCode).toBe(401);
-    const res = await app.inject({ method: "GET", url: "/v1/home", headers: { cookie: owner } });
+    const res = await app.inject({ method: "GET", url: "/v1/home", headers: auth(owner) });
     const body = res.json<{ adapter: string; devices: unknown[]; presence: { adultsHome: boolean } }>();
     expect(body.adapter).toBe("simulated");
     expect(body.devices.length).toBeGreaterThan(10);
     expect(body.presence.adultsHome).toBe(true);
-    expect((await app.inject({ method: "POST", url: "/v1/home/presence", headers: { cookie: child }, payload: { adultsHome: false } })).statusCode).toBe(403);
+    expect((await app.inject({ method: "POST", url: "/v1/home/presence", headers: auth(child), payload: { adultsHome: false } })).statusCode).toBe(403);
   });
 });

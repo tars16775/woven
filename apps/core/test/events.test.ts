@@ -7,6 +7,8 @@ import { buildApp } from "../src/app.ts";
 import { loadConfig } from "../src/config.ts";
 import { CORE_HOUSEHOLD_ID, openData, type Data } from "../src/data.ts";
 import { createLogger } from "../src/logger.ts";
+import { signPath } from "../src/auth/sessions.ts";
+import { auth, sessionOf, type Auth } from "./helpers.ts";
 import { buildServices } from "../src/services.ts";
 import { GateClient } from "../src/gate/client.ts";
 
@@ -15,6 +17,7 @@ const config = loadConfig({ NODE_ENV: "test", WOVEN_DATA: dataRoot, LOG_LEVEL: "
 let app: Awaited<ReturnType<typeof buildApp>>;
 let data: Data;
 let port: number;
+let owner: Auth = { cookie: "", device: "" };
 
 beforeAll(async () => {
   const hardware = detectHardware({ dataRoot });
@@ -22,6 +25,8 @@ beforeAll(async () => {
   app = await buildApp({ config, logger: createLogger(config), hardware, data, services: buildServices(data, config, new GateClient(null, "test")), version: "test", startedAt: new Date() });
   await app.listen({ host: "127.0.0.1", port: 0 });
   port = (app.server.address() as { port: number }).port;
+  const setup = await app.inject({ method: "POST", url: "/v1/household/setup", payload: { household: "H", owner: { name: "Alex", email: "alex@example.com" } } });
+  owner = sessionOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "alex@example.com", code: setup.json<{ recoveryCodes: string[] }>().recoveryCodes[0] } }));
 });
 
 afterAll(async () => {
@@ -34,7 +39,9 @@ type Msg = { type: string; row?: { type: string; seq: number }; head?: unknown }
 
 describe("event stream", () => {
   it("greets, then pushes every appended ledger row", async () => {
-    const socket = new WebSocket(`ws://127.0.0.1:${port}/v1/events`);
+    // A browser cannot send headers on a WebSocket: the address is signed with the device secret, and the cookie rides along.
+    const exp = Math.floor(Date.now() / 1000) + 300;
+    const socket = new WebSocket(`ws://127.0.0.1:${port}/v1/events?dexp=${exp}&dsig=${signPath(owner.device, "/v1/events", exp)}`, { headers: { cookie: owner.cookie } });
     const messages: Msg[] = [];
     const got = (n: number) =>
       new Promise<void>((resolve, reject) => {
@@ -52,7 +59,7 @@ describe("event stream", () => {
     data.ledger.append({ type: "core.started", householdId: CORE_HOUSEHOLD_ID, actor: { kind: "core", id: "core" }, where: "inside" });
     await first;
     expect(messages[0]?.type).toBe("hello");
-    expect(messages[1]).toMatchObject({ type: "ledger", row: { type: "core.started", seq: 1 } });
+    expect(messages[1]).toMatchObject({ type: "ledger", row: { type: "core.started" } });
     socket.close();
     await new Promise<void>((resolve) => socket.addEventListener("close", () => resolve()));
     // The server notices the close a moment later and removes its listener; appending must not throw or leak.
@@ -62,7 +69,7 @@ describe("event stream", () => {
   });
 
   it("reports config without secrets", async () => {
-    const res = await app.inject({ method: "GET", url: "/v1/system/config" });
+    const res = await app.inject({ method: "GET", url: "/v1/system/config", headers: auth(owner) });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ name: "woven.local", tls: { enabled: false }, mdns: false });
     expect(JSON.stringify(res.json())).not.toMatch(/PRIVATE KEY/);

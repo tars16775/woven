@@ -2,6 +2,7 @@ import { LedgerRow } from "@woven/schema";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { CORE_HOUSEHOLD_ID } from "../data.ts";
+import { requireSession } from "../auth/guard.ts";
 import type { ZodTypeProvider } from "../zod.ts";
 
 const Integrity = z.discriminatedUnion("ok", [
@@ -20,6 +21,7 @@ export const ledgerRoutes: FastifyPluginAsync = async (raw) => {
   app.get(
     "/ledger/recent",
     {
+      preHandler: requireSession,
       schema: {
         querystring: z.object({ limit: z.coerce.number().int().min(1).max(500).default(50) }),
         response: { 200: z.object({ rows: z.array(LedgerRow) }) },
@@ -29,7 +31,7 @@ export const ledgerRoutes: FastifyPluginAsync = async (raw) => {
     async (req) => ({ rows: app.deps.data.ledger.recent(undefined, req.query.limit) }),
   );
 
-  app.get("/ledger/integrity", { schema: { response: { 200: Integrity } } }, async () => {
+  app.get("/ledger/integrity", { preHandler: requireSession, schema: { response: { 200: Integrity } } }, async () => {
     const { ledger } = app.deps.data;
     const report = ledger.verify();
     // The check is itself an event: a ledger that says it was verified, and when.

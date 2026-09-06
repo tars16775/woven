@@ -58,6 +58,8 @@ export const sessions = sqliteTable(
     personId: text("person_id").notNull().references(() => people.id),
     /** Hash of the session token; the token itself is only ever in the cookie. */
     tokenHash: text("token_hash").notNull(),
+    /** A second secret the browser holds outside the cookie jar and sends as a header or a signed URL; a stolen cookie alone is not enough. */
+    deviceSecret: text("device_secret"),
     deviceLabel: text("device_label"),
     method: text("method", { enum: ["passkey", "code", "recovery"] }).notNull(),
     createdAt: text("created_at").notNull(),

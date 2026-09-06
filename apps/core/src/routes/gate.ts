@@ -9,7 +9,7 @@ export const gateRoutes: FastifyPluginAsync = async (raw) => {
   const app = raw.withTypeProvider<ZodTypeProvider>();
   const { services } = app.deps;
 
-  app.get("/gate", { schema: { response: { 200: GateStatus } } }, async () => services.gate.status());
+  app.get("/gate", { preHandler: requireSession, schema: { response: { 200: GateStatus } } }, async () => services.gate.status());
 
   app.post(
     "/gate",

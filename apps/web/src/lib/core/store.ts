@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { CoreClient, type CoreConfig, type CoreStatus, type GateStatus, type LedgerRow } from "./client";
+import { CoreClient, CoreError, type CoreConfig, type CoreStatus, type GateStatus, type LedgerRow } from "./client";
 import { LIVE, defaultCandidates, discover, normalize, probe, remember } from "./discovery";
 
 /**
@@ -119,8 +119,13 @@ function attach(url: string, version: string) {
       const [status, gate] = await Promise.all([client.status(), client.gate().catch(() => null)]);
       if (gen !== generation || state.phase !== "connected") return;
       set({ ...state, status, gate: gate ?? state.gate });
-    } catch {
+    } catch (err) {
       if (gen !== generation) return;
+      // Not signed in on this device: still connected, just nothing to show until sign-in.
+      if (err instanceof CoreError && err.status === 401) {
+        if (state.phase === "connected") set({ ...state, status: null });
+        return;
+      }
       lost("the Core stopped answering");
     }
   };

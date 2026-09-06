@@ -5,6 +5,7 @@ import { requireSession } from "../auth/guard.ts";
 import { PasskeyError } from "../auth/passkeys.ts";
 import { SESSION_COOKIE, sessionCookie } from "../auth/sessions.ts";
 import { screenPage } from "../auth/screen.ts";
+import { limits } from "../auth/limits.ts";
 import type { ZodTypeProvider } from "../zod.ts";
 
 const Options = z.object({ key: z.string(), options: z.record(z.string(), z.unknown()) });
@@ -29,6 +30,8 @@ export const authRoutes: FastifyPluginAsync = async (raw) => {
     const c = sessionCookie(issued.token, issued.expiresAt, { secure: secure() });
     void reply.setCookie(c.name, c.value, c.options);
     req.session = services.sessions.resolve(issued.token);
+    // The device secret goes to the page once, in the body; the browser keeps it outside the cookie jar.
+    void reply.header("x-woven-device-secret", issued.deviceSecret);
     return issued;
   };
   const view = (req: FastifyRequest): SessionView => {
@@ -47,6 +50,7 @@ export const authRoutes: FastifyPluginAsync = async (raw) => {
   app.post(
     "/household/setup",
     {
+      ...limits.setup,
       schema: {
         body: SetupHousehold,
         response: { 201: z.object({ household: Household, owner: Person, enrolment: z.string(), recoveryCodes: z.array(z.string()) }) },
@@ -64,7 +68,7 @@ export const authRoutes: FastifyPluginAsync = async (raw) => {
   /** Registration options: for yourself (session) or for a person named by an enrolment key. */
   app.post(
     "/auth/passkeys/register/options",
-    { schema: { body: z.object({ enrolment: z.string().optional() }), response: { 200: Options } } },
+    { ...limits.signIn, schema: { body: z.object({ enrolment: z.string().optional() }), response: { 200: Options } } },
     async (req) => {
       const personId = req.session?.personId ?? services.enrolments.peek(req.body.enrolment)?.personId;
       if (!personId) throw new PasskeyError(401, "Sign in, or use the link you were given.");
@@ -98,7 +102,7 @@ export const authRoutes: FastifyPluginAsync = async (raw) => {
 
   app.post(
     "/auth/passkeys/login/options",
-    { schema: { body: z.object({ email: z.email().optional() }), response: { 200: Options } } },
+    { ...limits.signIn, schema: { body: z.object({ email: z.email().optional() }), response: { 200: Options } } },
     async (req) => {
       const person = req.body.email ? services.household.personByEmail(req.body.email) : null;
       if (req.body.email && !person) throw new PasskeyError(401, "No one in this household has that email.");
@@ -109,7 +113,7 @@ export const authRoutes: FastifyPluginAsync = async (raw) => {
 
   app.post(
     "/auth/passkeys/login/verify",
-    { schema: { body: z.object({ key: z.string(), credential: Credential }), response: { 200: SessionView } } },
+    { ...limits.signIn, schema: { body: z.object({ key: z.string(), credential: Credential }), response: { 200: SessionView } } },
     async (req, reply) => {
       const personId = await services.passkeys.verifyAuthentication(req.body.key, req.body.credential as never);
       const person = services.household.person(personId);
@@ -122,7 +126,7 @@ export const authRoutes: FastifyPluginAsync = async (raw) => {
   /** Lost every device: a recovery code signs you in once so you can add a passkey. */
   app.post(
     "/auth/recover",
-    { schema: { body: z.object({ email: z.email(), code: z.string().min(8).max(12) }), response: { 200: SessionView } } },
+    { ...limits.recovery, schema: { body: z.object({ email: z.email(), code: z.string().min(8).max(12) }), response: { 200: SessionView } } },
     async (req, reply) => {
       const person = services.household.personByEmail(req.body.email);
       if (!person || !services.recovery.redeem(person, req.body.code)) throw new PasskeyError(401, "That code did not match.");
@@ -164,7 +168,7 @@ export const authRoutes: FastifyPluginAsync = async (raw) => {
 
   app.post(
     "/auth/code/login",
-    { schema: { body: z.object({ name: z.string().trim().min(1).max(80), code: z.string().min(6).max(7) }), response: { 200: SessionView } } },
+    { ...limits.code, schema: { body: z.object({ name: z.string().trim().min(1).max(80), code: z.string().min(6).max(7) }), response: { 200: SessionView } } },
     async (req, reply) => {
       const h = services.household.household();
       if (!h) throw new PasskeyError(401, "This box has no house yet.");

@@ -12,7 +12,7 @@ import { openData, type Data } from "../src/data.ts";
 import { createLogger } from "../src/logger.ts";
 import { buildServices, type Services } from "../src/services.ts";
 import { GateClient } from "../src/gate/client.ts";
-import { SESSION_COOKIE } from "../src/auth/sessions.ts";
+import { auth, sessionOf, type Auth } from "./helpers.ts";
 import { MediaService, mediaKind } from "../src/media.ts";
 
 const exec = promisify(execFile);
@@ -21,15 +21,10 @@ const config = loadConfig({ NODE_ENV: "test", WOVEN_DATA: dataRoot, LOG_LEVEL: "
 let app: Awaited<ReturnType<typeof buildApp>>;
 let data: Data;
 let services: Services;
-let owner = "";
+let owner: Auth = { cookie: "", device: "" };
 let tools = { ffmpeg: null as string | null, ffprobe: null as string | null };
 type Item = { fileId: string; name: string; kind: string; playable: boolean; durationS: number | null; width: number | null; codec: string | null };
 
-const cookieOf = (res: { headers: Record<string, unknown> }) => {
-  const raw = res.headers["set-cookie"] as string | string[] | undefined;
-  const list: string[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
-  return list.find((x) => x.startsWith(`${SESSION_COOKIE}=`))?.split(";")[0] ?? "";
-};
 
 beforeAll(async () => {
   tools = await MediaService.detectTools();
@@ -39,7 +34,7 @@ beforeAll(async () => {
   app = await buildApp({ config, logger: createLogger(config), hardware, data, services, version: "test", startedAt: new Date() });
   await app.ready();
   const setup = await app.inject({ method: "POST", url: "/v1/household/setup", payload: { household: "H", owner: { name: "Alex", email: "alex@example.com" } } });
-  owner = cookieOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "alex@example.com", code: setup.json<{ recoveryCodes: string[] }>().recoveryCodes[0] } }));
+  owner = sessionOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "alex@example.com", code: setup.json<{ recoveryCodes: string[] }>().recoveryCodes[0] } }));
 });
 afterAll(async () => {
   await app.close();
@@ -57,18 +52,18 @@ describe("media (phase 22)", () => {
   it("serves byte ranges so players can seek", async () => {
     const alex = services.household.personByEmail("alex@example.com")!;
     const entry = await services.files.put(alex, { name: "big.bin", path: "/", namespace: "personal", mime: "application/octet-stream" }, Buffer.from("0123456789abcdef"));
-    const whole = await app.inject({ method: "GET", url: `/v1/files/${entry.id}/content`, headers: { cookie: owner } });
+    const whole = await app.inject({ method: "GET", url: `/v1/files/${entry.id}/content`, headers: auth(owner) });
     expect(whole.statusCode).toBe(200);
     expect(whole.headers["accept-ranges"]).toBe("bytes");
-    const part = await app.inject({ method: "GET", url: `/v1/files/${entry.id}/content`, headers: { cookie: owner, range: "bytes=4-7" } });
+    const part = await app.inject({ method: "GET", url: `/v1/files/${entry.id}/content`, headers: { ...auth(owner), range: "bytes=4-7" } });
     expect(part.statusCode).toBe(206);
     expect(part.headers["content-range"]).toBe("bytes 4-7/16");
     expect(part.body).toBe("4567");
-    const tail = await app.inject({ method: "GET", url: `/v1/files/${entry.id}/content`, headers: { cookie: owner, range: "bytes=-3" } });
+    const tail = await app.inject({ method: "GET", url: `/v1/files/${entry.id}/content`, headers: { ...auth(owner), range: "bytes=-3" } });
     expect(tail.body).toBe("def");
-    const open = await app.inject({ method: "GET", url: `/v1/files/${entry.id}/content`, headers: { cookie: owner, range: "bytes=10-" } });
+    const open = await app.inject({ method: "GET", url: `/v1/files/${entry.id}/content`, headers: { ...auth(owner), range: "bytes=10-" } });
     expect(open.body).toBe("abcdef");
-    expect((await app.inject({ method: "GET", url: `/v1/files/${entry.id}/content`, headers: { cookie: owner, range: "bytes=99-" } })).statusCode).toBe(416);
+    expect((await app.inject({ method: "GET", url: `/v1/files/${entry.id}/content`, headers: { ...auth(owner), range: "bytes=99-" } })).statusCode).toBe(416);
   });
 
   it("probes a real clip, lists it, plays the native one directly and transcodes the other", async () => {
@@ -77,7 +72,7 @@ describe("media (phase 22)", () => {
       const alex = services.household.personByEmail("alex@example.com")!;
       const entry = await services.files.put(alex, { name: "voice.mp3", path: "/Music", namespace: "personal", mime: "audio/mpeg" }, Buffer.from("not really mp3"));
       await new Promise((r) => setTimeout(r, 100));
-      const list = await app.inject({ method: "GET", url: "/v1/media", headers: { cookie: owner } });
+      const list = await app.inject({ method: "GET", url: "/v1/media", headers: auth(owner) });
       expect(list.json<{ items: Item[]; tools: { ffmpeg: boolean } }>()).toMatchObject({ tools: { ffmpeg: false } });
       expect(list.json<{ items: Item[] }>().items.map((i) => i.fileId)).toContain(entry.id);
       return;
@@ -94,21 +89,21 @@ describe("media (phase 22)", () => {
     const tone = await services.files.put(alex, { name: "tone.flac", path: "/Music", namespace: "personal", mime: "audio/flac" }, await readFile(join(dir, "tone.flac")));
     for (let i = 0; i < 100 && services.media.list(alex).length < 3; i += 1) await new Promise((r) => setTimeout(r, 50));
 
-    const list = await app.inject({ method: "GET", url: "/v1/media?kind=video", headers: { cookie: owner } });
+    const list = await app.inject({ method: "GET", url: "/v1/media?kind=video", headers: auth(owner) });
     const items = list.json<{ items: Item[] }>().items;
     expect(items.map((i) => i.name).sort()).toEqual(["native.mp4", "old.mov"]);
     const n = items.find((i) => i.fileId === native.id)!;
     expect(n).toMatchObject({ kind: "video", playable: true, width: 320, codec: "h264" });
     expect(n.durationS).toBeCloseTo(2, 0);
     expect(items.find((i) => i.fileId === old.id)).toMatchObject({ playable: false, codec: "mpeg2video" });
-    const audio = (await app.inject({ method: "GET", url: "/v1/media?kind=audio", headers: { cookie: owner } })).json<{ items: Item[] }>().items;
+    const audio = (await app.inject({ method: "GET", url: "/v1/media?kind=audio", headers: auth(owner) })).json<{ items: Item[] }>().items;
     expect(audio.find((i) => i.fileId === tone.id)).toMatchObject({ kind: "audio", playable: true, codec: "flac" });
 
-    const direct = await app.inject({ method: "GET", url: `/v1/media/${native.id}/stream`, headers: { cookie: owner } });
+    const direct = await app.inject({ method: "GET", url: `/v1/media/${native.id}/stream`, headers: auth(owner) });
     expect(direct.statusCode).toBe(307);
     expect(direct.headers.location).toBe(`/v1/files/${native.id}/content`);
 
-    const transcoded = await app.inject({ method: "GET", url: `/v1/media/${old.id}/stream`, headers: { cookie: owner } });
+    const transcoded = await app.inject({ method: "GET", url: `/v1/media/${old.id}/stream`, headers: auth(owner) });
     expect(transcoded.statusCode).toBe(200);
     expect(transcoded.headers["content-type"]).toBe("video/mp4");
     expect(transcoded.rawPayload.length).toBeGreaterThan(10_000);

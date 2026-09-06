@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireSession } from "../auth/guard.ts";
 import { HouseholdError } from "../household.ts";
+import { limits } from "../auth/limits.ts";
 import type { ZodTypeProvider } from "../zod.ts";
 
 /**
@@ -12,7 +13,12 @@ import type { ZodTypeProvider } from "../zod.ts";
 export const householdRoutes: FastifyPluginAsync = async (raw) => {
   const app = raw.withTypeProvider<ZodTypeProvider>();
 
-  app.get("/household", { schema: { response: { 200: HouseholdView } } }, async () => app.deps.services.household.view());
+  /** Whether the box has a house yet, for the sign-in and setup pages. Nothing else without a session. */
+  app.get("/household/setup", { schema: { response: { 200: z.object({ setup: z.boolean(), name: z.string().nullable() }) } } }, async () => {
+    const h = app.deps.services.household.household();
+    return { setup: !!h, name: h?.name ?? null };
+  });
+  app.get("/household", { preHandler: requireSession, schema: { response: { 200: HouseholdView } } }, async () => app.deps.services.household.view());
 
   app.post(
     "/household/people",
@@ -49,7 +55,7 @@ export const householdRoutes: FastifyPluginAsync = async (raw) => {
     withdrawn: app.deps.services.invitations.revoke(req.params.id, req.session!.person),
   }));
   /** Whoever holds the link: learn who they are becoming and get an enrolment key for their first passkey. */
-  app.post("/household/invitations/accept", { schema: { body: z.object({ token: z.string().min(10) }), response: { 200: z.object({ person: Person, household: z.string(), enrolment: z.string() }) } } }, async (req) => {
+  app.post("/household/invitations/accept", { ...limits.invite, schema: { body: z.object({ token: z.string().min(10) }), response: { 200: z.object({ person: Person, household: z.string(), enrolment: z.string() }) } } }, async (req) => {
     const person = app.deps.services.invitations.accept(req.body.token);
     const enrolment = app.deps.services.enrolments.put({ personId: person.id, reason: "invitation" });
     return { person, household: app.deps.services.household.household()?.name ?? "", enrolment };

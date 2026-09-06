@@ -10,7 +10,7 @@ import { openData, type Data } from "../src/data.ts";
 import { createLogger } from "../src/logger.ts";
 import { buildServices, type Services } from "../src/services.ts";
 import { GateClient } from "../src/gate/client.ts";
-import { SESSION_COOKIE } from "../src/auth/sessions.ts";
+import { auth, sessionOf, type Auth } from "./helpers.ts";
 import { listSnapshots, restoreDrill, verifyStore } from "../src/integrity.ts";
 import { runNightly } from "../src/maintenance.ts";
 
@@ -20,12 +20,7 @@ const config = loadConfig({ NODE_ENV: "test", WOVEN_DATA: dataRoot, LOG_LEVEL: "
 let app: Awaited<ReturnType<typeof buildApp>>;
 let data: Data;
 let services: Services;
-let owner = "";
-const cookieOf = (res: { headers: Record<string, unknown> }) => {
-  const raw = res.headers["set-cookie"] as string | string[] | undefined;
-  const list: string[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
-  return list.find((x) => x.startsWith(`${SESSION_COOKIE}=`))?.split(";")[0] ?? "";
-};
+let owner: Auth = { cookie: "", device: "" };
 
 beforeAll(async () => {
   const hardware = detectHardware({ dataRoot });
@@ -34,7 +29,7 @@ beforeAll(async () => {
   app = await buildApp({ config, logger: createLogger(config), hardware, data, services, version: "test", startedAt: new Date() });
   await app.ready();
   const setup = await app.inject({ method: "POST", url: "/v1/household/setup", payload: { household: "H", owner: { name: "Alex", email: "alex@example.com" } } });
-  owner = cookieOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "alex@example.com", code: setup.json<{ recoveryCodes: string[] }>().recoveryCodes[0] } }));
+  owner = sessionOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "alex@example.com", code: setup.json<{ recoveryCodes: string[] }>().recoveryCodes[0] } }));
   const alex = services.household.personByEmail("alex@example.com")!;
   for (let i = 0; i < 5; i += 1) await services.files.put(alex, { name: `f${i}.txt`, path: "/", namespace: "personal" }, Buffer.from(`file ${i}`));
 });
@@ -84,19 +79,19 @@ describe("integrity and restore (phase 23)", () => {
   });
 
   it("owners run it from the dashboard; adults may look, children may not", async () => {
-    const status = await app.inject({ method: "GET", url: "/v1/system/backups", headers: { cookie: owner } });
+    const status = await app.inject({ method: "GET", url: "/v1/system/backups", headers: auth(owner) });
     expect(status.json()).toMatchObject({ mirror, lastDrill: null });
     expect(status.json<{ snapshots: unknown[] }>().snapshots).toHaveLength(1);
-    const drill = await app.inject({ method: "POST", url: "/v1/system/backups/drill", headers: { cookie: owner } });
+    const drill = await app.inject({ method: "POST", url: "/v1/system/backups/drill", headers: auth(owner) });
     expect(drill.statusCode).toBe(200);
     expect(drill.json<{ lastDrill: { ok: boolean } }>().lastDrill.ok).toBe(true);
-    const snap = await app.inject({ method: "POST", url: "/v1/system/backups/snapshot", headers: { cookie: owner } });
+    const snap = await app.inject({ method: "POST", url: "/v1/system/backups/snapshot", headers: auth(owner) });
     expect(snap.json<{ snapshots: { mirrored: boolean }[] }>().snapshots).toHaveLength(2);
     expect(snap.json<{ snapshots: { mirrored: boolean }[] }>().snapshots[0]?.mirrored).toBe(true);
-    await app.inject({ method: "POST", url: "/v1/household/people", headers: { cookie: owner }, payload: { name: "Sam", email: "sam@example.com", role: "child" } });
+    await app.inject({ method: "POST", url: "/v1/household/people", headers: auth(owner), payload: { name: "Sam", email: "sam@example.com", role: "child" } });
     const sam = services.household.personByEmail("sam@example.com")!;
-    const child = cookieOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "sam@example.com", code: services.recovery.issue(sam)[0] } }));
-    expect((await app.inject({ method: "GET", url: "/v1/system/backups", headers: { cookie: child } })).statusCode).toBe(403);
-    expect((await app.inject({ method: "POST", url: "/v1/system/backups/drill", headers: { cookie: child } })).statusCode).toBe(403);
+    const child = sessionOf(await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "sam@example.com", code: services.recovery.issue(sam)[0] } }));
+    expect((await app.inject({ method: "GET", url: "/v1/system/backups", headers: auth(child) })).statusCode).toBe(403);
+    expect((await app.inject({ method: "POST", url: "/v1/system/backups/drill", headers: auth(child) })).statusCode).toBe(403);
   });
 });

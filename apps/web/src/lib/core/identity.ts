@@ -6,6 +6,7 @@ import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequest
 import { z } from "zod";
 import { CoreError } from "./client";
 import { coreClient } from "./store";
+import { deviceHeaders, rememberDevice } from "./device";
 
 /**
  * Identity against the connected Core (phase 8): setting up the house,
@@ -30,8 +31,11 @@ async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {
     ...init,
     credentials: "include",
     cache: "no-store",
-    headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...(init.headers ?? {}) },
+    headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...deviceHeaders(), ...(init.headers ?? {}) },
   });
+  // A fresh session comes with the device secret, once; keep it outside the cookie jar.
+  const secret = res.headers.get("x-woven-device-secret");
+  if (secret) rememberDevice(secret);
   if (!res.ok) {
     let message = "";
     try {
@@ -50,6 +54,8 @@ export type Passkey = z.infer<typeof Passkey>;
 
 export const identity = {
   household: () => call("/v1/household", HouseholdView),
+  /** Whether the box has a house yet: the one thing the sign-in pages may ask without a session. */
+  setupState: () => call("/v1/household/setup", z.object({ setup: z.boolean(), name: z.string().nullable() })),
 
   /** null when this device has no live session. */
   async session(): Promise<SessionView | null> {
@@ -141,6 +147,7 @@ export const identity = {
     } catch {
       // Signing out locally still happens; the session expires on the box regardless.
     }
+    rememberDevice(null);
   },
 };
 

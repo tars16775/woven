@@ -5,6 +5,7 @@ import { z } from "zod";
 import { CoreError } from "./client";
 import { coreClient } from "./store";
 import { NoCoreError } from "./identity";
+import { deviceHeaders } from "./device";
 
 /**
  * Actions, the home and the Gate against the connected Core (phases 12 to
@@ -14,7 +15,7 @@ import { NoCoreError } from "./identity";
 async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
   const c = coreClient();
   if (!c) throw new NoCoreError();
-  const res = await fetch(`${c.base}${path}`, { ...init, credentials: "include", cache: "no-store", headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...(init.headers ?? {}) } });
+  const res = await fetch(`${c.base}${path}`, { ...init, credentials: "include", cache: "no-store", headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...deviceHeaders(), ...(init.headers ?? {}) } });
   if (!res.ok) {
     let message = "";
     try {

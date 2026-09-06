@@ -16,6 +16,8 @@ import { eventRoutes } from "./routes/events.ts";
 import { householdRoutes } from "./routes/household.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { attachSession } from "./auth/guard.ts";
+import { registerLimits } from "./auth/limits.ts";
+import { CORE_HOUSEHOLD_ID } from "./data.ts";
 import { HouseholdError } from "./household.ts";
 import { PasskeyError } from "./auth/passkeys.ts";
 import { ActionError } from "./actions/engine.ts";
@@ -73,10 +75,16 @@ export async function buildApp(deps: AppDeps) {
   await app.register(sensible);
   await app.register(websocket, { options: { maxPayload: 64 * 1024 } });
   await app.register(cookie);
+  await registerLimits(app, (route, key) => {
+    deps.services.metrics.bump("throttled");
+    deps.data.ledger.append({ type: "action.declined", householdId: deps.services.household.household()?.id ?? CORE_HOUSEHOLD_ID, actor: { kind: "core", id: "core" }, where: "policy", target: route, sensitivity: "low", payload: { reason: "too many attempts", from: key.split("|")[0] } });
+  });
   await app.register(cors, {
     origin: deps.config.origins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allowedHeaders: ["content-type", "x-woven-device", "range"],
+    exposedHeaders: ["x-woven-device-secret", "content-range", "accept-ranges", "content-disposition"],
   });
 
   app.decorate("deps", deps);

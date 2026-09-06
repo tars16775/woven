@@ -1,5 +1,6 @@
 import { CoreConfig, CoreStatus, GateStatus, LedgerRow } from "@woven/schema";
 import { z } from "zod";
+import { deviceHeaders, signedUrl } from "./device";
 
 /**
  * The typed client for one Core. Every response is parsed against the shared
@@ -21,7 +22,7 @@ export class CoreClient {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     try {
-      const res = await this.fetcher(`${this.base}${path}`, { signal: ctrl.signal, cache: "no-store" });
+      const res = await this.fetcher(`${this.base}${path}`, { signal: ctrl.signal, cache: "no-store", credentials: "include", headers: deviceHeaders() });
       if (!res.ok) throw new CoreError(res.status, await safeText(res));
       return schema.parse(await res.json());
     } finally {
@@ -47,7 +48,7 @@ export class CoreClient {
 
   /** ws(s):// address of the live event stream. */
   eventsUrl(): string {
-    return `${this.base.replace(/^http/, "ws")}/v1/events`;
+    return signedUrl(this.base.replace(/^http/, "ws"), "/v1/events");
   }
 }
 

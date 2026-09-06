@@ -28,8 +28,8 @@ const dir = join(env.WOVEN_DATA, "gate");
 const stateFile = join(dir, "state.json");
 const logFile = join(dir, "crossings.log");
 
-type State = { state: "open" | "closed"; changedAt: string | null; changedBy: string | null };
-const allowList = env.WOVEN_GATE_ALLOW.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+type State = { state: "open" | "closed"; changedAt: string | null; changedBy: string | null; allowList?: string[] };
+let allowList = env.WOVEN_GATE_ALLOW.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 /** "api.example.com" matches itself; "*.hf.co" matches any subdomain (content mirrors move around). */
 const allowed = (host: string) => allowList.some((a) => (a.startsWith("*.") ? host === a.slice(2) || host.endsWith(a.slice(1)) : host === a));
 let state: State = { state: "open", changedAt: null, changedBy: null };
@@ -39,10 +39,14 @@ let day = new Date().toISOString().slice(0, 10);
 
 await mkdir(dir, { recursive: true, mode: 0o700 });
 try {
-  state = { ...state, ...(JSON.parse(await readFile(stateFile, "utf8")) as Partial<State>) };
+  const saved = JSON.parse(await readFile(stateFile, "utf8")) as Partial<State>;
+  state = { state: saved.state ?? state.state, changedAt: saved.changedAt ?? null, changedBy: saved.changedBy ?? null };
+  // The allow list the owner built from the dashboard outlives the environment's first-boot list.
+  if (Array.isArray(saved.allowList)) allowList = [...new Set([...allowList, ...saved.allowList.map((h) => String(h).toLowerCase())])];
 } catch {
-  await writeFile(stateFile, JSON.stringify(state), { mode: 0o600 });
+  await writeFile(stateFile, JSON.stringify({ ...state, allowList }), { mode: 0o600 });
 }
+const persist = () => writeFile(stateFile, JSON.stringify({ ...state, allowList }), { mode: 0o600 });
 
 const app = Fastify({ logger: { level: env.LOG_LEVEL, base: { service: "woven-gate" } } });
 
@@ -62,10 +66,31 @@ const status = () => ({ ...state, allowList, crossingsToday, bytesOutToday });
 
 app.get("/status", async () => status());
 
+/** The allow list changes only through the core, which only lets the owner do it with a passkey (class H). */
+const Host = z.object({ host: z.string().trim().min(1).max(253).regex(/^(\*\.)?[a-z0-9.-]+(:\d+)?$/i), by: z.string().optional() });
+app.post("/allow", async (req, reply) => {
+  const p = Host.safeParse(req.body);
+  if (!p.success) return reply.status(400).send({ error: "That is not a host name." });
+  const host = p.data.host.toLowerCase();
+  if (!allowList.includes(host)) allowList = [...allowList, host];
+  await persist();
+  await record({ kind: "allowed", host, by: p.data.by ?? null });
+  return status();
+});
+app.post("/disallow", async (req, reply) => {
+  const p = Host.safeParse(req.body);
+  if (!p.success) return reply.status(400).send({ error: "That is not a host name." });
+  const host = p.data.host.toLowerCase();
+  allowList = allowList.filter((h) => h !== host);
+  await persist();
+  await record({ kind: "disallowed", host, by: p.data.by ?? null });
+  return status();
+});
+
 app.post("/open", async (req) => {
   const { by } = (req.body ?? {}) as { by?: string };
   state = { state: "open", changedAt: new Date().toISOString(), changedBy: by ?? null };
-  await writeFile(stateFile, JSON.stringify(state), { mode: 0o600 });
+  await persist();
   await record({ kind: "opened", by: by ?? null });
   return status();
 });
@@ -73,7 +98,7 @@ app.post("/open", async (req) => {
 app.post("/close", async (req) => {
   const { by } = (req.body ?? {}) as { by?: string };
   state = { state: "closed", changedAt: new Date().toISOString(), changedBy: by ?? null };
-  await writeFile(stateFile, JSON.stringify(state), { mode: 0o600 });
+  await persist();
   await record({ kind: "closed", by: by ?? null });
   return status();
 });

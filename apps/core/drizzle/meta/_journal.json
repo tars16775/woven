@@ -64,6 +64,13 @@
       "when": 1788707967653,
       "tag": "0008_memories",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1788723728011,
+      "tag": "0009_device_secret",
+      "breakpoints": true
     }
   ]
 }

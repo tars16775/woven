@@ -71,6 +71,7 @@ export function signIn(s: Omit<Session, "at">) {
 export function signOut() {
   try {
     localStorage.removeItem(KEY);
+    localStorage.removeItem("woven:device");
   } catch {}
   emit();
 }

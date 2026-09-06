@@ -86,7 +86,7 @@ export class ActionEngine {
     );
     if (decision.outcome === "allow" && bounds) decision = { outcome: "approve", reason: bounds, requires: { by: "adult", factors: [], ttlSeconds: 600 } };
     if (decision.outcome === "allow" && spec.alwaysApprove) decision = { outcome: "approve", reason: "Crossings always ask first.", requires: { by: "self", factors: [], ttlSeconds: 300 } };
-    if (decision.outcome !== "deny" && spec.executor === "gate" && spec.name !== "gate.set" && !this.deps.gate.isOpen()) {
+    if (decision.outcome !== "deny" && spec.executor === "gate" && !["gate.set", "gate.allow", "gate.disallow"].includes(spec.name) && !this.deps.gate.isOpen()) {
       decision = { outcome: "deny", reason: "The Gate is closed. Nothing crosses until it is opened." };
     }
 
@@ -225,6 +225,11 @@ export class ActionEngine {
           if (spec.name === "gate.set") {
             observed = await this.deps.gate.setOpen(Boolean(params.open), by.id);
             where = "inside";
+          } else if (spec.name === "gate.allow" || spec.name === "gate.disallow") {
+            where = "inside";
+            const host = String(params.host);
+            const status = await this.deps.gate.setAllowed(host, spec.name === "gate.allow", by.id);
+            observed = { allowed: spec.name === "gate.allow", allowList: status.allowList };
           } else if (spec.name === "model.install") {
             if (!this.deps.installModel) throw new ActionError(409, "Models are not wired on this core.");
             const r = await this.deps.installModel(String(params.model), id);

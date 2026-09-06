@@ -5,6 +5,7 @@ import { z } from "zod";
 import { CoreError } from "./client";
 import { NoCoreError } from "./identity";
 import { coreClient } from "./store";
+import { deviceHeaders, signedUrl } from "./device";
 
 function base(): string {
   const c = coreClient();
@@ -12,7 +13,7 @@ function base(): string {
   return c.base;
 }
 async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${base()}${path}`, { ...init, credentials: "include", cache: "no-store", headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...(init.headers ?? {}) } });
+  const res = await fetch(`${base()}${path}`, { ...init, credentials: "include", cache: "no-store", headers: { ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...deviceHeaders(), ...(init.headers ?? {}) } });
   if (!res.ok) {
     let message = "";
     try {
@@ -36,7 +37,7 @@ export const files = {
   move: (id: string, to: { path?: string; name?: string; namespace?: Namespace }) => call(`/v1/files/${id}/move`, FileEntry, post(to)),
   remove: (id: string) => call(`/v1/files/${id}`, z.object({ removed: z.literal(true) }), { method: "DELETE" }),
   /** The address the browser can open or save; the session cookie goes along. */
-  contentUrl: (id: string, download = false) => `${base()}/v1/files/${id}/content${download ? "?download=true" : ""}`,
+  contentUrl: (id: string, download = false) => signedUrl(base(), `/v1/files/${id}/content${download ? "?download=true" : ""}`),
 
   /**
    * Chunked, resumable upload: hash first so the box can say "already have
@@ -50,7 +51,7 @@ export const files = {
       for (let i = 0; i < session.chunks; i += 1) {
         if (have.has(i)) continue;
         const chunk = file.slice(i * session.chunkSize, Math.min(file.size, (i + 1) * session.chunkSize));
-        const res = await fetch(`${base()}/v1/files/uploads/${session.id}/chunks/${i}`, { method: "PUT", credentials: "include", headers: { "content-type": "application/octet-stream" }, body: chunk });
+        const res = await fetch(`${base()}/v1/files/uploads/${session.id}/chunks/${i}`, { method: "PUT", credentials: "include", headers: { "content-type": "application/octet-stream", ...deviceHeaders() }, body: chunk });
         if (!res.ok) throw new CoreError(res.status, `Chunk ${i + 1} of ${session.chunks} failed.`);
         opts.onProgress?.(Math.min(file.size, (i + 1) * session.chunkSize), file.size);
       }
@@ -63,8 +64,8 @@ export const files = {
 export const photos = {
   timeline: (cursor?: string | null) => call(`/v1/photos${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`, PhotoTimeline),
   stats: () => call("/v1/photos/stats", PhotoStats),
-  thumbUrl: (id: string) => `${base()}/v1/photos/${id}/thumb`,
-  previewUrl: (id: string) => `${base()}/v1/photos/${id}/preview`,
+  thumbUrl: (id: string) => signedUrl(base(), `/v1/photos/${id}/thumb`),
+  previewUrl: (id: string) => signedUrl(base(), `/v1/photos/${id}/preview`),
   importFolder: (folder: string) => call("/v1/photos/import", z.object({ files: z.number(), photos: z.number() }), post({ folder })),
   indexAll: () => call("/v1/photos/index", z.object({ indexed: z.number() }), post({})),
   search: (q: string) => call(`/v1/photos/search?q=${encodeURIComponent(q)}`, z.object({ ready: z.boolean(), results: z.array(Photo.extend({ score: z.number() })), indexed: z.number(), total: z.number() })),
@@ -92,7 +93,7 @@ export const media = {
   list: (kind?: "video" | "audio") => call(`/v1/media${kind ? `?kind=${kind}` : ""}`, z.object({ items: z.array(MediaItem), tools: z.object({ ffmpeg: z.boolean(), ffprobe: z.boolean() }) })),
   index: () => call("/v1/media/index", z.object({ probed: z.number() }), post({})),
   /** What a <video> or <audio> element plays; the box redirects to the original or transcodes. */
-  streamUrl: (fileId: string) => `${base()}/v1/media/${fileId}/stream`,
+  streamUrl: (fileId: string) => signedUrl(base(), `/v1/media/${fileId}/stream`),
 };
 
 export type { MediaItem };

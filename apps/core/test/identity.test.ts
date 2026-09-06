@@ -11,7 +11,7 @@ import { buildServices, type Services } from "../src/services.ts";
 import { GateClient } from "../src/gate/client.ts";
 import { OneTimeStore } from "../src/auth/challenges.ts";
 import { formatCode, normalizeCode } from "../src/auth/recovery.ts";
-import { SESSION_COOKIE } from "../src/auth/sessions.ts";
+import { auth, sessionOf, type Auth } from "./helpers.ts";
 
 const dataRoot = mkdtempSync(`${os.tmpdir()}/woven-identity-`);
 const ORIGIN = "http://localhost:3000";
@@ -33,21 +33,16 @@ afterAll(async () => {
   await rm(dataRoot, { recursive: true, force: true });
 });
 
-const cookieOf = (res: { headers: Record<string, unknown> }) => {
-  const raw = res.headers["set-cookie"] as string | string[] | undefined;
-  const list: string[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
-  const c = list.find((x) => x.startsWith(`${SESSION_COOKIE}=`));
-  return c ? c.split(";")[0]! : "";
-};
 
 describe("household setup and members (phase 7)", () => {
-  let cookie = "";
+  let cookie: Auth = { cookie: "", device: "" };
   let recoveryCodes: string[] = [];
   let enrolment = "";
 
   it("starts empty", async () => {
-    const res = await app.inject({ method: "GET", url: "/v1/household" });
-    expect(res.json()).toEqual({ setup: false });
+    const res = await app.inject({ method: "GET", url: "/v1/household/setup" });
+    expect(res.json()).toEqual({ setup: false, name: null });
+    expect((await app.inject({ method: "GET", url: "/v1/household" })).statusCode).toBe(401);
   });
 
   it("creates the household and owner once, with recovery codes shown once", async () => {
@@ -63,8 +58,8 @@ describe("household setup and members (phase 7)", () => {
 
     const again = await app.inject({ method: "POST", url: "/v1/household/setup", payload: { household: "Other", owner: { name: "B", email: "b@example.com" } } });
     expect(again.statusCode).toBe(409);
-    const view = await app.inject({ method: "GET", url: "/v1/household" });
-    expect(view.json()).toMatchObject({ setup: true, household: { name: "Alex's house" }, people: [{ name: "Alex", role: "owner" }] });
+    expect((await app.inject({ method: "GET", url: "/v1/household/setup" })).json()).toEqual({ setup: true, name: "Alex's house" });
+    expect(services.household.view()).toMatchObject({ setup: true, household: { name: "Alex's house" }, people: [{ name: "Alex", role: "owner" }] });
   });
 
   it("hands out registration options to the enrolment holder for the allowed origin only", async () => {
@@ -90,8 +85,9 @@ describe("household setup and members (phase 7)", () => {
     const res = await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "alex@example.com", code: recoveryCodes[0]!.toUpperCase() } });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ person: { name: "Alex" }, method: "recovery", passkeys: 0 });
-    cookie = cookieOf(res);
-    expect(cookie).toMatch(new RegExp(`^${SESSION_COOKIE}=.{40,}`));
+    cookie = sessionOf(res);
+    expect(cookie.cookie).toMatch(/^woven_session=.{40,}/);
+    expect(cookie.device).toHaveLength(43);
     expect(String(res.headers["set-cookie"])).toMatch(/HttpOnly/);
     const reuse = await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "alex@example.com", code: recoveryCodes[0]! } });
     expect(reuse.statusCode).toBe(401);
@@ -99,37 +95,37 @@ describe("household setup and members (phase 7)", () => {
 
   it("answers the session for the cookie and refuses without it", async () => {
     expect((await app.inject({ method: "GET", url: "/v1/auth/session" })).statusCode).toBe(401);
-    const res = await app.inject({ method: "GET", url: "/v1/auth/session", headers: { cookie } });
+    const res = await app.inject({ method: "GET", url: "/v1/auth/session", headers: auth(cookie) });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ household: { name: "Alex's house" }, person: { role: "owner" } });
-    const keys = await app.inject({ method: "GET", url: "/v1/auth/passkeys", headers: { cookie } });
+    const keys = await app.inject({ method: "GET", url: "/v1/auth/passkeys", headers: auth(cookie) });
     expect(keys.json()).toEqual({ passkeys: [], recoveryCodesLeft: 7 });
   });
 
   it("adds and removes people with roles, refusing what the role forbids", async () => {
     const unauth = await app.inject({ method: "POST", url: "/v1/household/people", payload: { name: "Maya", email: "maya@example.com", role: "adult" } });
     expect(unauth.statusCode).toBe(401);
-    const maya = await app.inject({ method: "POST", url: "/v1/household/people", headers: { cookie }, payload: { name: "Maya", email: "maya@example.com", role: "adult" } });
+    const maya = await app.inject({ method: "POST", url: "/v1/household/people", headers: auth(cookie), payload: { name: "Maya", email: "maya@example.com", role: "adult" } });
     expect(maya.statusCode).toBe(201);
-    const sam = await app.inject({ method: "POST", url: "/v1/household/people", headers: { cookie }, payload: { name: "Sam", role: "child" } });
+    const sam = await app.inject({ method: "POST", url: "/v1/household/people", headers: auth(cookie), payload: { name: "Sam", role: "child" } });
     expect(sam.statusCode).toBe(201);
     expect(sam.json()).toMatchObject({ email: null, role: "child" });
-    const dup = await app.inject({ method: "POST", url: "/v1/household/people", headers: { cookie }, payload: { name: "M2", email: "maya@example.com", role: "guest" } });
+    const dup = await app.inject({ method: "POST", url: "/v1/household/people", headers: auth(cookie), payload: { name: "M2", email: "maya@example.com", role: "guest" } });
     expect(dup.statusCode).toBe(409);
-    const owner2 = await app.inject({ method: "POST", url: "/v1/household/people", headers: { cookie }, payload: { name: "X", role: "owner" } });
+    const owner2 = await app.inject({ method: "POST", url: "/v1/household/people", headers: auth(cookie), payload: { name: "X", role: "owner" } });
     expect(owner2.statusCode).toBe(400);
 
-    const ns = await app.inject({ method: "GET", url: "/v1/household/namespaces", headers: { cookie } });
+    const ns = await app.inject({ method: "GET", url: "/v1/household/namespaces", headers: auth(cookie) });
     expect(ns.json()).toMatchObject({ role: "owner" });
     expect(ns.json<{ namespaces: string[] }>().namespaces).toContain("guest");
 
-    const removed = await app.inject({ method: "DELETE", url: `/v1/household/people/${sam.json<{ id: string }>().id}`, headers: { cookie } });
+    const removed = await app.inject({ method: "DELETE", url: `/v1/household/people/${sam.json<{ id: string }>().id}`, headers: auth(cookie) });
     expect(removed.statusCode).toBe(200);
     expect(removed.json<{ removedAt: string | null }>().removedAt).not.toBeNull();
-    const people = (await app.inject({ method: "GET", url: "/v1/household" })).json<{ people: { name: string }[] }>().people;
+    const people = (await app.inject({ method: "GET", url: "/v1/household", headers: auth(cookie) })).json<{ people: { name: string }[] }>().people;
     expect(people.map((p) => p.name)).toEqual(["Alex", "Maya"]);
-    const me = (await app.inject({ method: "GET", url: "/v1/auth/session", headers: { cookie } })).json<{ person: { id: string } }>().person.id;
-    const self = await app.inject({ method: "DELETE", url: `/v1/household/people/${me}`, headers: { cookie } });
+    const me = (await app.inject({ method: "GET", url: "/v1/auth/session", headers: auth(cookie) })).json<{ person: { id: string } }>().person.id;
+    const self = await app.inject({ method: "DELETE", url: `/v1/household/people/${me}`, headers: auth(cookie) });
     expect(self.statusCode).toBe(400);
   });
 
@@ -149,13 +145,13 @@ describe("household setup and members (phase 7)", () => {
 
   it("signs out and the cookie stops working; other sessions can be ended", async () => {
     const second = await app.inject({ method: "POST", url: "/v1/auth/recover", payload: { email: "alex@example.com", code: recoveryCodes[1]! } });
-    const cookie2 = cookieOf(second);
-    const others = await app.inject({ method: "POST", url: "/v1/auth/logout-others", headers: { cookie: cookie2 } });
+    const cookie2 = sessionOf(second);
+    const others = await app.inject({ method: "POST", url: "/v1/auth/logout-others", headers: auth(cookie2) });
     expect(others.json()).toEqual({ signedOut: 1 });
-    expect((await app.inject({ method: "GET", url: "/v1/auth/session", headers: { cookie } })).statusCode).toBe(401);
-    const out = await app.inject({ method: "POST", url: "/v1/auth/logout", headers: { cookie: cookie2 } });
+    expect((await app.inject({ method: "GET", url: "/v1/auth/session", headers: auth(cookie) })).statusCode).toBe(401);
+    const out = await app.inject({ method: "POST", url: "/v1/auth/logout", headers: auth(cookie2) });
     expect(out.statusCode).toBe(200);
-    expect((await app.inject({ method: "GET", url: "/v1/auth/session", headers: { cookie: cookie2 } })).statusCode).toBe(401);
+    expect((await app.inject({ method: "GET", url: "/v1/auth/session", headers: auth(cookie2) })).statusCode).toBe(401);
   });
 });
 
