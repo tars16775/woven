@@ -1,4 +1,4 @@
-import { createRequire } from "node:module";
+import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { settle } from "./helpers";
 
@@ -7,8 +7,8 @@ import { settle } from "./helpers";
  * and the dashboard preview. Anything serious or critical fails the build;
  * moderate findings are listed so they do not hide.
  */
-const require = createRequire(import.meta.url);
-const axePath = require.resolve("axe-core/axe.min.js");
+// Playwright loads specs as CommonJS; the package is resolved from the app folder it runs in.
+const axePath = path.join(process.cwd(), "node_modules", "axe-core", "axe.min.js");
 
 type Violation = { id: string; impact: string | null; help: string; nodes: { target: string[] }[] };
 

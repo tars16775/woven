@@ -73,6 +73,8 @@ export default defineConfig({
               NODE_ENV: "production",
               LOG_LEVEL: "warn",
               WOVEN_DEMO_RECOVERY_CODE: "demo-house,demo-key-1,demo-key-2,demo-key-3",
+              // A file key for the throwaway data root, so test runs never touch the login Keychain.
+              WOVEN_KEY: "file",
             },
           },
         ]
