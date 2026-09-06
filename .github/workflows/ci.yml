@@ -9,6 +9,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  secrets:
+    name: secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   core:
     name: core (schema, hal, policy, core service)
     runs-on: macos-latest
@@ -30,6 +42,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --filter "./packages/*" --filter "./apps/core"
+
+      - name: Known vulnerabilities (high and above, production dependencies)
+        run: pnpm audit --audit-level=high --prod
 
       - name: Typecheck
         run: pnpm --filter "./packages/*" --filter "./apps/core" typecheck

@@ -1,4 +1,6 @@
-import { BackupStatus, CoreConfig, CoreStatus } from "@woven/schema";
+import { BackupStatus, CoreConfig, CoreStatus, StorageHealth } from "@woven/schema";
+import { z } from "zod";
+import { writeDiagnostics } from "../diagnostics.ts";
 import { requireRole } from "../auth/guard.ts";
 import { listSnapshots, restoreDrill } from "../integrity.ts";
 import { takeSnapshot } from "../snapshot.ts";
@@ -77,5 +79,20 @@ export const systemRoutes: FastifyPluginAsync = async (raw) => {
     lastDrill = { ...report, at: new Date().toISOString() };
     data.ledger.append({ type: "core.integrity_checked", householdId: req.session!.person.householdId || CORE_HOUSEHOLD_ID, actor: { kind: "person", id: req.session!.person.id }, where: "inside", target: report.snapshot, sensitivity: "low", payload: { drill: true, ok: report.ok, rows: report.ledger.rows, objects: report.objects.checked, problem: report.problem } });
     return backupStatus();
+  });
+
+  /* Core management (phase 45) */
+  app.get("/system/storage", { preHandler: requireRole("owner", "adult"), schema: { response: { 200: StorageHealth } } }, async () => app.deps.hardware.storage());
+
+  app.post("/system/diagnostics", { preHandler: requireRole("owner"), schema: { response: { 200: z.object({ dir: z.string(), files: z.array(z.string()), takenAt: z.string() }) } } }, async () =>
+    writeDiagnostics({ data: app.deps.data, services: app.deps.services, hardware: app.deps.hardware, config: app.deps.config, version: app.deps.version, startedAt: app.deps.startedAt, logFile: app.deps.logFile ?? null }),
+  );
+
+  /** Restart the core process. The supervisor (tools/woven-core.sh) starts it again; the dashboard waits for health. */
+  app.post("/system/restart", { preHandler: requireRole("owner"), schema: { response: { 202: z.object({ restarting: z.literal(true) }) } } }, async (req, reply) => {
+    const p = req.session!.person;
+    app.deps.data.ledger.append({ type: "action.executed", householdId: p.householdId, actor: { kind: "person", id: p.id }, where: "inside", target: "core", sensitivity: "low", payload: { capability: "core.restart", planned: {}, observed: { restarting: true } } });
+    void reply.status(202).send({ restarting: true as const });
+    setTimeout(() => app.deps.restart?.(), 300).unref();
   });
 };

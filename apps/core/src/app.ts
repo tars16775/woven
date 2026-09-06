@@ -42,6 +42,10 @@ export type AppDeps = {
   tls?: TlsMaterial;
   version: string;
   startedAt: Date;
+  /** Where the process log is, for diagnostics bundles. */
+  logFile?: string;
+  /** Ask the supervisor for a fresh process (exit code 75). Absent in tests. */
+  restart?: () => void;
 };
 
 /**

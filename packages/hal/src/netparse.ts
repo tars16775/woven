@@ -44,3 +44,16 @@ export function normaliseMac(mac: string): string | null {
   if (parts.length !== 6 || parts.some((p) => !/^[0-9a-f]{1,2}$/.test(p))) return null;
   return parts.map((p) => p.padStart(2, "0")).join(":");
 }
+
+/** macOS `diskutil info <path>`: the lines that matter for health. */
+export function parseDiskutil(out: string): { volume: string | null; filesystem: string | null; smart: "verified" | "failing" | "unknown"; medium: "ssd" | "hdd" | "unknown" } {
+  const grab = (label: string) => new RegExp(`^\\s*${label}:\\s*(.+)$`, "m").exec(out)?.[1]?.trim() ?? null;
+  const smartRaw = (grab("SMART Status") ?? "").toLowerCase();
+  const solid = (grab("Solid State") ?? "").toLowerCase();
+  return {
+    volume: grab("Volume Name"),
+    filesystem: grab("File System Personality"),
+    smart: smartRaw === "verified" ? "verified" : /fail/.test(smartRaw) ? "failing" : "unknown",
+    medium: solid === "yes" ? "ssd" : solid === "no" ? "hdd" : "unknown",
+  };
+}

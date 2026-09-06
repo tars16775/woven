@@ -1,6 +1,6 @@
 "use client";
 
-import { ActionRecord, FileEntry, FileListing, FilesSummary, MediaItem, NetworkView, Photo, PhotoStats, PhotoTimeline, type Namespace } from "@woven/schema";
+import { ActionRecord, FileEntry, FileListing, FilesSummary, MediaItem, NetworkView, Photo, PhotoStats, PhotoTimeline, StorageHealth, type Namespace } from "@woven/schema";
 import { z } from "zod";
 import { CoreError } from "./client";
 import { NoCoreError } from "./identity";
@@ -101,4 +101,11 @@ export const network = {
   scan: () => call("/v1/network", NetworkView),
 };
 export type { NetworkView };
+
+export const system = {
+  storage: () => call("/v1/system/storage", StorageHealth),
+  diagnostics: () => call("/v1/system/diagnostics", z.object({ dir: z.string(), files: z.array(z.string()), takenAt: z.string() }), post({})),
+  restart: () => call("/v1/system/restart", z.object({ restarting: z.literal(true) }), post({})),
+};
+export type { StorageHealth };
 

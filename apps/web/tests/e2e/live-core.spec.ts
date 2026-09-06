@@ -137,3 +137,11 @@ test("the TV page lists media from the box and plays it", async ({ page }) => {
   await page.getByRole("button", { name: "Delete tone.wav" }).click({ timeout: 30_000 });
   await expect(page.getByTestId("listing")).not.toContainText("tone.wav", { timeout: 15_000 }).catch(() => undefined);
 });
+
+test("the Core page shows the volume's health and writes a scrubbed diagnostics bundle", async ({ page }) => {
+  await signInWithPasskey(page);
+  await page.goto("/dashboard/core");
+  await expect(page.getByTestId("storage")).toContainText(/free · SMART/, { timeout: 30_000 });
+  await page.getByTestId("diagnostics").click();
+  await expect(page.getByText(/Diagnostics written to/)).toBeVisible({ timeout: 30_000 });
+});

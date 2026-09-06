@@ -3,8 +3,8 @@ import { execFile } from "node:child_process";
 import { statfs } from "node:fs/promises";
 import os from "node:os";
 import { promisify } from "node:util";
-import type { HardwareIdentity, Metrics, NetworkObservation } from "@woven/schema";
-import { parseArp, parseRouteGet } from "./netparse.ts";
+import type { HardwareIdentity, Metrics, NetworkObservation, StorageHealth } from "@woven/schema";
+import { parseArp, parseDiskutil, parseRouteGet } from "./netparse.ts";
 import type { Hardware, StoragePaths } from "./index.ts";
 
 const exec = promisify(execFile);
@@ -110,6 +110,17 @@ export function macosHardware(paths: StoragePaths): Hardware {
         .filter((a): a is os.NetworkInterfaceInfo => !!a && a.family === "IPv4" && !a.internal)
         .map((a) => a.address);
       return { gateway, interface: iface, ssid, addresses, neighbours, router: false };
+    },
+
+    async storage(): Promise<StorageHealth> {
+      const disk = await statfs(paths.root);
+      let info: ReturnType<typeof parseDiskutil> = { volume: null, filesystem: null, smart: "unknown", medium: "unknown" };
+      try {
+        info = parseDiskutil((await exec("/usr/sbin/diskutil", ["info", paths.root])).stdout);
+      } catch {
+        // not a mounted volume diskutil knows (a plain folder): space only
+      }
+      return { ...info, usedBytes: (disk.blocks - disk.bfree) * disk.bsize, totalBytes: disk.blocks * disk.bsize, freeBytes: disk.bavail * disk.bsize };
     },
 
     async metrics() {

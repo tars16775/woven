@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normaliseMac, parseArp, parseIpNeigh, parseIpRoute, parseRouteGet } from "../src/netparse.ts";
+import { normaliseMac, parseArp, parseDiskutil, parseIpNeigh, parseIpRoute, parseRouteGet } from "../src/netparse.ts";
 
 describe("network parsers", () => {
   it("reads the macOS default route", () => {
@@ -20,5 +20,11 @@ describe("network parsers", () => {
   it("normalises MACs", () => {
     expect(normaliseMac("0:1:2:A:B:C")).toBe("00:01:02:0a:0b:0c");
     expect(normaliseMac("nope")).toBeNull();
+  });
+
+  it("reads diskutil health lines", () => {
+    expect(parseDiskutil("   Volume Name:               Woven\n   File System Personality:   APFS\n   SMART Status:              Not Supported\n   Solid State:               Info not available\n")).toEqual({ volume: "Woven", filesystem: "APFS", smart: "unknown", medium: "unknown" });
+    expect(parseDiskutil("   SMART Status:              Verified\n   Solid State:               Yes\n")).toMatchObject({ smart: "verified", medium: "ssd" });
+    expect(parseDiskutil("   SMART Status:              Failing\n")).toMatchObject({ smart: "failing" });
   });
 });

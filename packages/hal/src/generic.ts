@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile, statfs } from "node:fs/promises";
 import os from "node:os";
-import type { HardwareIdentity, HardwareKind, Metrics, NetworkObservation } from "@woven/schema";
+import type { HardwareIdentity, HardwareKind, Metrics, NetworkObservation, StorageHealth } from "@woven/schema";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { parseIpNeigh, parseIpRoute } from "./netparse.ts";
@@ -56,6 +56,11 @@ export function genericHardware(paths: StoragePaths, kind: HardwareKind = "linux
         .filter((a): a is os.NetworkInterfaceInfo => !!a && a.family === "IPv4" && !a.internal)
         .map((a) => a.address);
       return { gateway, interface: iface, ssid: null, addresses, neighbours, router: false };
+    },
+
+    async storage(): Promise<StorageHealth> {
+      const disk = await statfs(paths.root);
+      return { volume: null, filesystem: null, smart: "unknown", medium: "unknown", usedBytes: (disk.blocks - disk.bfree) * disk.bsize, totalBytes: disk.blocks * disk.bsize, freeBytes: disk.bavail * disk.bsize };
     },
 
     async metrics() {

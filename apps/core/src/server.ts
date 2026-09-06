@@ -1,4 +1,5 @@
 import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
 import { createRequire } from "node:module";
 import { Bonjour } from "bonjour-service";
 import { detectHardware } from "@woven/hal";
@@ -62,7 +63,11 @@ async function main() {
   const tools = await MediaService.detectTools();
   logger.info({ ffmpeg: tools.ffmpeg ?? "not found", ffprobe: tools.ffprobe ?? "not found" }, "media tools");
   const services = buildServices(data, config, gate.client, { logger, tools, hardware });
-  const app = await buildApp({ config, logger, hardware, data, services, ...(tls ? { tls } : {}), version, startedAt });
+  const restart = () => {
+    logger.info("restarting at the owner's request");
+    void stop("restart", 75);
+  };
+  const app = await buildApp({ config, logger, hardware, data, services, ...(tls ? { tls } : {}), version, startedAt, logFile: join(paths.logs, "core.log"), restart });
   const scheme = tls ? "https" : "http";
   // The same API in plain HTTP, reachable only from this machine. Loopback
   // cannot be sniffed from the network, so it needs no certificate, and the
@@ -80,14 +85,14 @@ async function main() {
   const stopNightly = config.env === "production" || config.env === "development" ? scheduleNightly(data, logger, { mirror: config.snapshotMirror, sweep: () => services.files.sweepUploads() }) : () => undefined;
 
   const bonjour = config.mdns ? new Bonjour() : null;
-  const stop = async (signal: string) => {
+  const stop = async (signal: string, code = 0) => {
     logger.info({ signal }, "stopping");
     stopNightly();
     bonjour?.unpublishAll(() => bonjour.destroy());
     await Promise.all([app.close(), trust?.close(), local?.close()]);
     await gate.stop();
     data.close();
-    process.exit(0);
+    process.exit(code);
   };
   process.on("SIGINT", () => void stop("SIGINT"));
   process.on("SIGTERM", () => void stop("SIGTERM"));

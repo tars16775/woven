@@ -54,7 +54,7 @@ The dashboard looks for a Core at `https://woven.local:4000`, then this machine 
 ```bash
 ```
 
-Or double-click `Start Woven.command` on the LaCie. The site is at http://localhost:3000, the dashboard at `/dashboard`, the core at https://woven.local:4000/v1/health. On a new device open http://woven.local:4001 first and install the household certificate (ADR 0006); on this Mac double-click `Woven Data/keys/ca.crt`, then set its trust to Always in Keychain Access.
+Or double-click `Start Woven.command` on the LaCie (it runs the core under `tools/woven-core.sh`, which restarts it when the dashboard asks). The site is at http://localhost:3000, the dashboard at `/dashboard`, the core at https://woven.local:4000/v1/health. On a new device open http://woven.local:4001 first and install the household certificate (ADR 0006); on this Mac double-click `Woven Data/keys/ca.crt`, then set its trust to Always in Keychain Access.
 
 Visual QA screenshots (uses the locally installed Chrome):
 

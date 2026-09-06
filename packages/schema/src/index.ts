@@ -556,3 +556,17 @@ export const NetworkObservation = z.object({
 });
 export type NetworkObservation = z.infer<typeof NetworkObservation>;
 
+/* Core management (phase 45) ------------------------------------------------- */
+
+export const StorageHealth = z.object({
+  volume: z.string().nullable(),
+  filesystem: z.string().nullable(),
+  /** From SMART where the platform exposes it; "unknown" on disk images and USB bridges. */
+  smart: z.enum(["verified", "failing", "unknown"]),
+  medium: z.enum(["ssd", "hdd", "unknown"]),
+  usedBytes: z.number().int(),
+  totalBytes: z.number().int(),
+  freeBytes: z.number().int(),
+});
+export type StorageHealth = z.infer<typeof StorageHealth>;
+

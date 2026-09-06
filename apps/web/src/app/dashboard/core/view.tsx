@@ -10,6 +10,9 @@ import { useGateOpen } from "@/components/dashboard/state";
 import { core, household } from "@/lib/dashboard/data";
 import { ConnectCore } from "@/components/dashboard/connect-core";
 import { BackupsCard } from "@/components/dashboard/backups-card";
+import { bytes, system } from "@/lib/core/files";
+import type { StorageHealth } from "@/lib/core/files";
+import { explainAction } from "@/lib/core/actions";
 import { memoryLabel, storageLabel, temperatureLabel, useLiveCore } from "@/lib/core/live";
 import { coreClient, useCore } from "@/lib/core/store";
 import type { Integrity } from "@/lib/core/client";
@@ -36,6 +39,32 @@ export function CoreView() {
   const timers = useRef<number[]>([]);
   const connection = useCore();
   const live = useLiveCore();
+  const [storage, setStorage] = useState<StorageHealth | null>(null);
+  const [diagnosing, setDiagnosing] = useState(false);
+  useEffect(() => {
+    if (connection.phase !== "connected") return;
+    let alive = true;
+    system
+      .storage()
+      .then((s) => alive && setStorage(s))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [connection.phase]);
+
+  const diagnostics = async () => {
+    if (diagnosing) return;
+    setDiagnosing(true);
+    try {
+      const r = await system.diagnostics();
+      say(`Diagnostics written to ${r.dir} (${r.files.length} files, names and addresses scrubbed).`);
+    } catch (err) {
+      say(explainAction(err));
+    } finally {
+      setDiagnosing(false);
+    }
+  };
 
   // Clear pending timers if the page unmounts mid-restart.
   useEffect(() => {
@@ -56,9 +85,39 @@ export function CoreView() {
     });
   };
 
-  const restart = () => {
+  const restart = async () => {
     setConfirmRestart(false);
     setPhase("restarting");
+    if (connection.phase === "connected") {
+      // The core exits with the restart code; its supervisor starts it again; we wait for health.
+      try {
+        await system.restart();
+      } catch (err) {
+        setPhase("ready");
+        say(explainAction(err));
+        return;
+      }
+      const client = coreClient();
+      const started = Date.now();
+      const poll = async () => {
+        try {
+          const r = await fetch(`${client?.base ?? ""}/v1/health`, { cache: "no-store" });
+          if (r.ok && Date.now() - started > 1500) {
+            setPhase("ready");
+            setRestarted(true);
+            say("The Core is back.");
+            return;
+          }
+        } catch {}
+        if (Date.now() - started < 60_000) later(1000, () => void poll());
+        else {
+          setPhase("ready");
+          say("The Core did not come back within a minute. Check the Start command on the Mac.");
+        }
+      };
+      later(1500, () => void poll());
+      return;
+    }
     later(3000, () => {
       setPhase("ready");
       setRestarted(true);
@@ -110,6 +169,11 @@ export function CoreView() {
             <Button onClick={checkForUpdates} disabled={checking || restarting} aria-busy={checking}>
               {checking ? "Checking…" : "Check for updates"}
             </Button>
+            {connection.phase === "connected" && (
+              <Button onClick={diagnostics} disabled={diagnosing || restarting} aria-busy={diagnosing} data-testid="diagnostics">
+                {diagnosing ? "Writing…" : "Diagnostics"}
+              </Button>
+            )}
             <Button onClick={() => setConfirmRestart(true)} disabled={restarting}>
               {restarting ? "Restarting…" : "Restart"}
             </Button>
@@ -212,6 +276,18 @@ export function CoreView() {
 
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         <Card title="Drives" id="drives">
+          {storage && (
+            <div className="mb-3 border-b border-ink/6 pb-3" data-testid="storage">
+              <div className="flex items-center justify-between text-[14px]">
+                <span className="font-medium">{storage.volume ?? "Data volume"}</span>
+                <span className="text-ash">{bytes(storage.totalBytes)}</span>
+              </div>
+              <Meter value={storage.usedBytes} max={Math.max(1, storage.totalBytes)} className="mt-2" />
+              <div className="mt-1 text-[12px] text-ash">
+                {storage.filesystem ?? "filesystem"} · {bytes(storage.freeBytes)} free · SMART {storage.smart === "verified" ? "verified" : storage.smart === "failing" ? "FAILING" : "not reported"} · {storage.medium === "unknown" ? "medium unknown" : storage.medium.toUpperCase()}
+              </div>
+            </div>
+          )}
           <ul className="divide-y divide-ink/6">
             {core.drives.map((d) => (
               <li key={d.bay} className="py-2.5 first:pt-0 last:pb-0">

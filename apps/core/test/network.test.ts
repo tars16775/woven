@@ -8,6 +8,7 @@ const hardware: Hardware = {
   paths: { root: "/tmp/x", db: "", store: "", storeTmp: "", keys: "", snapshots: "", logs: "" },
   identity: () => Promise.reject(new Error("not needed")),
   metrics: () => Promise.reject(new Error("not needed")),
+  storage: () => Promise.reject(new Error("not needed")),
   network: async () => ({
     gateway: "192.168.0.1",
     interface: "en1",
