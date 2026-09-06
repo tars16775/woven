@@ -1,0 +1,21 @@
+#!/bin/bash
+# What launchd runs: load the configuration, keep the Core alive, honour its
+# restart request (exit 75), and pass stop signals down to the Core.
+set -u
+WOVEN_HOME="${WOVEN_HOME:-$HOME/.woven}"
+set -a; . "$WOVEN_HOME/config.env"; set +a
+export PATH="$WOVEN_HOME/node/bin:$PATH"
+cd "$WOVEN_HOME/current"
+child=0
+stop() { [ "$child" -gt 0 ] && kill -TERM "$child" 2>/dev/null; wait "$child" 2>/dev/null; exit 0; }
+trap stop TERM INT
+while true; do
+  node dist/server.js &
+  child=$!
+  wait "$child"
+  code=$?
+  [ "$code" -eq 0 ] && exit 0
+  [ "$code" -eq 75 ] && { echo "restart requested"; sleep 1; continue; }
+  echo "core exited with $code; starting again in 5 s"
+  sleep 5
+done

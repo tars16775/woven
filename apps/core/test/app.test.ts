@@ -81,8 +81,8 @@ describe("core app", () => {
 });
 
 describe("config", () => {
-  it("requires the data root", () => {
-    expect(() => loadConfig({})).toThrow(/WOVEN_DATA/);
+  it("defaults the data root to the platform's application-data folder", () => {
+    expect(loadConfig({}).dataRoot).toMatch(/Woven|woven/);
   });
   it("parses origins and trims them", () => {
     const c = loadConfig({ WOVEN_DATA: "/x", WOVEN_ORIGINS: " http://a , http://b " });

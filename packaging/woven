@@ -1,0 +1,71 @@
+#!/bin/bash
+# The woven command: start, stop, status, logs, update, uninstall. Installed by install.sh.
+set -euo pipefail
+WOVEN_HOME="${WOVEN_HOME:-$HOME/.woven}"
+LABEL="${WOVEN_LABEL:-com.woven.core}"
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+CONFIG="$WOVEN_HOME/config.env"
+APP="$WOVEN_HOME/current"
+LOG="$WOVEN_HOME/logs/core.log"
+
+usage() {
+  cat <<USAGE
+woven <command>
+
+  start        start the Core (and keep it running across logins)
+  stop         stop the Core
+  restart      stop, then start
+  status       is it running, and where
+  logs         follow the Core's log
+  open         open the dashboard in your browser
+  config       show the configuration file (edit with any editor, then: woven restart)
+  update       fetch the newest release and restart
+  uninstall    remove the service and the program (your data stays in the data folder)
+  version      what is installed
+USAGE
+}
+
+loaded() { launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1; }
+port() { (grep -E '^WOVEN_PORT=' "$CONFIG" 2>/dev/null | cut -d= -f2) || true; }
+name() { (grep -E '^WOVEN_NAME=' "$CONFIG" 2>/dev/null | cut -d= -f2) || true; }
+
+case "${1:-}" in
+  start)
+    [ -f "$PLIST" ] || { echo "Not installed. Run install.sh first."; exit 1; }
+    loaded || launchctl bootstrap "gui/$(id -u)" "$PLIST"
+    launchctl kickstart -k "gui/$(id -u)/$LABEL" 2>/dev/null || true
+    echo "Woven is starting. Dashboard: https://${WOVEN_NAME:-$(name)}:${WOVEN_PORT:-$(port)}"
+    ;;
+  stop)
+    loaded && launchctl bootout "gui/$(id -u)/$LABEL" && echo "Stopped." || echo "Not running."
+    ;;
+  restart)
+    "$0" stop >/dev/null 2>&1 || true
+    sleep 1
+    "$0" start
+    ;;
+  status)
+    if loaded; then
+      pid=$(launchctl print "gui/$(id -u)/$LABEL" 2>/dev/null | awk '/pid =/{print $3; exit}')
+      echo "Running (pid ${pid:-?}) · https://$(name):$(port) · data: $(grep -E '^WOVEN_DATA=' "$CONFIG" | cut -d= -f2-)"
+      curl -sk --max-time 3 "https://localhost:$(port)/v1/health" || echo "  (not answering yet)"
+      echo
+    else
+      echo "Not running. Start with: woven start"
+    fi
+    ;;
+  logs) tail -n 100 -f "$LOG" ;;
+  open) open "https://$(name):$(port)/dashboard" ;;
+  config) echo "$CONFIG"; echo; cat "$CONFIG" ;;
+  version) cat "$APP/VERSION" 2>/dev/null || echo "unknown" ;;
+  update)
+    curl -fsSL https://raw.githubusercontent.com/tars16775/woven/main/packaging/install.sh | WOVEN_HOME="$WOVEN_HOME" bash
+    ;;
+  uninstall)
+    "$0" stop >/dev/null 2>&1 || true
+    rm -f "$PLIST"
+    rm -rf "$WOVEN_HOME/current" "$WOVEN_HOME/releases" "$WOVEN_HOME/node"
+    echo "Woven is uninstalled. Your data is untouched at: $(grep -E '^WOVEN_DATA=' "$CONFIG" | cut -d= -f2-)"
+    ;;
+  *) usage; exit 1 ;;
+esac

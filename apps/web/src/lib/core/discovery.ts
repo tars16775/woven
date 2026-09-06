@@ -15,7 +15,10 @@ const REMEMBERED = "woven:core";
 
 export function defaultCandidates(): string[] {
   const fromEnv = process.env.NEXT_PUBLIC_WOVEN_CORE_URL?.trim();
+  // Served by the Core itself (the installed service): the page's own origin answers first.
+  const own = typeof window !== "undefined" && window.location.port !== "3000" && /^https?:$/.test(window.location.protocol) ? window.location.origin : null;
   const list = [
+    ...(own ? [own] : []),
     ...(fromEnv ? [fromEnv] : []),
     "https://woven.local:4000",
     "https://localhost:4000",

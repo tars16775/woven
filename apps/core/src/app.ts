@@ -1,4 +1,7 @@
 import cookie from "@fastify/cookie";
+import fastifyStatic from "@fastify/static";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
 import websocket from "@fastify/websocket";
@@ -93,7 +96,22 @@ export async function buildApp(deps: AppDeps) {
     reply.removeHeader("x-powered-by");
   });
 
+  // The dashboard and site, served by the box itself: one process, one address (WOVEN_SITE).
+  const site = deps.config.siteDir;
+  if (site) {
+    await app.register(fastifyStatic, { root: site, prefix: "/", wildcard: false, index: ["index.html"], extensions: ["html"], cacheControl: true, maxAge: "1h", immutable: false });
+  }
+
   app.setNotFoundHandler((req, reply) => {
+    if (site && req.method === "GET" && !req.url.startsWith("/v1/") && (req.headers.accept ?? "").includes("text/html")) {
+      // The export writes "dashboard.html" next to a "dashboard/" folder; a directory hit does not try the file, so we do.
+      const path = req.url.split("?")[0]!.replace(/\/+$/, "").replace(/\.\./g, "");
+      const page = [`${path}.html`, `${path}/index.html`].map((f) => join(site, f)).find((f) => f.startsWith(site) && existsSync(f));
+      if (page) return reply.type("text/html; charset=utf-8").sendFile(page.slice(site.length + 1));
+      // A page the export did not pre-render (a deep link with a query, a typo): the site's own not-found page.
+      const lost = ["404.html", "index.html"].map((f) => join(site, f)).find((f) => existsSync(f));
+      if (lost) return reply.status(404).type("text/html; charset=utf-8").sendFile(lost.slice(site.length + 1));
+    }
     void reply.status(404).send({ error: "Nothing at this address on the box.", requestId: req.id });
   });
 

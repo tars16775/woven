@@ -1,4 +1,23 @@
+import os from "node:os";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
+
+/** Where a household's data goes when nobody said otherwise: the platform's usual place for an app's data. */
+export function defaultDataRoot(): string {
+  if (process.platform === "darwin") return join(os.homedir(), "Library", "Application Support", "Woven");
+  return join(process.env.XDG_DATA_HOME ?? join(os.homedir(), ".local", "share"), "woven");
+}
+
+/** The static site the core serves at "/": next to the bundle in a release (web/), or the export next to the source tree. */
+export function defaultSiteDir(): string | null {
+  const here = dirname(fileURLToPath(import.meta.url));
+  for (const c of [join(here, "..", "web"), join(here, "web"), join(here, "..", "..", "web", "out-build"), join(here, "..", "..", "..", "web", "out-build")]) {
+    if (existsSync(join(c, "index.html"))) return c;
+  }
+  return null;
+}
 
 /**
  * Runtime configuration, from the environment only. Anything secret lives in
@@ -6,8 +25,10 @@ import { z } from "zod";
  */
 const Env = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  /** Data root. On the Mac: /Volumes/Woven/Woven Data. Required. */
-  WOVEN_DATA: z.string().min(1),
+  /** Data root. Defaults to the platform's application-data folder; point it at a bigger drive if you like. */
+  WOVEN_DATA: z.string().min(1).default(defaultDataRoot()),
+  /** The built dashboard and site to serve at "/". "off" serves the API only. */
+  WOVEN_SITE: z.string().default("auto"),
   WOVEN_HOST: z.string().default("0.0.0.0"),
   WOVEN_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
   /** Comma-separated origins allowed to call the API from a browser. */
@@ -46,6 +67,8 @@ export type Config = {
   localPort: number;
   gate: { mode: string; port: number; allow: string };
   snapshotMirror: string | null;
+  /** Folder with the static site, or null for API only. */
+  siteDir: string | null;
   logLevel: z.infer<typeof Env>["LOG_LEVEL"];
 };
 
@@ -69,6 +92,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     localPort: e.WOVEN_LOCAL_PORT,
     gate: { mode: e.WOVEN_GATE, port: e.WOVEN_GATE_PORT, allow: e.WOVEN_GATE_ALLOW },
     snapshotMirror: e.WOVEN_SNAPSHOT_MIRROR.trim() || null,
+    siteDir: e.WOVEN_SITE === "off" ? null : e.WOVEN_SITE === "auto" ? defaultSiteDir() : e.WOVEN_SITE,
     logLevel: e.LOG_LEVEL,
   };
 }

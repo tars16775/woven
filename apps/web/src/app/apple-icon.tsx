@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+export const dynamic = "force-static";
 
 // Home-screen icon. iOS masks its own corners, so the square is filled edge to
 // edge in bone and the mark is scaled up from the tab icon.

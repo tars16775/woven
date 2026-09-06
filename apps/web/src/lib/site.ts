@@ -122,6 +122,7 @@ export const footerLinks = [
   { label: "Press", href: "/press" },
   { label: "Careers", href: "/careers" },
   { label: "Developers", href: "/developers" },
+  { label: "Woven on your Mac", href: "/mac" },
   { label: "Contact", href: "/contact" },
 ];
 

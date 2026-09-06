@@ -1,3 +1,4 @@
+export const dynamic = "force-static";
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/brand";
 
@@ -21,6 +22,7 @@ export const publicRoutes: Record<string, Meta> = {
   "/founding-homes": { changeFrequency: "weekly", priority: 0.6 },
   "/support": { changeFrequency: "monthly", priority: 0.5 },
   "/developers": { changeFrequency: "monthly", priority: 0.5 },
+  "/mac": { changeFrequency: "weekly", priority: 0.7 },
   "/legal": { changeFrequency: "yearly", priority: 0.2 },
   "/press": company,
   "/careers": company,

@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    name: package for macOS
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Build the release tarball
+        run: packaging/release.sh "${GITHUB_REF_NAME#v}"
+      - name: Try the installer on this runner (no service)
+        env:
+          WOVEN_HOME: ${{ runner.temp }}/woven-home
+          WOVEN_NO_LAUNCHD: "1"
+          WOVEN_NO_OPEN: "1"
+          WOVEN_RELEASE_FILE: release/woven-macos.tar.gz
+        run: |
+          packaging/install.sh
+          ls "$WOVEN_HOME/current/dist" "$WOVEN_HOME/current/web/index.html"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" release/woven-macos.tar.gz --title "Woven $GITHUB_REF_NAME" --notes "Install or update on a Mac: curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/packaging/install.sh | bash"

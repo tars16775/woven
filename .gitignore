@@ -29,3 +29,5 @@ Screenshot*.png
 
 # dependencies (workspace-wide)
 node_modules/
+release/
+apps/web/out-build/

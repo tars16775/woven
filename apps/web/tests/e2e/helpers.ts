@@ -15,6 +15,7 @@ export const publicPaths = [
   "/founding-homes",
   "/support",
   "/developers",
+  "/mac",
   "/legal",
   "/press",
   "/careers",

@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+export const dynamic = "force-static";
 
 // Woven tab icon: a bone rounded square, the amber "Ready." light with a soft
 // glow, and the lowercase wordmark's first letter.
