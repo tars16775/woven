@@ -145,3 +145,20 @@ test("the Core page shows the volume's health and writes a scrubbed diagnostics 
   await page.getByTestId("diagnostics").click();
   await expect(page.getByText(/Diagnostics written to/)).toBeVisible({ timeout: 30_000 });
 });
+
+test("routines run from the Home page and a new one can be made", async ({ page }) => {
+  await signInWithPasskey(page);
+  await page.goto("/dashboard/home");
+  await expect(page.getByTestId("routines")).toContainText("Goodnight", { timeout: 30_000 });
+  await page.getByRole("button", { name: "Run Goodnight" }).click();
+  await expect(page.getByText(/Goodnight: \d of \d steps done/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("device-living.ceiling").getByRole("switch")).toHaveAttribute("aria-checked", "false", { timeout: 15_000 });
+
+  await page.getByTestId("new-routine").click();
+  await page.getByRole("textbox", { name: "Name" }).fill("Reading light");
+  await page.getByTestId("add-step").click();
+  await page.getByRole("button", { name: "Make it" }).click();
+  await expect(page.getByTestId("routines")).toContainText("Reading light", { timeout: 15_000 });
+  await page.getByRole("button", { name: "Delete Reading light" }).click();
+  await expect(page.getByTestId("routines")).not.toContainText("Reading light", { timeout: 15_000 });
+});

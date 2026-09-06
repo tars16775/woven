@@ -75,7 +75,8 @@ export class ActionEngine {
     const bounds = spec.bounds?.(params) ?? null;
     let decision: Decision = evaluate(
       {
-        actor: { kind: actor.kind, id: actor.id, ...(actor.role ? { role: actor.role } : {}) },
+        // A routine acts with its author's role: it can do what they could, and no more.
+        actor: { kind: actor.kind === "routine" && actor.role ? "person" : actor.kind, id: actor.id, ...(actor.role ? { role: actor.role } : {}) },
         riskClass: spec.riskClass,
         namespace,
         presence: this.deps.presence.get().adultsHome,

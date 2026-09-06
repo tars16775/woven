@@ -19,6 +19,7 @@ import { PhotoService } from "./photos.ts";
 import { ModelStore } from "./models.ts";
 import { MediaService, mediaKind, type Tools } from "./media.ts";
 import { NetworkScanner } from "./network-scan.ts";
+import { RoutineService } from "./routines.ts";
 import { detectHardware, type Hardware } from "@woven/hal";
 import { PhotoIndex, loadClip, type Embedder } from "./photo-index.ts";
 import type { Logger } from "./logger.ts";
@@ -47,6 +48,7 @@ export type Services = {
   photoIndex: PhotoIndex;
   media: MediaService;
   network: NetworkScanner;
+  routines: RoutineService;
 };
 
 export type ServiceOptions = { home?: HomeAdapter; logger?: Logger; loadEmbedder?: (dir: string) => Promise<Embedder>; tools?: Tools; hardware?: Hardware; mdns?: boolean };
@@ -106,6 +108,9 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
       return { from: r.from.id, to: r.to.id };
     },
   });
+  const routines = new RoutineService(db, data.ledger, household, actions, logger);
+  // Presence changes run the routines that wait for them (Leaving, Arrive).
+  presence.onChange = (adultsHome) => void routines.onPresence(adultsHome).catch(() => undefined);
   return {
     household,
     sessions: new SessionService(db, data.ledger),
@@ -125,5 +130,6 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
     photoIndex,
     media: mediaService,
     network: new NetworkScanner(opts.hardware ?? detectHardware({ dataRoot: config.dataRoot }), logger, { mdns: opts.mdns ?? config.mdns }),
+    routines,
   };
 }

@@ -129,11 +129,15 @@ export class Presence {
   private adultsHome = false;
   private since: string | null = null;
   private source = "unknown";
+  /** Called when the answer flips, not on every report. */
+  onChange: ((adultsHome: boolean) => void) | null = null;
 
   set(adultsHome: boolean, source: string) {
+    const flipped = adultsHome !== this.adultsHome;
     this.adultsHome = adultsHome;
     this.since = new Date().toISOString();
     this.source = source;
+    if (flipped) this.onChange?.(adultsHome);
   }
   get(): HomeState["presence"] {
     return { adultsHome: this.adultsHome, since: this.since, source: this.source };

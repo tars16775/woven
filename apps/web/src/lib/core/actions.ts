@@ -1,6 +1,6 @@
 "use client";
 
-import { ActionRecord, GateStatus, HomeState, type PrepareRequest } from "@woven/schema";
+import { ActionRecord, GateStatus, HomeState, Routine, RoutineRun, type NewRoutine, type PrepareRequest } from "@woven/schema";
 import { z } from "zod";
 import { CoreError } from "./client";
 import { coreClient } from "./store";
@@ -42,6 +42,15 @@ export const home = {
   setPresence: (adultsHome: boolean) => call("/v1/home/presence", HomeState.shape.presence, post({ adultsHome })),
 };
 
+export const routines = {
+  list: () => call("/v1/routines", z.object({ routines: z.array(Routine) })).then((r) => r.routines),
+  create: (input: NewRoutine) => call("/v1/routines", Routine, post(input)),
+  update: (id: string, patch: Partial<NewRoutine>) => call(`/v1/routines/${id}`, Routine, { method: "PATCH", body: JSON.stringify(patch) }),
+  remove: (id: string) => call(`/v1/routines/${id}`, z.object({ removed: z.literal(true) }), { method: "DELETE" }),
+  run: (id: string) => call(`/v1/routines/${id}/run`, RoutineRun, post()),
+  say: (phrase: string) => call("/v1/routines/say", RoutineRun.nullable(), post({ phrase })),
+};
+
 export const gate = {
   status: () => call("/v1/gate", GateStatus),
   set: (open: boolean) => call("/v1/gate", GateStatus, post({ open })),
@@ -71,4 +80,4 @@ export function explainAction(err: unknown): string {
   return err instanceof Error ? err.message : "Something went wrong.";
 }
 
-export type { ActionRecord, GateStatus, HomeState };
+export type { ActionRecord, GateStatus, HomeState, Routine, RoutineRun, NewRoutine };

@@ -9,6 +9,8 @@ import { loadConfig } from "../config.ts";
 import { openData } from "../data.ts";
 import { households, people } from "../db/schema.ts";
 import { RecoveryService } from "../auth/recovery.ts";
+import { buildServices } from "../services.ts";
+import { GateClient } from "../gate/client.ts";
 import { Person } from "@woven/schema";
 
 export const DEMO_HOUSEHOLD_ID = "01J9Z0DEM0H0ME000000000001";
@@ -16,6 +18,7 @@ export const DEMO_HOUSEHOLD_ID = "01J9Z0DEM0H0ME000000000001";
 const config = loadConfig();
 const { paths } = detectHardware({ dataRoot: config.dataRoot });
 const data = await openData(paths);
+const services = buildServices(data, config, new GateClient(null, "seed"));
 try {
   const existing = data.database.db.select().from(households).all();
   const other = existing.find((h) => h.id !== DEMO_HOUSEHOLD_ID);
@@ -44,6 +47,9 @@ try {
       data.ledger.append({ type: "person.created", householdId: DEMO_HOUSEHOLD_ID, actor: core, where: "inside", target: p.id, payload: { role: p.role } });
     }
   });
+  // The three starter routines every new house gets.
+  const alexPerson = Person.parse(data.database.db.select().from(people).where(eq(people.id, "01J9Z0DEM0PERS0N0A1EX00001")).get());
+  services.routines.ensureStarters(alexPerson);
   // WOVEN_DEMO_RECOVERY_CODE (comma-separated) gives the demo owner known
   // recovery codes so the end-to-end suite can sign in. Only the demo household ever gets them.
   const demoCode = process.env.WOVEN_DEMO_RECOVERY_CODE;

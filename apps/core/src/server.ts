@@ -84,10 +84,15 @@ async function main() {
     : null;
   const stopNightly = config.env === "production" || config.env === "development" ? scheduleNightly(data, logger, { mirror: config.snapshotMirror, sweep: () => services.files.sweepUploads() }) : () => undefined;
 
+  // Scheduled routines: once a minute, on the minute.
+  const routineTimer = setInterval(() => void services.routines.tick().catch((err: unknown) => logger.warn({ err }, "routine tick failed")), 60_000);
+  routineTimer.unref();
+
   const bonjour = config.mdns ? new Bonjour() : null;
   const stop = async (signal: string, code = 0) => {
     logger.info({ signal }, "stopping");
     stopNightly();
+    clearInterval(routineTimer);
     bonjour?.unpublishAll(() => bonjour.destroy());
     await Promise.all([app.close(), trust?.close(), local?.close()]);
     await gate.stop();

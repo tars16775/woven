@@ -5,6 +5,7 @@ import { Button, Card, PageHeader, Pill } from "@/components/dashboard/ui";
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { Approvals } from "@/components/dashboard/approvals";
+import { RoutinesCard } from "@/components/dashboard/routines-card";
 import { actions, describe, explainAction, home, type ActionRecord, type HomeState } from "@/lib/core/actions";
 import { useCore } from "@/lib/core/store";
 
@@ -177,7 +178,9 @@ export function LiveHomeControls() {
         ))}
       </div>
 
-      <p className="mt-4 text-[12px] text-ash">Every switch is an action with a receipt. Routines arrive with the Home Assistant bridge.</p>
+      <RoutinesCard devices={state.devices} onRan={() => void refresh()} />
+
+      <p className="mt-4 text-[12px] text-ash">Every switch is an action with a receipt.</p>
 
       <Dialog open={ask !== null} onClose={() => setAsk(null)} kicker={ask ? `Class ${ask.riskClass} · asks first` : ""} title={ask?.preview ?? ""} tone="ask">
         <p className="mt-2 text-[14px] text-ash">

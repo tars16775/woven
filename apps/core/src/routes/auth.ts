@@ -54,6 +54,7 @@ export const authRoutes: FastifyPluginAsync = async (raw) => {
     },
     async (req, reply) => {
       const { household, owner } = services.household.setup(req.body);
+      services.routines.ensureStarters(owner);
       const recoveryCodes = services.recovery.issue(owner);
       const enrolment = services.enrolments.put({ personId: owner.id, reason: "setup" });
       return reply.status(201).send({ household, owner, enrolment, recoveryCodes });

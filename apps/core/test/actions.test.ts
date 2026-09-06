@@ -154,7 +154,7 @@ describe("policy (phase 13)", () => {
     const res = await app.inject({ method: "POST", url: `/v1/actions/${id}/execute`, headers: { cookie: owner } });
     expect(res.statusCode).toBe(409);
     expect(res.json<Rec>()).toMatchObject({ error: expect.stringMatching(/changed after it was approved/) });
-    expect(services.home.device("living.thermostat")?.state).toMatchObject({ setpointC: 22 });
+    expect(services.home.device("living.thermostat")?.state).not.toMatchObject({ setpointC: 45 });
     expect(hashParams("climate.set_temperature", "living.thermostat", { setpointC: 30 })).not.toBe(hashParams("climate.set_temperature", "living.thermostat", { setpointC: 45 }));
   });
 

@@ -570,3 +570,45 @@ export const StorageHealth = z.object({
 });
 export type StorageHealth = z.infer<typeof StorageHealth>;
 
+/* Routines (phase 27) -------------------------------------------------------- */
+
+export const RoutineTrigger = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("manual") }),
+  /** Local time, every day. */
+  z.object({ kind: z.literal("time"), at: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), days: z.array(z.number().int().min(0).max(6)).optional() }),
+  z.object({ kind: z.literal("presence"), when: z.enum(["everyone_away", "first_home"]) }),
+  /** "goodnight", "movie time": for Tandem and the app. */
+  z.object({ kind: z.literal("phrase"), phrase: z.string().trim().min(1).max(60) }),
+]);
+export type RoutineTrigger = z.infer<typeof RoutineTrigger>;
+
+export const RoutineStep = z.object({ capability: CapabilityName, target: z.string().min(1), parameters: z.record(z.string(), z.unknown()).default({}) });
+export type RoutineStep = z.infer<typeof RoutineStep>;
+
+export const Routine = z.object({
+  id: Ulid,
+  householdId: Ulid,
+  name: z.string().min(1).max(60),
+  trigger: RoutineTrigger,
+  steps: z.array(RoutineStep).min(1).max(20),
+  enabled: z.boolean(),
+  createdBy: Ulid,
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+  lastRunAt: z.iso.datetime().nullable(),
+  /** "6 of 6 steps done", "2 steps need approval", from the last run. */
+  lastResult: z.string().nullable(),
+});
+export type Routine = z.infer<typeof Routine>;
+
+export const NewRoutine = Routine.pick({ name: true, trigger: true, steps: true }).extend({ enabled: z.boolean().default(true) });
+export type NewRoutine = z.infer<typeof NewRoutine>;
+
+export const RoutineRun = z.object({
+  routineId: Ulid,
+  startedAt: z.iso.datetime(),
+  steps: z.array(z.object({ capability: CapabilityName, target: z.string(), status: ActionStatus, actionId: Ulid.nullable(), note: z.string().nullable() })),
+  summary: z.string(),
+});
+export type RoutineRun = z.infer<typeof RoutineRun>;
+

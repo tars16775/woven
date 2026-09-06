@@ -273,3 +273,22 @@ export const media = sqliteTable(
   (t) => [index("media_household_kind_idx").on(t.householdId, t.kind)],
 );
 
+/** Routines (phase 27): a name, a trigger, ordered steps that are ordinary capability calls. */
+export const routines = sqliteTable(
+  "routines",
+  {
+    id: text("id").primaryKey(),
+    householdId: text("household_id").notNull().references(() => households.id),
+    name: text("name").notNull(),
+    trigger: text("trigger").notNull(),
+    steps: text("steps").notNull(),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    createdBy: text("created_by").notNull().references(() => people.id),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    lastRunAt: text("last_run_at"),
+    lastResult: text("last_result"),
+  },
+  (t) => [index("routines_household_idx").on(t.householdId)],
+);
+
