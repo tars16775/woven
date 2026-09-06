@@ -37,4 +37,7 @@ jobs:
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" release/woven-macos.tar.gz --title "Woven $GITHUB_REF_NAME" --notes "Install or update on a Mac: curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/packaging/install.sh | bash"
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/woven-macos.tar.gz \
+            --title "Woven $GITHUB_REF_NAME" \
+            --notes "Install or update on a Mac with one command (see packaging/install.sh): curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/packaging/install.sh | bash"
