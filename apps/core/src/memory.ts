@@ -61,6 +61,10 @@ export class MemoryService {
       .map((m) => Memory.parse(m));
   }
 
+  /** The search index follows what is remembered and forgotten. */
+  onChanged: ((m: Memory) => void) | null = null;
+  onForgot: ((id: string) => void) | null = null;
+
   /** The person says it themselves: durable at once. */
   remember(person: Person, input: NewMemory): Memory {
     return this.insert(person, input, "person", "durable");
@@ -98,13 +102,16 @@ export class MemoryService {
   edit(person: Person, id: string, text: string): Memory {
     this.mine(person, id);
     this.db.update(memories).set({ text, updatedAt: this.now().toISOString() }).where(eq(memories.id, id)).run();
-    return Memory.parse(this.db.select().from(memories).where(eq(memories.id, id)).get());
+    const edited = Memory.parse(this.db.select().from(memories).where(eq(memories.id, id)).get());
+    this.onChanged?.(edited);
+    return edited;
   }
 
   /** Gone: the row is tombstoned and the text blanked, so not even a backup of the database keeps it after the next snapshot. */
   forget(person: Person, id: string): void {
     const m = this.mine(person, id);
     this.db.update(memories).set({ deletedAt: this.now().toISOString(), text: "" }).where(eq(memories.id, id)).run();
+    this.onForgot?.(id);
     this.ledger.append({ type: "memory.deleted", householdId: person.householdId, actor: { kind: "person", id: person.id }, where: "inside", target: id, sensitivity: "high", payload: { kind: m.kind, wasDurable: m.status === "durable" } });
   }
 
@@ -135,7 +142,9 @@ export class MemoryService {
     const s = this.settingsFor(person);
     this.db.insert(memories).values({ id, householdId: person.householdId, personId: person.id, text: input.text, kind: input.kind, status, source, seen: 1, createdAt: now, updatedAt: now, expiresAt: this.expiry(status, s, now) }).run();
     if (status === "durable") this.ledger.append({ type: "memory.created", householdId: person.householdId, actor: source === "person" ? { kind: "person", id: person.id } : { kind: "agent", id: "tandem" }, where: "inside", target: id, sensitivity: "high", payload: { kind: input.kind, source } });
-    return Memory.parse(this.db.select().from(memories).where(eq(memories.id, id)).get());
+    const made = Memory.parse(this.db.select().from(memories).where(eq(memories.id, id)).get());
+    this.onChanged?.(made);
+    return made;
   }
 
   private mine(person: Person, id: string) {

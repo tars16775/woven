@@ -1,7 +1,7 @@
-import { Household, Person, ScreenState, SessionView, SetupHousehold } from "@woven/schema";
+import { DeviceToken, Household, Person, ScreenState, SessionView, SetupHousehold } from "@woven/schema";
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { requireSession } from "../auth/guard.ts";
+import { requireRole, requireSession } from "../auth/guard.ts";
 import { PasskeyError } from "../auth/passkeys.ts";
 import { SESSION_COOKIE, sessionCookie } from "../auth/sessions.ts";
 import { screenPage } from "../auth/screen.ts";
@@ -206,6 +206,20 @@ export const authRoutes: FastifyPluginAsync = async (raw) => {
     void reply.clearCookie(SESSION_COOKIE, { path: "/" });
     return { ok: true as const };
   });
+
+  /* Device tokens (gap 20): a year-long credential for a backup client, shown once. */
+  app.post(
+    "/auth/tokens",
+    { preHandler: requireRole("owner", "adult"), schema: { body: z.object({ label: z.string().trim().min(1).max(80) }), response: { 201: DeviceToken.extend({ token: z.string() }) } } },
+    async (req, reply) => {
+      const issued = services.sessions.issue(req.session!.person, "token", req.body.label);
+      return reply.status(201).send({ id: issued.id, label: req.body.label, createdAt: new Date().toISOString(), expiresAt: issued.expiresAt, token: `${issued.token}.${issued.deviceSecret}` });
+    },
+  );
+  app.get("/auth/tokens", { preHandler: requireSession, schema: { response: { 200: z.object({ tokens: z.array(DeviceToken) }) } } }, async (req) => ({ tokens: services.sessions.tokens(req.session!.person) }));
+  app.delete("/auth/tokens/:id", { preHandler: requireSession, schema: { params: z.object({ id: z.string() }), response: { 200: z.object({ revoked: z.boolean() }) } } }, async (req) => ({
+    revoked: services.sessions.revokeById(req.session!.person, req.params.id),
+  }));
 
   app.post("/auth/logout-others", { preHandler: requireSession, schema: { response: { 200: z.object({ signedOut: z.number().int() }) } } }, async (req) => ({
     signedOut: services.sessions.revokeOthers(req.session!.person, req.session!.id),

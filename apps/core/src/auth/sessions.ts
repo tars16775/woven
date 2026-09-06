@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import type { AuthMethod, Person } from "@woven/schema";
+import type { AuthMethod, DeviceToken, Person } from "@woven/schema";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { monotonicFactory } from "ulid";
 import type { Db } from "../db/index.ts";
@@ -9,6 +9,7 @@ import type { Ledger } from "../ledger.ts";
 const nextId = monotonicFactory();
 export const SESSION_COOKIE = "woven_session";
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+const ONE_YEAR = 365 * 24 * 60 * 60 * 1000;
 
 export type IssuedSession = { token: string; id: string; expiresAt: string; deviceSecret: string };
 export type ResolvedSession = {
@@ -43,7 +44,8 @@ export class SessionService {
     const deviceSecret = randomBytes(32).toString("base64url");
     const id = nextId();
     const created = this.now();
-    const expiresAt = new Date(created.getTime() + THIRTY_DAYS).toISOString();
+    // A device token (a backup client) lives a year; a browser session a month.
+    const expiresAt = new Date(created.getTime() + (method === "token" ? ONE_YEAR : THIRTY_DAYS)).toISOString();
     this.db.transaction((tx) => {
       tx.insert(sessions)
         .values({ id, personId: person.id, tokenHash: hashToken(token), deviceSecret, deviceLabel, method, createdAt: created.toISOString(), expiresAt })
@@ -95,6 +97,28 @@ export class SessionService {
         sensitivity: "low",
         payload: { reason: "signed out" },
       });
+    });
+    return true;
+  }
+
+  /** A person's live device tokens (gap 20), for the Settings page. */
+  tokens(person: Person): DeviceToken[] {
+    const nowIso = this.now().toISOString();
+    return this.db
+      .select()
+      .from(sessions)
+      .where(and(eq(sessions.personId, person.id), eq(sessions.method, "token"), isNull(sessions.revokedAt), gt(sessions.expiresAt, nowIso)))
+      .all()
+      .map((s) => ({ id: s.id, label: s.deviceLabel, createdAt: s.createdAt, expiresAt: s.expiresAt }));
+  }
+
+  /** Revoke one of the person's sessions by id (a token from Settings, or a device from the list). */
+  revokeById(person: Person, id: string): boolean {
+    const row = this.db.select().from(sessions).where(and(eq(sessions.id, id), eq(sessions.personId, person.id), isNull(sessions.revokedAt))).get();
+    if (!row) return false;
+    this.db.transaction((tx) => {
+      tx.update(sessions).set({ revokedAt: this.now().toISOString() }).where(eq(sessions.id, id)).run();
+      this.ledger.append({ type: "session.ended", householdId: person.householdId, actor: { kind: "person", id: person.id }, where: "inside", sensitivity: "low", payload: { reason: row.method === "token" ? "device token revoked" : "device signed out", device: row.deviceLabel ?? "unknown device" } });
     });
     return true;
   }

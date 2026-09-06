@@ -6,6 +6,10 @@
 # updates the program and keeps your data and configuration.
 set -euo pipefail
 
+# --client: only the woven-backup command, for a Mac that backs up to a Core elsewhere in the house.
+CLIENT_ONLY=""
+for arg in "$@"; do case "$arg" in --client) CLIENT_ONLY=1 ;; esac; done
+
 REPO="${WOVEN_REPO:-tars16775/woven}"
 NODE_VERSION="${WOVEN_NODE_VERSION:-22.22.0}"
 WOVEN_HOME="${WOVEN_HOME:-$HOME/.woven}"
@@ -66,6 +70,20 @@ fi
 ln -sfn "$dest" "$WOVEN_HOME/current"
 install -m 0755 "$dest/packaging/woven" "$WOVEN_HOME/bin/woven"
 install -m 0755 "$dest/packaging/woven-run" "$WOVEN_HOME/bin/woven-run"
+install -m 0755 "$dest/packaging/woven-backup" "$WOVEN_HOME/bin/woven-backup"
+
+if [ -n "$CLIENT_ONLY" ]; then
+  case ":$PATH:" in *":$WOVEN_HOME/bin:"*) ;; *)
+    for rc in "$HOME/.zshrc" "$HOME/.bash_profile"; do
+      [ -f "$rc" ] && ! grep -q '.woven/bin' "$rc" && printf '\n# Woven\nexport PATH="$HOME/.woven/bin:$PATH"\n' >>"$rc"
+    done ;;
+  esac
+  say "The Woven backup client $version is installed."
+  echo "  Next: make a token under Settings, Backup devices on your household's dashboard, then"
+  echo "        woven-backup connect https://woven.local:4000 <token>"
+  echo "        woven-backup run ~/Documents --watch      (open a new terminal for PATH)"
+  exit 0
+fi
 
 # 3. Configuration, written once and kept.
 if [ ! -f "$WOVEN_HOME/config.env" ]; then

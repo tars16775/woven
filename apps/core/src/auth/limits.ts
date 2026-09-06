@@ -26,6 +26,8 @@ export const limits = {
   signIn: { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
   recovery: { config: { rateLimit: { max: 5, timeWindow: "10 minutes" } } },
   code: { config: { rateLimit: { max: 8, timeWindow: "1 minute" } } },
+  /** Public share links: enough for a family fetching a video, not for scanning tokens. */
+  share: { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
   invite: { config: { rateLimit: { max: 10, timeWindow: "10 minutes" } } },
   setup: { config: { rateLimit: { max: 3, timeWindow: "10 minutes" } } },
 } as const;

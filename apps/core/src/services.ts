@@ -4,6 +4,9 @@ import { OneTimeStore } from "./auth/challenges.ts";
 import { PasskeyService } from "./auth/passkeys.ts";
 import { RecoveryService } from "./auth/recovery.ts";
 import { Ask } from "./ask.ts";
+import { files as filesTable } from "./db/schema.ts";
+import { SearchIndex } from "./search.ts";
+import { ShareService } from "./shares.ts";
 import { SessionService } from "./auth/sessions.ts";
 import { HouseholdService } from "./household.ts";
 import { ActionEngine } from "./actions/engine.ts";
@@ -57,6 +60,8 @@ export type Services = {
   alerts: Alerts;
   metrics: Metrics;
   ask: Ask;
+  search: SearchIndex;
+  shares: ShareService;
 };
 
 export type ServiceOptions = { home?: HomeAdapter; logger?: Logger; loadEmbedder?: (dir: string) => Promise<Embedder>; tools?: Tools; hardware?: Hardware; mdns?: boolean };
@@ -130,6 +135,26 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
   // Presence changes run the routines that wait for them (Leaving, Arrive).
   presence.onChange = (adultsHome) => void routines.onPresence(adultsHome).catch(() => undefined);
   const disk = async () => (opts.hardware ? await opts.hardware.storage() : { usedBytes: 0, totalBytes: 0, freeBytes: 0 });
+  // Search (gap 18) follows files, memories and routines as they change; a drifted index rebuilds at start.
+  const search = new SearchIndex(data.database.sqlite, db, household);
+  const rebuilt = search.reindexIfNeeded();
+  if (rebuilt) logger.info(rebuilt, "rebuilt the search index");
+  const previousOnAdded = files.onAdded;
+  files.onAdded = (entry) => {
+    search.indexFile({ ...entry, householdId: data.database.db.select({ h: filesTable.householdId }).from(filesTable).where(eq(filesTable.id, entry.id)).get()?.h ?? "" });
+    previousOnAdded?.(entry);
+  };
+  files.onChanged = (entry) => search.indexFile({ ...entry, householdId: data.database.db.select({ h: filesTable.householdId }).from(filesTable).where(eq(filesTable.id, entry.id)).get()?.h ?? "" });
+  const previousOnRemoved = files.onRemoved;
+  files.onRemoved = async (id) => {
+    search.removeFile(id);
+    await previousOnRemoved?.(id);
+  };
+  const memory = new MemoryService(db, data.ledger);
+  memory.onChanged = (m) => search.indexMemory({ ...m, householdId: household.household()?.id ?? "" });
+  memory.onForgot = (id) => search.removeMemory(id);
+  routines.onChanged = (r) => search.indexRoutine({ id: r.id, householdId: r.householdId, createdBy: r.createdBy, name: r.name, trigger: JSON.stringify(r.trigger), steps: JSON.stringify(r.steps) });
+  routines.onRemoved = (id) => search.removeRoutine(id);
   const services: Services = {
     household,
     sessions: new SessionService(db, data.ledger),
@@ -150,7 +175,9 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
     media: mediaService,
     network: new NetworkScanner(opts.hardware ?? detectHardware({ dataRoot: config.dataRoot }), logger, { mdns: opts.mdns ?? config.mdns }),
     routines,
-    memory: new MemoryService(db, data.ledger),
+    memory,
+    search,
+    shares: new ShareService(db, data.ledger, files),
     alerts: new Alerts(),
     metrics: new Metrics(),
   } as Services;

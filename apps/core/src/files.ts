@@ -43,6 +43,8 @@ export class FilesService {
   /** Called after a file is registered (photo indexing hangs off this). */
   onAdded: ((entry: FileEntry) => void) | null = null;
   onRemoved: ((fileId: string) => Promise<void>) | null = null;
+  /** Called after a move or rename (the search index follows). */
+  onChanged: ((entry: FileEntry) => void) | null = null;
 
   constructor(
     private readonly db: Db,
@@ -163,6 +165,8 @@ export class FilesService {
         this.ledger.append({ type: "action.executed", householdId: row.householdId, actor: { kind: "person", id: actor.id }, where: "inside", target: id, namespace, sensitivity: "low", payload: { capability: "file.share", planned: { from: row.namespace, to: namespace }, observed: { namespace } } });
       }
     });
+    const moved = toEntry(this.get(actor, id));
+    this.onChanged?.(moved);
     return toEntry(this.db.select().from(files).where(eq(files.id, id)).get()!);
   }
 

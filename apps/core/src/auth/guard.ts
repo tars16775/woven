@@ -18,6 +18,13 @@ declare module "fastify" {
  * no secret keep working until they expire.
  */
 export async function attachSession(req: FastifyRequest) {
+  // A device token (gap 20): "Bearer <session>.<device secret>" from a backup client or another machine; no cookie involved.
+  const bearer = /^Bearer\s+([A-Za-z0-9_-]{32,})\.([A-Za-z0-9_-]{32,})$/.exec(String(req.headers.authorization ?? ""));
+  if (bearer && !req.cookies[SESSION_COOKIE]) {
+    const s = req.server.deps.services.sessions.resolve(bearer[1]);
+    req.session = s && s.method === "token" && s.deviceSecret === bearer[2] ? s : null;
+    return;
+  }
   const token = req.cookies[SESSION_COOKIE];
   const session = token ? req.server.deps.services.sessions.resolve(token) : null;
   if (session?.deviceSecret) {

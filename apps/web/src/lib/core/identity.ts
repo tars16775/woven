@@ -1,6 +1,6 @@
 "use client";
 
-import { ActionRecord, Alert, HouseholdView, Invitation, Memory, MemorySettings, SessionView, type NewInvitation, type Person } from "@woven/schema";
+import { ActionRecord, Alert, HouseholdView, Invitation, Memory, MemorySettings, SessionView, type NewInvitation, type Person, DeviceToken } from "@woven/schema";
 import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
 import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser";
 import { z } from "zod";
@@ -140,6 +140,10 @@ export const identity = {
   removePasskey: (id: string) => call(`/v1/auth/passkeys/${id}`, z.object({ removed: z.boolean() }), { method: "DELETE" }),
   newRecoveryCodes: () => call("/v1/auth/recovery-codes", z.object({ recoveryCodes: z.array(z.string()) }), { method: "POST" }),
   logoutOthers: () => call("/v1/auth/logout-others", z.object({ signedOut: z.number() }), { method: "POST" }),
+  /* Device tokens for backup clients (gap 20) */
+  tokens: () => call("/v1/auth/tokens", z.object({ tokens: z.array(DeviceToken) })).then((r) => r.tokens),
+  newToken: (label: string) => call("/v1/auth/tokens", DeviceToken.extend({ token: z.string() }), post({ label })),
+  revokeToken: (id: string) => call(`/v1/auth/tokens/${id}`, z.object({ revoked: z.boolean() }), { method: "DELETE" }),
 
   async logout(): Promise<void> {
     try {
@@ -187,3 +191,5 @@ export function sessionRecord(view: SessionView, method: "passkey" | "code" | "r
     simulated: false as const,
   };
 }
+
+export type { DeviceToken };

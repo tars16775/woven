@@ -14,6 +14,7 @@ import { Dialog } from "./dialog";
 import { ToastProvider } from "./toast";
 import { ThemeStyle, useDocumentTheme, useTheme } from "./theme";
 import { useGateOpen } from "./state";
+import { SearchBox } from "./search-box";
 import type { LedgerRow } from "@woven/schema";
 
 /** Bytes that left through the Gate since midnight, from the receipts on hand. */
@@ -218,6 +219,7 @@ export function Shell({ children }: { children: ReactNode }) {
               )}
             </div>
             <div className="flex items-center gap-3">
+              {isLive && <SearchBox />}
               <Link
                 href="/dashboard/ask"
                 className="hidden rounded-[8px] bg-white px-3 py-1.5 text-[13px] text-ash ring-1 ring-ink/8 hover:text-ink md:block"

@@ -17,7 +17,7 @@ cp -R "$ROOT/apps/core/dist" "$OUT/dist"
 cp -R "$ROOT/apps/core/drizzle" "$OUT/drizzle"
 cp -R "$ROOT/apps/web/out-build" "$OUT/web"
 mkdir -p "$OUT/packaging"
-cp "$ROOT/packaging/woven" "$ROOT/packaging/woven-run" "$ROOT/packaging/com.woven.core.plist.template" "$ROOT/packaging/install.sh" "$OUT/packaging/"
+cp "$ROOT/packaging/woven" "$ROOT/packaging/woven-run" "$ROOT/packaging/woven-backup" "$ROOT/packaging/com.woven.core.plist.template" "$ROOT/packaging/install.sh" "$OUT/packaging/"
 cp "$ROOT/README.md" "$OUT/README.md"
 echo "$VERSION" >"$OUT/VERSION"
 node -e '

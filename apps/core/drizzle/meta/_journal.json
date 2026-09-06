@@ -78,6 +78,13 @@
       "when": 1788730000000,
       "tag": "0010_rescue",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1788740000000,
+      "tag": "0011_shares",
+      "breakpoints": true
     }
   ]
 }

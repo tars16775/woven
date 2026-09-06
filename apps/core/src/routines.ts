@@ -37,13 +37,19 @@ export class RoutineService {
     return row ? toRoutine(row) : null;
   }
 
+  /** The search index follows routines too. */
+  onChanged: ((r: Routine) => void) | null = null;
+  onRemoved: ((id: string) => void) | null = null;
+
   create(input: NewRoutine, by: Person): Routine {
     if (by.role === "guest") throw new HouseholdError(400, "Guests cannot make routines.");
     const now = this.now().toISOString();
     const id = nextId();
     this.db.insert(routines).values({ id, householdId: by.householdId, name: input.name, trigger: JSON.stringify(input.trigger), steps: JSON.stringify(input.steps), enabled: input.enabled, createdBy: by.id, createdAt: now, updatedAt: now }).run();
     this.ledger.append({ type: "action.executed", householdId: by.householdId, actor: { kind: "person", id: by.id }, where: "inside", target: id, sensitivity: "low", payload: { capability: "routine.create", planned: { name: input.name, trigger: input.trigger.kind, steps: input.steps.length }, observed: { id } } });
-    return this.get(by.householdId, id)!;
+    const made = this.get(by.householdId, id)!;
+    this.onChanged?.(made);
+    return made;
   }
 
   update(id: string, patch: { [K in keyof NewRoutine]?: NewRoutine[K] | undefined }, by: Person): Routine {
@@ -62,7 +68,9 @@ export class RoutineService {
       })
       .where(eq(routines.id, id))
       .run();
-    return this.get(by.householdId, id)!;
+    const changed = this.get(by.householdId, id)!;
+    this.onChanged?.(changed);
+    return changed;
   }
 
   remove(id: string, by: Person): void {
@@ -70,6 +78,7 @@ export class RoutineService {
     if (!r) throw new HouseholdError(404, "No such routine.");
     if (by.role !== "owner" && by.id !== r.createdBy) throw new HouseholdError(400, "Only the owner or whoever made it can delete a routine.");
     this.db.delete(routines).where(eq(routines.id, id)).run();
+    this.onRemoved?.(id);
     this.ledger.append({ type: "action.executed", householdId: by.householdId, actor: { kind: "person", id: by.id }, where: "inside", target: id, sensitivity: "low", payload: { capability: "routine.delete", planned: { name: r.name }, observed: {} } });
   }
 

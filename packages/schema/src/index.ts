@@ -158,6 +158,9 @@ export const EventType = z.enum([
   "update.installed",
   "memory.created",
   "memory.deleted",
+  "file.shared",
+  "file.share_used",
+  "file.share_revoked",
   "core.started",
   "core.integrity_checked",
 ]);
@@ -298,7 +301,8 @@ export const SetupHousehold = z.object({
 });
 export type SetupHousehold = z.infer<typeof SetupHousehold>;
 
-export const AuthMethod = z.enum(["passkey", "code", "recovery"]);
+/** "token": a long-lived device token for a backup client or another machine (gap 20). */
+export const AuthMethod = z.enum(["passkey", "code", "recovery", "token"]);
 export type AuthMethod = z.infer<typeof AuthMethod>;
 
 /** GET /v1/auth/session: who is signed in on this device. */
@@ -395,6 +399,42 @@ export const GateStatus = z.object({
   bytesOutToday: z.number().int().nonnegative(),
 });
 export type GateStatus = z.infer<typeof GateStatus>;
+
+/* Share links, search and device tokens (gaps 18 to 20) --------------------- */
+
+export const Share = z.object({
+  id: Ulid,
+  fileId: Ulid,
+  name: z.string(),
+  size: z.number().int(),
+  mime: z.string().nullable(),
+  namespace: Namespace,
+  createdBy: Ulid,
+  createdAt: z.iso.datetime(),
+  expiresAt: z.iso.datetime(),
+  maxDownloads: z.number().int().nullable(),
+  downloads: z.number().int(),
+  lastUsedAt: z.iso.datetime().nullable(),
+  revokedAt: z.iso.datetime().nullable(),
+  /** Still answers: not revoked, not expired, not exhausted, file still there. */
+  live: z.boolean(),
+});
+export type Share = z.infer<typeof Share>;
+
+export const SearchResult = z.object({
+  kind: z.enum(["file", "memory", "routine"]),
+  id: Ulid,
+  title: z.string(),
+  /** The matching part, with [brackets] around the hits. */
+  snippet: z.string(),
+  namespace: Namespace.nullable(),
+  href: z.string(),
+});
+export type SearchResult = z.infer<typeof SearchResult>;
+
+/** A device token as the Settings page lists it; the secret itself is shown once at creation. */
+export const DeviceToken = z.object({ id: Ulid, label: z.string().nullable(), createdAt: z.iso.datetime(), expiresAt: z.iso.datetime() });
+export type DeviceToken = z.infer<typeof DeviceToken>;
 
 /* Files (phases 18 and 19) --------------------------------------------------- */
 

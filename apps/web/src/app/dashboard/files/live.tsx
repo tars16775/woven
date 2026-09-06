@@ -5,7 +5,7 @@ import { Button, Card, Meter, PageHeader, Pill } from "@/components/dashboard/ui
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { explainAction } from "@/lib/core/actions";
-import { bytes, files, type FileEntry, type FileListing, type FilesSummary } from "@/lib/core/files";
+import { bytes, files, shares, type FileEntry, type FileListing, type FilesSummary, type Share } from "@/lib/core/files";
 import { useSession } from "@/lib/auth";
 import type { Namespace } from "@woven/schema";
 
@@ -31,6 +31,8 @@ export function LiveFiles() {
   const [progress, setProgress] = useState<{ name: string; sent: number; total: number } | null>(null);
   const [share, setShare] = useState<FileEntry | null>(null);
   const [rename, setRename] = useState<{ file: FileEntry; name: string } | null>(null);
+  const [link, setLink] = useState<{ file: FileEntry; hours: number; made: { share: Share; url: string } | null } | null>(null);
+  const [links, setLinks] = useState<Share[]>([]);
   const [error, setError] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const [tick, setTick] = useState(0);
@@ -89,6 +91,46 @@ export function LiveFiles() {
       say(explainAction(err));
     }
   };
+
+  const makeLink = async () => {
+    if (!link || link.made) return;
+    try {
+      const r = await shares.create(link.file.id, { expiresInHours: link.hours });
+      setLink({ ...link, made: { share: r.share, url: shares.url(r.token) } });
+      setLinks(await shares.list());
+      say("Link made · receipt written");
+    } catch (err) {
+      say(explainAction(err));
+    }
+  };
+  const copyLink = async () => {
+    if (!link?.made) return;
+    try {
+      await navigator.clipboard.writeText(link.made.url);
+      say("Link copied.");
+    } catch {
+      say("Select the link and copy it.");
+    }
+  };
+  const revokeLink = async (s: Share) => {
+    try {
+      await shares.revoke(s.id);
+      setLinks(await shares.list());
+      say(`The link to ${s.name} is off.`);
+    } catch (err) {
+      say(explainAction(err));
+    }
+  };
+  useEffect(() => {
+    let alive = true;
+    shares
+      .list()
+      .then((l) => alive && setLinks(l))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [tick]);
 
   const doRename = async () => {
     if (!rename || !rename.name.trim()) return;
@@ -211,6 +253,9 @@ export function LiveFiles() {
                   <Button kind="quiet" onClick={() => setShare(f)}>
                     Share
                   </Button>
+                  <Button kind="quiet" onClick={() => setLink({ file: f, hours: 24 * 7, made: null })} aria-label={`Link to ${f.name}`}>
+                    Link
+                  </Button>
                   <Button kind="quiet" onClick={() => remove(f)} aria-label={`Delete ${f.name}`}>
                     Delete
                   </Button>
@@ -220,6 +265,29 @@ export function LiveFiles() {
           </ul>
         )}
       </Card>
+
+      {links.some((l) => l.live) && (
+        <Card title="Links you handed out" className="mt-4">
+          <ul className="divide-y divide-ink/6" data-testid="share-links">
+            {links
+              .filter((l) => l.live)
+              .map((l) => (
+                <li key={l.id} className="flex items-center justify-between gap-4 py-2.5 text-[14px] first:pt-0 last:pb-0">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{l.name}</div>
+                    <div className="text-[12px] text-ash">
+                      Ends {new Date(l.expiresAt).toLocaleString()} · {l.downloads} {l.downloads === 1 ? "download" : "downloads"}
+                      {l.maxDownloads ? ` of ${l.maxDownloads}` : ""}
+                    </div>
+                  </div>
+                  <Button kind="quiet" onClick={() => revokeLink(l)}>
+                    Turn off
+                  </Button>
+                </li>
+              ))}
+          </ul>
+        </Card>
+      )}
 
       {summary && summary.sources.length > 0 && (
         <Card title="Where files came from" className="mt-4">
@@ -255,6 +323,46 @@ export function LiveFiles() {
             Close
           </Button>
         </DialogActions>
+      </Dialog>
+
+      <Dialog open={link !== null} onClose={() => setLink(null)} kicker="A link anyone can open, until it ends" title={link?.file.name ?? ""} size="md">
+        {link && !link.made ? (
+          <>
+            <p className="mt-2 text-[14px] text-ash">Whoever has the link can download this one file from your Core. Nothing else on the box is reachable through it, and every download leaves a receipt.</p>
+            <div className="mt-4 flex flex-wrap gap-2" role="radiogroup" aria-label="How long the link lasts">
+              {[
+                [24, "1 day"],
+                [24 * 7, "1 week"],
+                [24 * 30, "30 days"],
+              ].map(([h, label]) => (
+                <Button key={h} kind={link.hours === h ? "soft" : "outline"} onClick={() => setLink({ ...link, hours: h as number })} role="radio" aria-checked={link.hours === h}>
+                  {label}
+                </Button>
+              ))}
+            </div>
+            <DialogActions>
+              <Button kind="primary" className="flex-1 py-2.5" onClick={makeLink} data-autofocus data-testid="make-link">
+                Make the link
+              </Button>
+              <Button kind="soft" className="flex-1 py-2.5" onClick={() => setLink(null)}>
+                Cancel
+              </Button>
+            </DialogActions>
+          </>
+        ) : link?.made ? (
+          <>
+            <input readOnly value={link.made.url} onFocus={(e) => e.target.select()} className="mt-4 w-full rounded-[8px] bg-bone px-3 py-2 font-mono text-[12px] ring-1 ring-ink/8" aria-label="Share link" data-testid="share-url" />
+            <p className="mt-2 text-[13px] text-ash">Ends {new Date(link.made.share.expiresAt).toLocaleString()}. Turn it off any time from the list below the files.</p>
+            <DialogActions>
+              <Button kind="primary" className="flex-1 py-2.5" onClick={copyLink} data-autofocus>
+                Copy link
+              </Button>
+              <Button kind="soft" className="flex-1 py-2.5" onClick={() => setLink(null)}>
+                Done
+              </Button>
+            </DialogActions>
+          </>
+        ) : null}
       </Dialog>
 
       <Dialog open={rename !== null} onClose={() => setRename(null)} kicker="Rename" title={rename?.file.name ?? ""}>

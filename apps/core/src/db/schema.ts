@@ -63,7 +63,7 @@ export const sessions = sqliteTable(
     /** A second secret the browser holds outside the cookie jar and sends as a header or a signed URL; a stolen cookie alone is not enough. */
     deviceSecret: text("device_secret"),
     deviceLabel: text("device_label"),
-    method: text("method", { enum: ["passkey", "code", "recovery"] }).notNull(),
+    method: text("method", { enum: ["passkey", "code", "recovery", "token"] }).notNull(),
     createdAt: text("created_at").notNull(),
     expiresAt: text("expires_at").notNull(),
     revokedAt: text("revoked_at"),
@@ -135,6 +135,25 @@ export const files = sqliteTable(
 );
 
 /** Resumable uploads (phase 18): chunks land in store/tmp/<id>/ until complete assembles them into one object. */
+/** Expiring share links (gap 19): the token's hash, one file, one maker, an expiry and an optional cap. */
+export const shares = sqliteTable(
+  "shares",
+  {
+    id: text("id").primaryKey(),
+    fileId: text("file_id").notNull().references(() => files.id),
+    householdId: text("household_id").notNull().references(() => households.id),
+    createdBy: text("created_by").notNull().references(() => people.id),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    maxDownloads: integer("max_downloads"),
+    downloads: integer("downloads").notNull().default(0),
+    createdAt: text("created_at").notNull(),
+    lastUsedAt: text("last_used_at"),
+    revokedAt: text("revoked_at"),
+  },
+  (t) => [uniqueIndex("shares_token_idx").on(t.tokenHash), index("shares_file_idx").on(t.fileId)],
+);
+
 export const uploads = sqliteTable("uploads", {
   id: text("id").primaryKey(),
   ownerId: text("owner_id").notNull().references(() => people.id),

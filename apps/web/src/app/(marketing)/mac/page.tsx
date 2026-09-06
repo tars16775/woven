@@ -51,6 +51,15 @@ export default function MacPage() {
         </ul>
       </Block>
 
+      <Block id="backup" title="Back up other Macs to it">
+        <p>
+          Any other Mac in the house can back folders up to your Core with a small client and a token you make under Settings, Backup devices. It hashes what changed and sends only bytes the box does not already hold, over the household certificate.
+        </p>
+        <Code>{`curl -fsSL https://raw.githubusercontent.com/tars16775/woven/main/packaging/install.sh | bash -s -- --client
+woven-backup connect https://woven.local:4000 <token from Settings>
+woven-backup run ~/Documents --watch     # keeps watching; --into and --namespace to choose where`}</Code>
+      </Block>
+
       <Block id="command" title="The woven command">
         <Code>{`woven status      # running, where, how much space
 woven logs        # follow the core

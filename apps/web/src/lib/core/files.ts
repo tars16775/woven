@@ -1,6 +1,6 @@
 "use client";
 
-import { ActionRecord, FileEntry, FileListing, FilesSummary, MediaItem, NetworkView, Photo, PhotoStats, PhotoTimeline, StorageHealth, type Namespace } from "@woven/schema";
+import { ActionRecord, FileEntry, FileListing, FilesSummary, MediaItem, NetworkView, Photo, PhotoStats, PhotoTimeline, SearchResult, Share, StorageHealth, type Namespace } from "@woven/schema";
 import { z } from "zod";
 import { CoreError } from "./client";
 import { NoCoreError } from "./identity";
@@ -60,6 +60,19 @@ export const files = {
     return call(`/v1/files/uploads/${session.id}/complete`, FileEntry, post({}));
   },
 };
+
+/** Expiring share links (gap 19). The landing page lives on the Core's own origin. */
+export const shares = {
+  create: (fileId: string, opts: { expiresInHours?: number; maxDownloads?: number | null } = {}) => call(`/v1/files/${fileId}/shares`, z.object({ share: Share, token: z.string() }), post(opts)),
+  list: () => call("/v1/files/shares", z.object({ shares: z.array(Share) })).then((r) => r.shares),
+  revoke: (id: string) => call(`/v1/files/shares/${id}`, Share, { method: "DELETE" }),
+  /** The address to hand out: the Core serves the landing page and the file from one origin. */
+  url: (token: string) => `${base()}/share?t=${encodeURIComponent(token)}`,
+};
+
+/** Search on the box (gap 18). */
+export const search = (q: string, limit = 12) => call(`/v1/search?q=${encodeURIComponent(q)}&limit=${limit}`, z.object({ results: z.array(SearchResult) })).then((r) => r.results);
+export type { SearchResult, Share };
 
 export const photos = {
   timeline: (cursor?: string | null) => call(`/v1/photos${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`, PhotoTimeline),

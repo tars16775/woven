@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: { server: "src/server.ts", gate: "src/gate/process.ts" },
+  entry: { server: "src/server.ts", gate: "src/gate/process.ts", "woven-backup": "src/cli/woven-backup.ts" },
   format: ["esm"],
   target: "node22",
   platform: "node",

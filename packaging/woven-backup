@@ -1,0 +1,5 @@
+#!/bin/bash
+# The woven-backup command: back folders up to the household's Core from any Mac. Installed by install.sh.
+set -euo pipefail
+WOVEN_HOME="${WOVEN_HOME:-$HOME/.woven}"
+exec "$WOVEN_HOME/node/bin/node" "$WOVEN_HOME/current/dist/woven-backup.js" "$@"

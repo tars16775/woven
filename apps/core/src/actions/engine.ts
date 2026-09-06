@@ -4,6 +4,7 @@ import { evaluate, type Decision, type PolicyContext } from "@woven/policy";
 import { and, eq, lt } from "drizzle-orm";
 import { monotonicFactory } from "ulid";
 import type { Db } from "../db/index.ts";
+import type { AuthMethod } from "@woven/schema";
 import { actions } from "../db/schema.ts";
 import type { Ledger } from "../ledger.ts";
 import type { HomeAdapter, Presence } from "../home/adapter.ts";
@@ -24,7 +25,7 @@ export class ActionError extends Error {
   }
 }
 
-export type Approver = Person & { sessionMethod: "passkey" | "code" | "recovery" };
+export type Approver = Person & { sessionMethod: AuthMethod };
 
 export type EngineDeps = {
   db: Db;
