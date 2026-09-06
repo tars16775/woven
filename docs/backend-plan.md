@@ -53,6 +53,7 @@ Honest limits of the Mac phase: no Thread or Zigbee without a Linux radio bridge
 | 19 Files dashboard | done · 2026-09-06 | browse by space and folder, upload, open or save, rename, move between spaces (a receipt), delete with object GC; namespace rules from the household |
 | 20 Photo ingest | done · 2026-09-06 | EXIF (date, camera, place) with exifr, 512 px thumbnails and 2048 px previews with sharp stored as objects, timeline by month, lightbox, import a folder on the box, uploaded images indexed on arrival; faces off |
 | 21 Photo index | next | on-device embeddings for "lake finds the lake trip" |
+| 23 Integrity and restore | done · 2026-09-06 | nightly re-hash of objects (all, or a sample on a large store), snapshot mirrored to `WOVEN_SNAPSHOT_MIRROR`, a restore drill from the Core page that restores the newest snapshot into scratch, verifies chain and objects, and reports |
 | 15 The Gate | done · 2026-09-06 | separate process (child of the core on the Mac, Outside processor on the box), loopback + secret, allow list, open/close persisted, its own crossing log; the core's only egress is the Gate client (lint-enforced); closing makes an approved crossing fail with a receipt |
 
 ## Tracks and phases

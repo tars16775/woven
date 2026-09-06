@@ -1,4 +1,9 @@
-import { CoreConfig, CoreStatus } from "@woven/schema";
+import { BackupStatus, CoreConfig, CoreStatus } from "@woven/schema";
+import { requireRole } from "../auth/guard.ts";
+import { listSnapshots, restoreDrill } from "../integrity.ts";
+import { takeSnapshot } from "../snapshot.ts";
+import { mirrorSnapshot } from "../integrity.ts";
+import { CORE_HOUSEHOLD_ID } from "../data.ts";
 import type { FastifyPluginAsync } from "fastify";
 import type { ZodTypeProvider } from "../zod.ts";
 
@@ -46,5 +51,31 @@ export const systemRoutes: FastifyPluginAsync = async (raw) => {
           }
         : { enabled: false },
     });
+  });
+
+  /* Backups and the restore drill (phase 23) */
+  let lastDrill: BackupStatus["lastDrill"] = null;
+  const backupStatus = async (): Promise<BackupStatus> => ({
+    snapshots: (await listSnapshots(app.deps.data.paths.snapshots, app.deps.config.snapshotMirror)).slice(0, 30),
+    mirror: app.deps.config.snapshotMirror,
+    lastDrill,
+  });
+  app.get("/system/backups", { preHandler: requireRole("owner", "adult"), schema: { response: { 200: BackupStatus } } }, async () => backupStatus());
+
+  app.post("/system/backups/snapshot", { preHandler: requireRole("owner"), schema: { response: { 200: BackupStatus } } }, async (req) => {
+    const { data, config } = app.deps;
+    const snap = await takeSnapshot({ db: data.database, objectsDir: data.paths.store, snapshotsDir: data.paths.snapshots });
+    let mirrored = false;
+    if (config.snapshotMirror) mirrored = (await mirrorSnapshot(snap.dir, config.snapshotMirror).catch(() => ({ copied: false }))).copied;
+    data.ledger.append({ type: "action.executed", householdId: req.session!.person.householdId || CORE_HOUSEHOLD_ID, actor: { kind: "person", id: req.session!.person.id }, where: "inside", target: "snapshot", sensitivity: "low", payload: { capability: "backup.snapshot", planned: {}, observed: { objects: snap.manifest.objects.count, mirrored } } });
+    return backupStatus();
+  });
+
+  app.post("/system/backups/drill", { preHandler: requireRole("owner"), schema: { response: { 200: BackupStatus } } }, async (req) => {
+    const { data, config } = app.deps;
+    const report = await restoreDrill(data.paths.snapshots, config.snapshotMirror);
+    lastDrill = { ...report, at: new Date().toISOString() };
+    data.ledger.append({ type: "core.integrity_checked", householdId: req.session!.person.householdId || CORE_HOUSEHOLD_ID, actor: { kind: "person", id: req.session!.person.id }, where: "inside", target: report.snapshot, sensitivity: "low", payload: { drill: true, ok: report.ok, rows: report.ledger.rows, objects: report.objects.checked, problem: report.problem } });
+    return backupStatus();
   });
 };

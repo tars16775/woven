@@ -9,6 +9,7 @@ import { useToast } from "@/components/dashboard/toast";
 import { useGateOpen } from "@/components/dashboard/state";
 import { core, household } from "@/lib/dashboard/data";
 import { ConnectCore } from "@/components/dashboard/connect-core";
+import { BackupsCard } from "@/components/dashboard/backups-card";
 import { memoryLabel, storageLabel, temperatureLabel, useLiveCore } from "@/lib/core/live";
 import { coreClient, useCore } from "@/lib/core/store";
 import type { Integrity } from "@/lib/core/client";
@@ -265,6 +266,12 @@ export function CoreView() {
           </ul>
         </Card>
       </div>
+
+      {connection.phase === "connected" && (
+        <div className="mt-4">
+          <BackupsCard />
+        </div>
+      )}
 
       <Card title="Updates" className="mt-4">
         <div className="flex flex-wrap items-center justify-between gap-4 text-[14px]">

@@ -3,8 +3,12 @@ import { join } from "node:path";
 import type { Logger } from "./logger.ts";
 import { CORE_HOUSEHOLD_ID, type Data } from "./data.ts";
 import { takeSnapshot } from "./snapshot.ts";
+import { mirrorSnapshot, verifyStore } from "./integrity.ts";
 
 export type MaintenanceOptions = {
+  /** A second location for snapshots. */
+  mirror?: string | null;
+  sweep?: () => Promise<number>;
   /** Local hour (0-23) to run. Default 3 in the morning, when the house is quiet. */
   hour?: number;
   /** How many snapshots to keep. Default 14. */
@@ -21,21 +25,31 @@ export function msUntilHour(hour: number, now: Date): number {
 }
 
 /** Verify the chain, snapshot the household, prune old snapshots. */
-export async function runNightly(data: Data, logger: Logger, keep = 14, sweep?: () => Promise<number>): Promise<void> {
-  if (sweep) logger.info({ removed: await sweep() }, "stale uploads swept");
+export async function runNightly(data: Data, logger: Logger, keep = 14, opts: Pick<MaintenanceOptions, "mirror" | "sweep"> = {}): Promise<void> {
+  if (opts.sweep) logger.info({ removed: await opts.sweep() }, "stale uploads swept");
   const report = data.ledger.verify();
+  const objects = await verifyStore(data.database.db, data.store);
   data.ledger.append({
     type: "core.integrity_checked",
     householdId: CORE_HOUSEHOLD_ID,
     actor: { kind: "core", id: "core" },
     where: "inside",
     sensitivity: "low",
-    payload: { ok: report.ok, rows: report.rows, nightly: true },
+    payload: { ok: report.ok && objects.corrupt.length === 0 && objects.missing.length === 0, rows: report.rows, objects: { checked: objects.checked, total: objects.total, corrupt: objects.corrupt.length, missing: objects.missing.length, sampled: objects.sampled }, nightly: true },
   });
   if (!report.ok) logger.error({ report }, "ledger integrity check FAILED");
+  if (objects.corrupt.length || objects.missing.length) logger.error({ corrupt: objects.corrupt, missing: objects.missing }, "object store integrity check FAILED");
 
   const snap = await takeSnapshot({ db: data.database, objectsDir: data.paths.store, snapshotsDir: data.paths.snapshots });
   logger.info({ dir: snap.dir, objects: snap.manifest.objects.count }, "snapshot taken");
+  if (opts.mirror) {
+    try {
+      const m = await mirrorSnapshot(snap.dir, opts.mirror);
+      logger.info({ mirror: opts.mirror, copied: m.copied }, "snapshot mirrored");
+    } catch (err) {
+      logger.error({ err, mirror: opts.mirror }, "snapshot mirror FAILED; the second location is not reachable");
+    }
+  }
 
   await pruneSnapshots(data.paths.snapshots, keep);
 }
@@ -55,7 +69,7 @@ export function scheduleNightly(data: Data, logger: Logger, opts: MaintenanceOpt
   let timer: NodeJS.Timeout | null = null;
   const arm = () => {
     timer = setTimeout(() => {
-      runNightly(data, logger, opts.keep).catch((err: unknown) => logger.error({ err }, "nightly maintenance failed"));
+      runNightly(data, logger, opts.keep, { mirror: opts.mirror ?? null, ...(opts.sweep ? { sweep: opts.sweep } : {}) }).catch((err: unknown) => logger.error({ err }, "nightly maintenance failed"));
       arm();
     }, msUntilHour(hour, now()));
     timer.unref();

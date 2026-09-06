@@ -488,3 +488,16 @@ export const PhotoStats = z.object({
 });
 export type PhotoStats = z.infer<typeof PhotoStats>;
 
+/* Backups and the restore drill (phase 23) ---------------------------------- */
+
+export const SnapshotInfo = z.object({ name: z.string(), takenAt: z.iso.datetime(), objects: z.number().int(), bytes: z.number().int(), mirrored: z.boolean() });
+export const BackupStatus = z.object({
+  snapshots: z.array(SnapshotInfo),
+  mirror: z.string().nullable(),
+  /** The last drill, if one ran since the core started. */
+  lastDrill: z
+    .object({ snapshot: z.string(), takenAt: z.iso.datetime(), ok: z.boolean(), ledger: z.object({ ok: z.boolean(), rows: z.number().int() }), objects: z.object({ checked: z.number().int(), total: z.number().int(), corrupt: z.array(z.string()), missing: z.array(z.string()), sampled: z.boolean() }), durationMs: z.number().int(), problem: z.string().nullable(), at: z.iso.datetime() })
+    .nullable(),
+});
+export type BackupStatus = z.infer<typeof BackupStatus>;
+

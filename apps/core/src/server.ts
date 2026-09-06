@@ -74,7 +74,7 @@ async function main() {
         coreUrl: `${scheme}://${config.name}:${config.port}/v1/health`,
       })
     : null;
-  const stopNightly = config.env === "production" || config.env === "development" ? scheduleNightly(data, logger) : () => undefined;
+  const stopNightly = config.env === "production" || config.env === "development" ? scheduleNightly(data, logger, { mirror: config.snapshotMirror, sweep: () => services.files.sweepUploads() }) : () => undefined;
 
   const bonjour = config.mdns ? new Bonjour() : null;
   const stop = async (signal: string) => {

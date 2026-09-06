@@ -103,3 +103,13 @@ test("Files uploads to the box in chunks, lists, serves and deletes; an image sh
   await page.getByRole("button", { name: "Delete dot.png" }).click();
   await expect(page.getByTestId("empty")).toBeVisible({ timeout: 15_000 });
 });
+
+test("the owner runs a restore drill from the Core page", async ({ page }) => {
+  await signInWithPasskey(page);
+  await page.goto("/dashboard/core");
+  await expect(page.getByTestId("core-connection")).toContainText(/Core · localhost/, { timeout: 30_000 });
+  await page.getByRole("button", { name: "Snapshot now" }).click({ timeout: 30_000 });
+  await expect(page.getByText(/Snapshot taken/)).toBeVisible({ timeout: 20_000 });
+  await page.getByTestId("restore-drill").click();
+  await expect(page.getByTestId("drill-result")).toContainText("Restored and verified", { timeout: 60_000 });
+});

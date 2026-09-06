@@ -27,6 +27,8 @@ const Env = z.object({
   WOVEN_GATE_PORT: z.coerce.number().int().min(1).max(65535).default(4010),
   /** Hosts crossings may reach, comma-separated. Empty means the Gate refuses everything. */
   WOVEN_GATE_ALLOW: z.string().default(""),
+  /** A second place for snapshots: another drive, or a folder the household chose. Empty means none yet. */
+  WOVEN_SNAPSHOT_MIRROR: z.string().default(""),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 });
 
@@ -43,6 +45,7 @@ export type Config = {
   /** 0 disables the loopback listener. */
   localPort: number;
   gate: { mode: string; port: number; allow: string };
+  snapshotMirror: string | null;
   logLevel: z.infer<typeof Env>["LOG_LEVEL"];
 };
 
@@ -65,6 +68,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     trustPort: e.WOVEN_TRUST_PORT,
     localPort: e.WOVEN_LOCAL_PORT,
     gate: { mode: e.WOVEN_GATE, port: e.WOVEN_GATE_PORT, allow: e.WOVEN_GATE_ALLOW },
+    snapshotMirror: e.WOVEN_SNAPSHOT_MIRROR.trim() || null,
     logLevel: e.LOG_LEVEL,
   };
 }
