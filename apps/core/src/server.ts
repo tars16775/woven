@@ -123,6 +123,16 @@ async function main() {
             night = facts;
             void reassess();
           },
+          ...(config.healthPing
+            ? {
+                // Opt-in and honest: version and uptime, through the Gate (woventechnology.com must be on the allow list), with a receipt that says exactly that.
+                ping: async () => {
+                  const sent = `A health ping to woventechnology.com: Woven Core ${version}, ${identity.kind}, up ${Math.round(process.uptime() / 86400)} days. Nothing about the household.`;
+                  const r = await services.gate.cross({ actionId: `health-ping:${new Date().toISOString().slice(0, 10)}`, host: "woventechnology.com", method: "POST", path: "/api/ping", body: JSON.stringify({ version, kind: identity.kind, upDays: Math.round(process.uptime() / 86400) }) });
+                  data.ledger.append({ type: "gate.crossing", householdId: CORE_HOUSEHOLD_ID, actor: { kind: "core", id: "core" }, where: "gate", sensitivity: "low", target: "woventechnology.com", sent, payload: { capability: "core.health_ping", observed: { status: r.status, bytesOut: r.bytesOut } } });
+                },
+              }
+            : {}),
         }) : () => undefined;
 
   // Alerts: what the household should hear about, reassessed every ten minutes and after the nightly job.
@@ -145,7 +155,11 @@ async function main() {
       logger.warn({ err }, "could not assess alerts");
     }
   };
-  services.alerts.onChange = (alerts) => logger.info({ alerts: alerts.map((a) => `${a.level}: ${a.title}`) }, "alerts changed");
+  services.alerts.onChange = (alerts) => {
+    logger.info({ alerts: alerts.map((a) => `${a.level}: ${a.title}`) }, "alerts changed");
+    // Urgent ones reach the adults' devices (gap 25), through the Gate, with a receipt.
+    void services.push.onAlerts(alerts).catch((err: unknown) => logger.warn({ err }, "could not push an alert"));
+  };
   void reassess();
   const alertTimer = setInterval(() => void reassess(), 10 * 60_000);
   alertTimer.unref();

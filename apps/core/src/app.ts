@@ -41,6 +41,7 @@ import { systemRoutes } from "./routes/system.ts";
 import { askRoutes } from "./routes/ask.ts";
 import { shareRoutes } from "./routes/shares.ts";
 import { remoteRoutes } from "./routes/remote.ts";
+import { pushRoutes } from "./routes/push.ts";
 import type { RelayClient } from "./remote/client.ts";
 
 export type AppDeps = {
@@ -147,6 +148,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(askRoutes, { prefix: "/v1" });
   await app.register(shareRoutes, { prefix: "/v1" });
   await app.register(remoteRoutes, { prefix: "/v1" });
+  await app.register(pushRoutes, { prefix: "/v1" });
   await app.register(ledgerRoutes, { prefix: "/v1" });
   await app.register(eventRoutes, { prefix: "/v1" });
   await app.register(householdRoutes, { prefix: "/v1" });

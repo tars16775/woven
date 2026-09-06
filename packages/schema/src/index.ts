@@ -468,6 +468,11 @@ export const RemotePairing = z.object({
 });
 export type RemotePairing = z.infer<typeof RemotePairing>;
 
+/* Notifications (gap 17) ------------------------------------------------------ */
+
+export const PushSubscriptionView = z.object({ id: z.string(), host: z.string(), label: z.string().nullable(), createdAt: z.iso.datetime(), lastSentAt: z.iso.datetime().nullable(), failures: z.number().int() });
+export type PushSubscriptionView = z.infer<typeof PushSubscriptionView>;
+
 /* Files (phases 18 and 19) --------------------------------------------------- */
 
 export const FileEntry = z.object({

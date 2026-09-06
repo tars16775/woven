@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-globals -- this file is the core's only way out: it talks to the Gate on loopback (ADR 0005). */
 import type { GateStatus } from "@woven/schema";
 
-export type CrossRequest = { actionId: string; host: string; method: "GET" | "POST"; path: string; body?: string | undefined };
+export type CrossRequest = { actionId: string; host: string; method: "GET" | "POST"; path: string; body?: string | undefined; bodyBase64?: string | undefined; headers?: Record<string, string> | undefined };
 export type CrossResult = { status: number; bytesOut: number; bytesIn: number; durationMs: number; body: string };
 export type FetchResult = { status: number; bytesIn: number; sha256: string; hops: string[]; durationMs: number };
 

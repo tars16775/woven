@@ -100,6 +100,8 @@ WOVEN_ORIGINS="https://${WOVEN_NAME:-woven.local}:${WOVEN_PORT:-4000},http://loc
 WOVEN_SNAPSHOT_MIRROR=""
 # Remote access: the relay address (wss://...). Empty keeps the Core reachable at home only.
 WOVEN_RELAY=""
+# Opt-in nightly health ping to woventechnology.com (version and uptime only, through the Gate, with a receipt).
+WOVEN_HEALTH_PING="off"
 LOG_LEVEL="info"
 CONF
 fi

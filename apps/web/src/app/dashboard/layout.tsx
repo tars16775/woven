@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Shell } from "@/components/dashboard/shell";
+import { Pwa } from "@/components/pwa";
 
 export const metadata: Metadata = {
   title: { default: "Dashboard", template: "%s · Dashboard | Woven" },
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function DashboardLayout({ children }: LayoutProps<"/dashboard">) {
-  return <Shell>{children}</Shell>;
+  return (
+    <>
+      <Pwa />
+      <Shell>{children}</Shell>
+    </>
+  );
 }

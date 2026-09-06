@@ -13,7 +13,7 @@ function walk(dir) {
     if (name.startsWith("._")) continue;
     const p = join(dir, name);
     if (statSync(p).isDirectory()) walk(p);
-    else if (/^live[^/]*\.tsx?$/.test(name) || /^(pilot-card|memory-card|passkeys-card|backups-card|data-rights-card|backup-tokens-card|search-box|remote-card|core-image|approvals)\.tsx$/.test(name)) check(p);
+    else if (/^live[^/]*\.tsx?$/.test(name) || /^(pilot-card|memory-card|passkeys-card|backups-card|data-rights-card|backup-tokens-card|search-box|remote-card|core-image|notifications-card|approvals)\.tsx$/.test(name)) check(p);
   }
 }
 

@@ -171,6 +171,24 @@ export const remoteDevices = sqliteTable(
   (t) => [index("remote_devices_person_idx").on(t.personId)],
 );
 
+/** Push subscriptions (gap 17): the endpoint and keys sealed under the household key; the host in the clear for the Gate's allow list. */
+export const pushSubscriptions = sqliteTable(
+  "push_subscriptions",
+  {
+    id: text("id").primaryKey(),
+    householdId: text("household_id").notNull().references(() => households.id),
+    personId: text("person_id").notNull().references(() => people.id),
+    host: text("host").notNull(),
+    sealed: text("sealed").notNull(),
+    label: text("label"),
+    createdAt: text("created_at").notNull(),
+    lastSentAt: text("last_sent_at"),
+    failures: integer("failures").notNull().default(0),
+    revokedAt: text("revoked_at"),
+  },
+  (t) => [index("push_subscriptions_person_idx").on(t.personId)],
+);
+
 export const uploads = sqliteTable("uploads", {
   id: text("id").primaryKey(),
   ownerId: text("owner_id").notNull().references(() => people.id),

@@ -11,6 +11,8 @@ export type MaintenanceOptions = {
   sweep?: () => Promise<number>;
   /** Called with what the night found, so alerts can be raised or cleared. */
   report?: (facts: { ledgerOk: boolean; objectsBad: number; mirrorOk: boolean | null }) => void;
+  /** The opt-in health ping (gap 25), after the night's work. */
+  ping?: () => Promise<void>;
   /** Local hour (0-23) to run. Default 3 in the morning, when the house is quiet. */
   hour?: number;
   /** How many snapshots to keep. Default 14. */
@@ -27,7 +29,7 @@ export function msUntilHour(hour: number, now: Date): number {
 }
 
 /** Verify the chain, snapshot the household, prune old snapshots. */
-export async function runNightly(data: Data, logger: Logger, keep = 14, opts: Pick<MaintenanceOptions, "mirror" | "sweep" | "report"> = {}): Promise<void> {
+export async function runNightly(data: Data, logger: Logger, keep = 14, opts: Pick<MaintenanceOptions, "mirror" | "sweep" | "report" | "ping"> = {}): Promise<void> {
   if (opts.sweep) logger.info({ removed: await opts.sweep() }, "stale uploads swept");
   const report = data.ledger.verify();
   const objects = await verifyStore(data.database.db, data.store);
@@ -58,6 +60,7 @@ export async function runNightly(data: Data, logger: Logger, keep = 14, opts: Pi
   opts.report?.({ ledgerOk: report.ok, objectsBad: objects.corrupt.length + objects.missing.length, mirrorOk });
 
   await pruneSnapshots(data.paths.snapshots, keep);
+  if (opts.ping) await opts.ping().catch((err: unknown) => logger.warn({ err }, "the health ping did not leave"));
 }
 
 export async function pruneSnapshots(snapshotsDir: string, keep: number): Promise<string[]> {
@@ -75,7 +78,7 @@ export function scheduleNightly(data: Data, logger: Logger, opts: MaintenanceOpt
   let timer: NodeJS.Timeout | null = null;
   const arm = () => {
     timer = setTimeout(() => {
-      runNightly(data, logger, opts.keep, { mirror: opts.mirror ?? null, ...(opts.sweep ? { sweep: opts.sweep } : {}), ...(opts.report ? { report: opts.report } : {}) }).catch((err: unknown) => logger.error({ err }, "nightly maintenance failed"));
+      runNightly(data, logger, opts.keep, { mirror: opts.mirror ?? null, ...(opts.sweep ? { sweep: opts.sweep } : {}), ...(opts.report ? { report: opts.report } : {}), ...(opts.ping ? { ping: opts.ping } : {}) }).catch((err: unknown) => logger.error({ err }, "nightly maintenance failed"));
       arm();
     }, msUntilHour(hour, now()));
     timer.unref();

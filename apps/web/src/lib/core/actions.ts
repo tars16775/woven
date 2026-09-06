@@ -1,6 +1,6 @@
 "use client";
 
-import { ActionRecord, GateStatus, HomeState, RemoteDevice, RemotePairing, RemoteStatus, Routine, RoutineRun, type NewRoutine, type PrepareRequest } from "@woven/schema";
+import { ActionRecord, GateStatus, HomeState, PushSubscriptionView, RemoteDevice, RemotePairing, RemoteStatus, Routine, RoutineRun, type NewRoutine, type PrepareRequest } from "@woven/schema";
 import { z } from "zod";
 import { CoreError } from "./client";
 import { coreClient } from "./store";
@@ -58,6 +58,15 @@ export const remote = {
   pair: (label: string) => call("/v1/remote/pair", RemotePairing, post({ label })),
   devices: () => call("/v1/remote/devices", z.object({ devices: z.array(RemoteDevice) })).then((r) => r.devices),
   revoke: (id: string) => call(`/v1/remote/devices/${id}`, RemoteDevice, { method: "DELETE" }),
+};
+
+/** Notifications (gap 17). */
+export const push = {
+  vapid: () => call("/v1/push/vapid", z.object({ publicKey: z.string() })),
+  subscribe: (sub: { endpoint: string; keys: { p256dh: string; auth: string }; label?: string }) => call("/v1/push/subscriptions", PushSubscriptionView, post(sub)),
+  list: () => call("/v1/push/subscriptions", z.object({ subscriptions: z.array(PushSubscriptionView) })).then((r) => r.subscriptions),
+  remove: (id: string) => call(`/v1/push/subscriptions/${id}`, z.object({ removed: z.boolean() }), { method: "DELETE" }),
+  test: () => call("/v1/push/test", z.object({ sent: z.number(), failed: z.number(), dropped: z.number(), skipped: z.string().nullable() }), post({})),
 };
 
 export const gate = {

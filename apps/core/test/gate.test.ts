@@ -17,11 +17,15 @@ const dataRoot = mkdtempSync(`${os.tmpdir()}/woven-gate-`);
 const ORIGIN = "http://localhost:3000";
 let outsidePort = 0;
 let outsideHits = 0;
+let lastOutside: { headers: Record<string, string | string[] | undefined>; body: Buffer; path: string } | null = null;
 const outside = createServer((req, res) => {
   outsideHits += 1;
-  let body = "";
-  req.on("data", (c: Buffer) => (body += c.toString()));
+  const chunks: Buffer[] = [];
+  req.on("data", (c: Buffer) => chunks.push(c));
   req.on("end", () => {
+    const body = Buffer.concat(chunks);
+    lastOutside = { headers: req.headers, body, path: req.url ?? "" };
+    res.statusCode = req.url?.startsWith("/push/gone") ? 410 : req.url?.startsWith("/push/") ? 201 : 200;
     res.setHeader("content-type", "application/json");
     res.end(JSON.stringify({ echo: body.length, path: req.url }));
   });
@@ -152,4 +156,59 @@ describe("the Gate (phase 15)", () => {
     expect(stateFile.state).toBe("closed");
     await app.inject({ method: "POST", url: "/v1/gate", headers: auth(owner), payload: { open: true } });
   });
+  it("sends notifications through the Gate, encrypted for one device, with a receipt (gaps 17 and 25)", async () => {
+    const { generateKeyPairSync, randomBytes } = await import("node:crypto");
+    const { decryptForTest } = await import("../src/push/webpush.ts");
+    // A browser's keys, and its subscription with a push service that happens to be our outside server.
+    const pair = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
+    const jwk = pair.privateKey.export({ format: "jwk" }) as { d: string; x: string; y: string; kty: string; crv: string };
+    const p256dh = Buffer.concat([Buffer.from([4]), Buffer.from(jwk.x, "base64url"), Buffer.from(jwk.y, "base64url")]).toString("base64url");
+    const authSecret = randomBytes(16);
+    const endpoint = `https://127.0.0.1:${outsidePort}/push/device-1`;
+    // The push service host is on the allow list (the same host the crossings above used), and the Gate is open.
+    await app.inject({ method: "POST", url: "/v1/gate", headers: auth(owner), payload: { open: true } });
+    const vapid = await app.inject({ method: "GET", url: "/v1/push/vapid", headers: auth(owner) });
+    expect(Buffer.from(vapid.json<{ publicKey: string }>().publicKey, "base64url")).toHaveLength(65);
+    const made = await app.inject({ method: "POST", url: "/v1/push/subscriptions", headers: auth(owner), payload: { endpoint, keys: { p256dh, auth: authSecret.toString("base64url") }, label: "Alex's phone" } });
+    expect(made.statusCode).toBe(201);
+    expect(made.json()).toMatchObject({ host: `127.0.0.1:${outsidePort}`, label: "Alex's phone", failures: 0 });
+
+    // The Gate speaks plain HTTP to 127.0.0.1; the endpoint's scheme is what the push service would use.
+    const person = services.household.personByEmail("alex@example.com")!;
+    const hitsBefore = outsideHits;
+    const r = await services.push.send(person, { title: "Woven: test", body: "hello", url: "/dashboard" });
+    expect(r).toEqual({ sent: 1, failed: 0, dropped: 0, skipped: null });
+    expect(outsideHits).toBe(hitsBefore + 1);
+    expect(lastOutside?.path).toBe("/push/device-1");
+    expect(lastOutside?.headers["content-encoding"]).toBe("aes128gcm");
+    expect(String(lastOutside?.headers.authorization)).toMatch(/^vapid t=.+, k=.+$/);
+    expect(lastOutside?.headers.ttl).toBe("86400");
+    const plain = JSON.parse(decryptForTest(jwk, authSecret, lastOutside!.body).toString()) as { title: string; body: string };
+    expect(plain).toMatchObject({ title: "Woven: test", body: "hello" });
+    // The receipt says a notification with that title went to that host, and nothing about its content.
+    const receipt = data.ledger.recent(householdId, 5).find((x) => x.type === "gate.crossing" && (x.payload as { capability?: string }).capability === "push.send")!;
+    expect(receipt.sent).toContain('titled "Woven: test"');
+    expect(receipt.sent).not.toContain("hello");
+    expect((receipt.payload as { observed: { status: number } }).observed.status).toBe(201);
+
+    // An urgent alert goes to the adults once, not again while it stays raised.
+    const before = outsideHits;
+    await services.push.onAlerts([{ id: "disk", level: "urgent", title: "The volume is almost full", detail: "2% free.", since: new Date().toISOString() }]);
+    await services.push.onAlerts([{ id: "disk", level: "urgent", title: "The volume is almost full", detail: "2% free.", since: new Date().toISOString() }]);
+    expect(outsideHits).toBe(before + 1);
+    expect(JSON.parse(decryptForTest(jwk, authSecret, lastOutside!.body).toString())).toMatchObject({ title: "Woven: The volume is almost full" });
+
+    // A push service that says the subscription is gone gets it dropped.
+    const gone = await app.inject({ method: "POST", url: "/v1/push/subscriptions", headers: auth(owner), payload: { endpoint: `https://127.0.0.1:${outsidePort}/push/gone-2`, keys: { p256dh, auth: authSecret.toString("base64url") } } });
+    expect(gone.statusCode).toBe(201);
+    const r2 = await app.inject({ method: "POST", url: "/v1/push/test", headers: auth(owner) });
+    expect(r2.json()).toMatchObject({ sent: 1, dropped: 1 });
+    const list = await app.inject({ method: "GET", url: "/v1/push/subscriptions", headers: auth(owner) });
+    expect(list.json<{ subscriptions: { id: string }[] }>().subscriptions).toHaveLength(1);
+    // Close the Gate: nothing leaves, and the outcome says so.
+    await app.inject({ method: "POST", url: "/v1/gate", headers: auth(owner), payload: { open: false } });
+    expect((await services.push.send(person, { title: "x", body: "y" })).skipped).toBe("the Gate is closed");
+    await app.inject({ method: "POST", url: "/v1/gate", headers: auth(owner), payload: { open: true } });
+  });
 });
+

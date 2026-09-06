@@ -8,6 +8,7 @@ import { files as filesTable } from "./db/schema.ts";
 import { SearchIndex } from "./search.ts";
 import { ShareService } from "./shares.ts";
 import { RemoteDevices } from "./remote/devices.ts";
+import { PushService } from "./push/service.ts";
 import { derive } from "./keystore.ts";
 import { SessionService } from "./auth/sessions.ts";
 import { HouseholdService } from "./household.ts";
@@ -65,6 +66,7 @@ export type Services = {
   search: SearchIndex;
   shares: ShareService;
   remoteDevices: RemoteDevices;
+  push: PushService;
 };
 
 export type ServiceOptions = { home?: HomeAdapter; logger?: Logger; loadEmbedder?: (dir: string) => Promise<Embedder>; tools?: Tools; hardware?: Hardware; mdns?: boolean };
@@ -183,6 +185,7 @@ export function buildServices(data: Data, config: Config, gate: GateClient, opts
     search,
     shares: new ShareService(db, data.ledger, files),
     remoteDevices: new RemoteDevices(db, data.ledger, sessions, derive(data.key, "remote")),
+    push: new PushService(db, data.ledger, gate, household, data.paths.keys, derive(data.key, "keys"), logger, `mailto:${config.name.replace(/\.local$/, "")}@woven.local`),
     alerts: new Alerts(),
     metrics: new Metrics(),
   } as Services;

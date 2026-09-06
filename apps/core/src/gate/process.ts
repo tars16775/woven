@@ -109,6 +109,10 @@ const Cross = z.object({
   method: z.enum(["GET", "POST"]),
   path: z.string().default("/"),
   body: z.string().optional(),
+  /** A binary body (an encrypted notification), base64. */
+  bodyBase64: z.string().optional(),
+  /** Extra request headers (VAPID authorization, content encoding). Host and cookies are never forwarded. */
+  headers: z.record(z.string(), z.string()).optional(),
 });
 
 app.post("/cross", async (req, reply) => {
@@ -130,14 +134,17 @@ app.post("/cross", async (req, reply) => {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 60_000);
   try {
+    const extra: Record<string, string> = {};
+    for (const [k, v] of Object.entries(c.headers ?? {})) if (!/^(host|cookie|authorization-bearer-woven|x-woven-device)$/i.test(k)) extra[k.toLowerCase()] = v;
+    const binary = c.bodyBase64 !== undefined ? Buffer.from(c.bodyBase64, "base64") : null;
     const res = await fetch(url, {
       method: c.method,
       signal: ctrl.signal,
-      headers: { "content-type": "application/json", "user-agent": "WovenGate/0.1" },
-      ...(c.body !== undefined && c.method === "POST" ? { body: c.body } : {}),
+      headers: { "content-type": "application/json", "user-agent": "WovenGate/0.1", ...extra },
+      ...(c.method === "POST" && binary ? { body: binary } : c.body !== undefined && c.method === "POST" ? { body: c.body } : {}),
     });
     const text = await res.text();
-    const bytesOut = Buffer.byteLength(c.body ?? "") + Buffer.byteLength(url);
+    const bytesOut = (binary ? binary.length : Buffer.byteLength(c.body ?? "")) + Buffer.byteLength(url);
     crossingsToday += 1;
     bytesOutToday += bytesOut;
     await record({ kind: "crossed", actionId: c.actionId, host, status: res.status, bytesOut, bytesIn: Buffer.byteLength(text) });

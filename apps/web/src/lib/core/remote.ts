@@ -45,9 +45,9 @@ function b64(bytes: Uint8Array): string {
   for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(s);
 }
-function unb64(s: string): Uint8Array {
+function unb64(s: string): Uint8Array<ArrayBuffer> {
   const bin = atob(s);
-  const out = new Uint8Array(bin.length);
+  const out = new Uint8Array(new ArrayBuffer(bin.length));
   for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
   return out;
 }
@@ -117,7 +117,7 @@ export class RemoteTunnel {
     });
     let body: string | null = null;
     if (init.body !== undefined && init.body !== null) {
-      const bytes = typeof init.body === "string" ? enc.encode(init.body) : init.body instanceof Blob ? new Uint8Array(await init.body.arrayBuffer()) : init.body instanceof ArrayBuffer ? new Uint8Array(init.body) : ArrayBuffer.isView(init.body) ? new Uint8Array(init.body.buffer, init.body.byteOffset, init.body.byteLength) : null;
+      const bytes = typeof init.body === "string" ? enc.encode(init.body) : init.body instanceof Blob ? new Uint8Array(await init.body.arrayBuffer()) : init.body instanceof ArrayBuffer ? new Uint8Array(init.body) : ArrayBuffer.isView(init.body) ? new Uint8Array(init.body.buffer.slice(init.body.byteOffset, init.body.byteOffset + init.body.byteLength) as ArrayBuffer) : null;
       if (!bytes) throw new Error("that body cannot travel through the relay");
       body = b64(bytes);
     }
@@ -144,7 +144,7 @@ export class RemoteTunnel {
     const i = `${Date.now().toString(36)}-${(this.seq += 1)}`;
     const nonce = crypto.getRandomValues(new Uint8Array(12));
     const plain = enc.encode(JSON.stringify({ i, ...req }));
-    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce, additionalData: enc.encode(this.pairing.deviceId) }, this.key, plain));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce, additionalData: enc.encode(this.pairing.deviceId) }, this.key, plain as BufferSource));
     const frame = JSON.stringify({ d: this.pairing.deviceId, n: b64(nonce), c: b64(ct) });
     return new Promise<TunnelResponse>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -167,7 +167,7 @@ export class RemoteTunnel {
     if (typeof frame.n !== "string" || typeof frame.c !== "string") return;
     let msg: { i: string; s?: number; h?: Record<string, string>; b?: string | null; ev?: { type: string; row?: LedgerRow } };
     try {
-      const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(frame.n), additionalData: enc.encode(this.pairing.deviceId) }, this.key, unb64(frame.c));
+      const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(frame.n), additionalData: enc.encode(this.pairing.deviceId) }, this.key, unb64(frame.c) as BufferSource);
       msg = JSON.parse(dec.decode(plain)) as typeof msg;
     } catch {
       return;

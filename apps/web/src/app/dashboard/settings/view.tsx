@@ -10,6 +10,7 @@ import { HouseholdCard } from "@/components/dashboard/household-card";
 import { DataRightsCard } from "@/components/dashboard/data-rights-card";
 import { BackupTokensCard } from "@/components/dashboard/backup-tokens-card";
 import { RemoteCard } from "@/components/dashboard/remote-card";
+import { NotificationsCard } from "@/components/dashboard/notifications-card";
 import { useCore } from "@/lib/core/store";
 import { useSession } from "@/lib/auth";
 import { explain, identity } from "@/lib/core/identity";
@@ -104,6 +105,7 @@ export function SettingsView() {
             <DataRightsCard />
             <BackupTokensCard />
             <RemoteCard />
+            <NotificationsCard />
           </>
         )}
         {!live && (
