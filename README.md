@@ -10,14 +10,27 @@ Everything in your world, woven together.
 - The website and dashboard frontend lives in `apps/web` (Next.js 16, Tailwind 4, Motion, react-three-fiber). Marketing site, product pages, order configurator, sign-in and sign-up, and the household dashboard are built against a typed mock data layer and a client-side mock session.
 - The backend (identity, policy engine, capability gateway, activity ledger) is the next phase and will replace `apps/web/src/lib/dashboard/data.ts`.
 
+## Layout
+
+```
+apps/web        the site and the dashboard (Next.js)
+apps/core       the Woven Core service (Fastify), runs inside the house on :4000
+packages/schema shared Zod schemas and types for every boundary
+packages/hal    hardware layer: what machine this is, honestly
+packages/policy the deterministic action-risk engine
+docs/adr        architecture decision records
+docs/backend-plan.md  the 50 phases
+```
+
 ## Run it
 
 ```bash
-pnpm --dir apps/web install
-pnpm --dir apps/web dev
+pnpm install
+pnpm dev            # site on :3000 and core on :4000
+pnpm typecheck && pnpm lint && pnpm test
 ```
 
-Then open http://localhost:3000. The dashboard is at `/dashboard`.
+Or double-click `Start Woven.command` on the LaCie. The site is at http://localhost:3000, the dashboard at `/dashboard`, the core at http://localhost:4000/v1/health.
 
 Visual QA screenshots (uses the locally installed Chrome):
 

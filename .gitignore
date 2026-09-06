@@ -23,3 +23,9 @@ files/
 
 # machine-specific pnpm store location
 .npmrc
+
+# build output
+**/dist
+
+# dependencies (workspace-wide)
+node_modules/

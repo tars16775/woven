@@ -1,0 +1,25 @@
+{
+  "name": "@woven/hal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Hardware layer: everything the core knows about the machine it runs on.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@woven/schema": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.0"
+  }
+}

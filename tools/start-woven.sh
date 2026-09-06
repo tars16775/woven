@@ -32,7 +32,7 @@ fi
 if [ -d "$REPO/apps/core" ]; then
   if ! lsof -iTCP:4000 -sTCP:LISTEN >/dev/null 2>&1; then
     echo "Starting Woven Core…"
-    (cd "$REPO/apps/core" && WOVEN_DATA="$MOUNT/Woven Data" nohup pnpm start >"$LOGS/core.log" 2>&1 &)
+    (cd "$REPO/apps/core" && WOVEN_DATA="$MOUNT/Woven Data" nohup pnpm exec tsx src/server.ts >"$LOGS/core.log" 2>&1 &)
   fi
 fi
 
