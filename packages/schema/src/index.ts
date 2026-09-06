@@ -229,3 +229,26 @@ export const CoreStatus = z.object({
   dataRoot: z.string(),
 });
 export type CoreStatus = z.infer<typeof CoreStatus>;
+
+/** Non-secret runtime configuration, shown on the Core page. */
+export const CoreConfig = z.object({
+  version: z.string(),
+  name: z.string(),
+  port: z.number().int(),
+  origins: z.array(z.string()),
+  mdns: z.boolean(),
+  tls: z.discriminatedUnion("enabled", [
+    z.object({
+      enabled: z.literal(true),
+      caFingerprint: z.string(),
+      caNotAfter: z.iso.datetime(),
+      serverNotAfter: z.iso.datetime(),
+      names: z.array(z.string()),
+      addresses: z.array(z.string()),
+      trustUrl: z.url(),
+    }),
+    z.object({ enabled: z.literal(false) }),
+  ]),
+});
+export type CoreConfig = z.infer<typeof CoreConfig>;
+

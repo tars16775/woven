@@ -14,7 +14,7 @@ Everything in your world, woven together.
 
 ```
 apps/web        the site and the dashboard (Next.js)
-apps/core       the Woven Core service (Fastify), runs inside the house on :4000
+apps/core       the Woven Core service (Fastify), runs inside the house on :4000 (HTTPS) with the trust page on :4001
 packages/schema shared Zod schemas and types for every boundary
 packages/hal    hardware layer: what machine this is, honestly
 packages/policy the deterministic action-risk engine
@@ -35,7 +35,7 @@ pnpm --filter ./apps/core restore <snapshot-dir> [root]  # restore into an empty
 pnpm --filter ./apps/core db:generate                    # after editing apps/core/src/db/schema.ts
 ```
 
-Or double-click `Start Woven.command` on the LaCie. The site is at http://localhost:3000, the dashboard at `/dashboard`, the core at http://localhost:4000/v1/health.
+Or double-click `Start Woven.command` on the LaCie. The site is at http://localhost:3000, the dashboard at `/dashboard`, the core at https://woven.local:4000/v1/health. On a new device open http://woven.local:4001 first and install the household certificate (ADR 0006); on this Mac double-click `Woven Data/keys/ca.crt`, then set its trust to Always in Keychain Access.
 
 Visual QA screenshots (uses the locally installed Chrome):
 

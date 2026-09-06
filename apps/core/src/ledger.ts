@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { EventEmitter } from "node:events";
 import { EventEnvelope, LedgerRow, type EventType, type Where } from "@woven/schema";
 import { desc, eq } from "drizzle-orm";
 import { monotonicFactory } from "ulid";
@@ -48,8 +49,10 @@ export type IntegrityReport =
  * SQLite's writer lock and wrapped in a transaction so the chain can never
  * fork: read the head, hash, insert, all or nothing.
  */
-export class Ledger {
-  constructor(private readonly db: Db) {}
+export class Ledger extends EventEmitter<{ appended: [LedgerRow] }> {
+  constructor(private readonly db: Db) {
+    super();
+  }
 
   append(input: AppendInput): LedgerRow {
     if (input.type.startsWith("gate.") && input.type !== "gate.opened" && input.type !== "gate.closed" && !input.sent) {
@@ -71,7 +74,7 @@ export class Ledger {
       sent: input.sent,
     });
 
-    return this.db.transaction((tx) => {
+    const row = this.db.transaction((tx) => {
       const head = tx.select({ hash: events.hash }).from(events).orderBy(desc(events.seq)).limit(1).get();
       const prevHash = head?.hash ?? GENESIS;
       const hash = hashEvent(prevHash, envelope);
@@ -99,6 +102,8 @@ export class Ledger {
         .get();
       return LedgerRow.parse({ ...envelope, seq: inserted.seq, prevHash, hash });
     });
+    this.emit("appended", row);
+    return row;
   }
 
   /** Most recent rows first, for the Activity page. */

@@ -14,6 +14,12 @@ const Env = z.object({
   WOVEN_ORIGINS: z.string().default("http://localhost:3000,https://woven.local:3000,http://woven.local:3000"),
   /** Advertise on the LAN over mDNS as _woven._tcp. */
   WOVEN_MDNS: z.enum(["on", "off"]).default("on"),
+  /** The name devices use for the core on the home network. Advertised over mDNS and on the certificate. */
+  WOVEN_NAME: z.string().regex(/^[a-z0-9-]+\.local$/i).default("woven.local"),
+  /** Serve HTTPS with the household CA. Off only for tests and CI. */
+  WOVEN_TLS: z.enum(["on", "off"]).default("on"),
+  /** Plain-HTTP port for the trust page that hands devices the household CA. */
+  WOVEN_TRUST_PORT: z.coerce.number().int().min(1).max(65535).default(4001),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 });
 
@@ -24,6 +30,9 @@ export type Config = {
   port: number;
   origins: string[];
   mdns: boolean;
+  name: string;
+  tls: boolean;
+  trustPort: number;
   logLevel: z.infer<typeof Env>["LOG_LEVEL"];
 };
 
@@ -41,6 +50,9 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     port: e.WOVEN_PORT,
     origins: e.WOVEN_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean),
     mdns: e.WOVEN_MDNS === "on",
+    name: e.WOVEN_NAME.toLowerCase(),
+    tls: e.WOVEN_TLS === "on",
+    trustPort: e.WOVEN_TRUST_PORT,
     logLevel: e.LOG_LEVEL,
   };
 }

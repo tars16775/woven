@@ -7,6 +7,9 @@ import { loadConfig } from "./config.ts";
 import { createLogger } from "./logger.ts";
 import { CORE_HOUSEHOLD_ID, openData } from "./data.ts";
 import { scheduleNightly } from "./maintenance.ts";
+import { coreDnsNames, lanAddresses } from "./network.ts";
+import { ensureHouseholdTls, type TlsMaterial } from "./tls.ts";
+import { buildTrustServer } from "./trust.ts";
 
 const require = createRequire(import.meta.url);
 const { version } = require("../package.json") as { version: string };
@@ -40,7 +43,25 @@ async function main() {
     payload: { version, kind: identity.kind, ledgerRows: integrity.rows },
   });
 
-  const app = await buildApp({ config, logger, hardware, data, version, startedAt: new Date() });
+  // The household CA and this machine's certificate, created or renewed as needed.
+  let tls: TlsMaterial | undefined;
+  if (config.tls) {
+    tls = await ensureHouseholdTls({ keysDir: paths.keys, dns: coreDnsNames(config.name), ips: lanAddresses() });
+    if (tls.createdCa) logger.warn({ fingerprint: tls.ca.fingerprint }, "created a new household certificate authority; devices must trust it once");
+    if (tls.issued) logger.info({ names: tls.server.dns, addresses: tls.server.ips, notAfter: tls.server.notAfter }, "issued the core's certificate");
+  }
+
+  const app = await buildApp({ config, logger, hardware, data, ...(tls ? { tls } : {}), version, startedAt: new Date() });
+  const scheme = tls ? "https" : "http";
+  const trust = tls
+    ? await buildTrustServer({
+        logger,
+        tls,
+        version,
+        trustUrl: `http://${config.name}:${config.trustPort}`,
+        coreUrl: `${scheme}://${config.name}:${config.port}/v1/health`,
+      })
+    : null;
   const stopNightly = config.env === "production" || config.env === "development" ? scheduleNightly(data, logger) : () => undefined;
 
   const bonjour = config.mdns ? new Bonjour() : null;
@@ -48,7 +69,7 @@ async function main() {
     logger.info({ signal }, "stopping");
     stopNightly();
     bonjour?.unpublishAll(() => bonjour.destroy());
-    await app.close();
+    await Promise.all([app.close(), trust?.close()]);
     data.close();
     process.exit(0);
   };
@@ -56,17 +77,24 @@ async function main() {
   process.on("SIGTERM", () => void stop("SIGTERM"));
 
   await app.listen({ host: config.host, port: config.port });
+  if (trust) await trust.listen({ host: config.host, port: config.trustPort });
 
   if (bonjour) {
+    // Publishing with `host` makes the responder answer A records for the
+    // household name, so woven.local works without renaming the machine.
     bonjour.publish({
       name: "Woven Core",
       type: "woven",
+      host: config.name,
       port: config.port,
-      txt: { version, kind: identity.kind, id: identity.machineId.slice(0, 8) },
+      txt: { version, kind: identity.kind, id: identity.machineId.slice(0, 8), scheme, trust: tls ? String(config.trustPort) : "" },
     });
   }
 
-  logger.info({ port: config.port, dataRoot: config.dataRoot, hardware: identity.kind, ledgerRows: integrity.rows }, "Ready.");
+  logger.info(
+    { url: `${scheme}://${config.name}:${config.port}`, trust: trust ? `http://${config.name}:${config.trustPort}` : null, dataRoot: config.dataRoot, hardware: identity.kind, ledgerRows: integrity.rows },
+    "Ready.",
+  );
 }
 
 main().catch((err: unknown) => {

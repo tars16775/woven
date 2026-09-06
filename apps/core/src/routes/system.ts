@@ -1,4 +1,4 @@
-import { CoreStatus } from "@woven/schema";
+import { CoreConfig, CoreStatus } from "@woven/schema";
 import type { FastifyPluginAsync } from "fastify";
 import type { ZodTypeProvider } from "../zod.ts";
 
@@ -26,4 +26,26 @@ export const systemRoutes: FastifyPluginAsync = async (raw) => {
       });
     },
   );
+
+  app.get("/system/config", { schema: { response: { 200: CoreConfig } } }, async () => {
+    const { config, version, tls } = app.deps;
+    return CoreConfig.parse({
+      version,
+      name: config.name,
+      port: config.port,
+      origins: config.origins,
+      mdns: config.mdns,
+      tls: tls
+        ? {
+            enabled: true,
+            caFingerprint: tls.ca.fingerprint,
+            caNotAfter: tls.ca.notAfter,
+            serverNotAfter: tls.server.notAfter,
+            names: tls.server.dns,
+            addresses: tls.server.ips,
+            trustUrl: `http://${config.name}:${config.trustPort}`,
+          }
+        : { enabled: false },
+    });
+  });
 };

@@ -31,6 +31,17 @@ Stack, to be confirmed in phase 1: TypeScript on Node 22 for the core so it shar
 
 Honest limits of the Mac phase: no Thread or Zigbee without a Linux radio bridge; the Mac is not your router, so the Outside is observed rather than owned; camera detection runs on the CPU. All three are solved by the box.
 
+## Progress
+
+| Phase | State | Notes |
+| --- | --- | --- |
+| 1 Decisions and skeleton | done · 2026-09-05 | ADRs 0001 to 0005, workspace, schema, hardware layer, policy, core on :4000 |
+| 2 Data layer | done · 2026-09-06 | SQLite WAL + Drizzle migrations, content store, snapshot and tested restore, nightly job |
+| 3 Core service | done · 2026-09-06 | HTTPS with the household CA (ADR 0006), trust page on :4001, WebSocket `/v1/events`, `/v1/system/config`, `woven.local` over mDNS |
+| 4 Ledger and events | done · 2026-09-06 | Landed inside phase 2: hash chain, tamper detection, receipt writer (`Ledger.append`), `/v1/ledger/*` |
+| 5 Developer loop | next | seed household, e2e against a real core |
+| 6 Site meets core | queued | |
+
 ## Tracks and phases
 
 Each phase lists what gets built, when it is done, and what is needed from you. Phases inside a track are ordered; tracks can overlap after the Foundations.

@@ -1,5 +1,6 @@
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
+import websocket from "@fastify/websocket";
 import Fastify, { type FastifyError } from "fastify";
 import { zodSerializerCompiler, zodValidatorCompiler, type ZodTypeProvider } from "./zod.ts";
 import type { Hardware } from "@woven/hal";
@@ -7,6 +8,8 @@ import type { Config } from "./config.ts";
 import type { Logger } from "./logger.ts";
 import type { Data } from "./data.ts";
 import { ledgerRoutes } from "./routes/ledger.ts";
+import { eventRoutes } from "./routes/events.ts";
+import type { TlsMaterial } from "./tls.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { systemRoutes } from "./routes/system.ts";
 
@@ -15,6 +18,8 @@ export type AppDeps = {
   logger: Logger;
   hardware: Hardware;
   data: Data;
+  /** Present when serving HTTPS; the app also exposes it on /v1/system/config. */
+  tls?: TlsMaterial;
   version: string;
   startedAt: Date;
 };
@@ -25,6 +30,7 @@ export type AppDeps = {
  */
 export async function buildApp(deps: AppDeps) {
   const app = Fastify({
+    ...(deps.tls ? { https: { key: deps.tls.server.keyPem, cert: deps.tls.server.certPem } } : {}),
     loggerInstance: deps.logger,
     requestIdHeader: "x-request-id",
     genReqId: () => crypto.randomUUID(),
@@ -36,6 +42,7 @@ export async function buildApp(deps: AppDeps) {
   app.setSerializerCompiler(zodSerializerCompiler);
 
   await app.register(sensible);
+  await app.register(websocket, { options: { maxPayload: 64 * 1024 } });
   await app.register(cors, {
     origin: deps.config.origins,
     credentials: true,
@@ -68,6 +75,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(healthRoutes, { prefix: "/v1" });
   await app.register(systemRoutes, { prefix: "/v1" });
   await app.register(ledgerRoutes, { prefix: "/v1" });
+  await app.register(eventRoutes, { prefix: "/v1" });
 
   return app;
 }

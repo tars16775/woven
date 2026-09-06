@@ -33,6 +33,11 @@ if [ -d "$REPO/apps/core" ]; then
   if ! lsof -iTCP:4000 -sTCP:LISTEN >/dev/null 2>&1; then
     echo "Starting Woven Core…"
     (cd "$REPO/apps/core" && WOVEN_DATA="$MOUNT/Woven Data" nohup pnpm exec tsx src/server.ts >"$LOGS/core.log" 2>&1 &)
+    for i in $(seq 1 60); do
+      if curl -sk -o /dev/null https://localhost:4000/v1/health; then break; fi
+      sleep 1
+    done
+    echo "Core is up: https://woven.local:4000 (trust page http://woven.local:4001)"
   fi
 fi
 
