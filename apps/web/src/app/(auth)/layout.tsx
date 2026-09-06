@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/wordmark";
+import { CoreNotice } from "./notice";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -27,33 +28,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-[400px]">
-            <PreviewNotice />
+            <CoreNotice />
             {children}
           </div>
         </div>
       </main>
-    </div>
-  );
-}
-
-/**
- * There is no Core to talk to yet. Say so, plainly, above every sign-in
- * form so nobody mistakes the preview for the real thing.
- */
-function PreviewNotice() {
-  return (
-    <div
-      role="note"
-      aria-label="Preview notice"
-      className="mb-7 flex gap-3 rounded-[10px] bg-ask-bg px-4 py-3 ring-1 ring-ask/20"
-    >
-      <span className="mt-[7px] block h-[6px] w-[6px] shrink-0 rounded-full bg-ask" aria-hidden />
-      <p className="text-[13px] leading-relaxed text-ink">
-        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ask">Preview</span>
-        <br />
-        Founding Homes preview. Sign-in is simulated on this device until your Core arrives; nothing
-        is sent anywhere.
-      </p>
     </div>
   );
 }

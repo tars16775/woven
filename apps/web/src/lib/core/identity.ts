@@ -1,6 +1,6 @@
 "use client";
 
-import { HouseholdView, SessionView, type Person } from "@woven/schema";
+import { ActionRecord, HouseholdView, Invitation, SessionView, type NewInvitation, type Person } from "@woven/schema";
 import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
 import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser";
 import { z } from "zod";
@@ -83,6 +83,42 @@ export const identity = {
   },
 
   recover: (email: string, code: string) => call("/v1/auth/recover", SessionView, post({ email, code })),
+
+  /** The six digits on the box's screen plus your name: pairs this device as you. */
+  loginWithCode: (name: string, code: string) => call("/v1/auth/code/login", SessionView, post({ name, code })),
+
+  /** A fresh passkey assertion for class H approvals (strong authentication). Not a sign-in. */
+  async assert(email?: string): Promise<{ key: string; credential: Record<string, unknown> }> {
+    const { key, options } = await call("/v1/auth/passkeys/login/options", Options, post({ email: email || undefined }));
+    const credential = await startAuthentication({ optionsJSON: options as unknown as PublicKeyCredentialRequestOptionsJSON });
+    return { key, credential: credential as unknown as Record<string, unknown> };
+  },
+
+  /* Invitations (phase 10) */
+  invite: (input: NewInvitation) => call("/v1/household/invitations", Invitation, post(input)),
+  invitations: () => call("/v1/household/invitations", z.object({ invitations: z.array(Invitation) })).then((r) => r.invitations),
+  withdrawInvitation: (id: string) => call(`/v1/household/invitations/${id}`, z.object({ withdrawn: z.boolean() }), { method: "DELETE" }),
+  /** Whoever opens the link: become that person by registering a passkey on this device. */
+  async join(token: string): Promise<{ session: SessionView; household: string }> {
+    const accepted = await call("/v1/household/invitations/accept", z.object({ person: z.custom<Person>(), household: z.string(), enrolment: z.string() }), post({ token }));
+    const session = await this.registerPasskey({ enrolment: accepted.enrolment, label: deviceLabel() });
+    return { session, household: accepted.household };
+  },
+  addPerson: (input: { name: string; email?: string; role: "adult" | "child" | "guest" }) => call("/v1/household/people", z.custom<Person>(), post(input)),
+  removePerson: (id: string) => call(`/v1/household/people/${id}`, z.custom<Person>(), { method: "DELETE" }),
+
+  /* Data rights (phase 11) */
+  exportData: (scope: "me" | "household") => call("/v1/household/export", z.object({ dir: z.string(), takenAt: z.string(), counts: z.record(z.string(), z.number()) }), post({ scope })),
+  deleteAccount: (personId: string) => call(`/v1/household/people/${personId}/account`, z.object({ files: z.number(), objects: z.number() }), { method: "DELETE" }),
+  /** Class H: prepare, confirm with this device's passkey, execute. */
+  async transferOwnership(toPersonId: string, ownerEmail: string): Promise<ActionRecord> {
+    const prepared = await call("/v1/actions/prepare", ActionRecord, post({ capability: "household.transfer_ownership", target: "household", parameters: { toPersonId } }));
+    if (prepared.status !== "prepared") return prepared;
+    const assertion = await this.assert(ownerEmail);
+    const approved = await call(`/v1/actions/${prepared.id}/approve`, ActionRecord, post({ assertion }));
+    if (approved.status !== "approved") return approved;
+    return call(`/v1/actions/${prepared.id}/execute`, ActionRecord, post({}));
+  },
 
   passkeys: () => call("/v1/auth/passkeys", z.object({ passkeys: z.array(Passkey), recoveryCodesLeft: z.number() })),
   removePasskey: (id: string) => call(`/v1/auth/passkeys/${id}`, z.object({ removed: z.boolean() }), { method: "DELETE" }),

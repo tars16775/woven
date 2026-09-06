@@ -6,6 +6,12 @@ import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { ThemeControl } from "@/components/dashboard/theme";
 import { PasskeysCard } from "@/components/dashboard/passkeys-card";
+import { HouseholdCard } from "@/components/dashboard/household-card";
+import { DataRightsCard } from "@/components/dashboard/data-rights-card";
+import { useCore } from "@/lib/core/store";
+import { useSession } from "@/lib/auth";
+import { explain, identity } from "@/lib/core/identity";
+import type { Person as CorePerson } from "@woven/schema";
 import { household, people as initialPeople, type Person } from "@/lib/dashboard/data";
 
 type Integration = { name: string; detail: string; tone: "good" | "warn" };
@@ -22,6 +28,11 @@ type Open = null | "invite" | "transfer" | "reset";
 
 export function SettingsView() {
   const say = useToast();
+  const core = useCore();
+  const session = useSession();
+  const live = core.phase === "connected" && !!session && !session.simulated;
+  const [transferTo, setTransferTo] = useState<CorePerson[] | null>(null);
+  const [transferPick, setTransferPick] = useState("");
   const [people, setPeople] = useState<Member[]>(initialPeople);
   const [integrations, setIntegrations] = useState(initialIntegrations);
   const [revoking, setRevoking] = useState<Integration | null>(null);
@@ -50,7 +61,19 @@ export function SettingsView() {
     setRevoking(null);
   };
 
-  const transfer = () => {
+  const transfer = async () => {
+    if (live) {
+      if (!transferPick || !session?.email) return;
+      try {
+        const r = await identity.transferOwnership(transferPick, session.email);
+        close();
+        say(r.status === "succeeded" ? "Ownership transferred. You are now an adult member; sign in again to refresh your role." : `${r.decision.reason}`);
+        setTransferTo(null);
+      } catch (err) {
+        say(explain(err));
+      }
+      return;
+    }
     close();
     say("Transfer started. The new owner confirms with a passkey on the box's screen.");
   };
@@ -62,11 +85,24 @@ export function SettingsView() {
 
   return (
     <div className="mx-auto max-w-[1100px]">
-      <PageHeader title="Settings" sub={`${household.name} · ${household.city}`} />
+      <PageHeader title="Settings" sub={live ? session.household : `${household.name} · ${household.city}`} />
 
       <PasskeysCard />
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        {live && (
+          <>
+            <HouseholdCard
+              onTransfer={(people) => {
+                setTransferTo(people.filter((p) => p.role === "adult"));
+                setTransferPick(people.find((p) => p.role === "adult")?.id ?? "");
+                setOpen("transfer");
+              }}
+            />
+            <DataRightsCard />
+          </>
+        )}
+        {!live && (
         <Card
           title="Household"
           action={
@@ -96,6 +132,7 @@ export function SettingsView() {
             </li>
           </ul>
         </Card>
+        )}
 
         <Card title="Integrations">
           {integrations.length > 0 ? (
@@ -211,14 +248,31 @@ export function SettingsView() {
 
       <Dialog open={open === "transfer"} onClose={close} kicker="Class H · strong auth" title="Transfer ownership?" tone="ask">
         <p className="mt-2 text-[14px] text-ash">
-          The new owner confirms with their passkey on the box&apos;s screen. You become an adult member and lose the recovery key. Everyone&apos;s files stay where they are.
+          {live
+            ? "You confirm with your passkey on this device. You become an adult member and your recovery codes stop working. Everyone's files stay where they are."
+            : "The new owner confirms with their passkey on the box's screen. You become an adult member and lose the recovery key. Everyone's files stay where they are."}
         </p>
+        {live && (
+          <Field label="New owner">
+            {transferTo && transferTo.length > 0 ? (
+              <select className={inputClass} value={transferPick} onChange={(e) => setTransferPick(e.target.value)}>
+                {transferTo.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-[13px] text-ash">Invite another adult first; ownership can only pass to an adult.</p>
+            )}
+          </Field>
+        )}
         <DialogActions>
           <Button kind="soft" className="flex-1 py-2.5" onClick={close} data-autofocus>
             Cancel
           </Button>
-          <Button kind="danger" className="flex-1 py-2.5" onClick={transfer}>
-            Start transfer
+          <Button kind="danger" className="flex-1 py-2.5" onClick={transfer} disabled={live && !transferPick}>
+            {live ? "Confirm with passkey" : "Start transfer"}
           </Button>
         </DialogActions>
       </Dialog>

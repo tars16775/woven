@@ -11,6 +11,10 @@ import type { GateClient } from "./gate/client.ts";
 import { defaultContext } from "@woven/policy";
 import { eq } from "drizzle-orm";
 import { settings } from "./db/schema.ts";
+import { ScreenCode } from "./auth/screen.ts";
+import { InvitationService } from "./invitations.ts";
+import { RightsService } from "./rights.ts";
+import { join } from "node:path";
 
 /** A first passkey may be registered by whoever holds one of these (setup, invitations). */
 export type Enrolment = { personId: string; reason: "setup" | "invitation" | "recovery" };
@@ -25,12 +29,17 @@ export type Services = {
   presence: Presence;
   gate: GateClient;
   actions: ActionEngine;
+  screen: ScreenCode;
+  invitations: InvitationService;
+  rights: RightsService;
 };
 
 export function buildServices(data: Data, config: Config, gate: GateClient, home: HomeAdapter = new SimulatedAdapter()): Services {
   const { db } = data.database;
   const passkeys = new PasskeyService(db, config.origins);
   const presence = new Presence();
+  const household = new HouseholdService(db, data.ledger);
+  const rights = new RightsService(db, data.ledger, household, data.store, join(data.paths.root, "exports"));
   const actions = new ActionEngine({
     db,
     ledger: data.ledger,
@@ -43,9 +52,15 @@ export function buildServices(data: Data, config: Config, gate: GateClient, home
       return Number.isFinite(n) ? { autoApproveAmountUpTo: n } : defaultContext;
     },
     verifyAssertion: (key, credential) => passkeys.verifyAuthentication(key, credential as never),
+    transferOwnership: (fromId, toId) => {
+      const from = household.person(fromId);
+      if (!from) throw new Error("no such person");
+      const r = rights.transferOwnership(from, toId);
+      return { from: r.from.id, to: r.to.id };
+    },
   });
   return {
-    household: new HouseholdService(db, data.ledger),
+    household,
     sessions: new SessionService(db, data.ledger),
     passkeys,
     recovery: new RecoveryService(db),
@@ -54,5 +69,8 @@ export function buildServices(data: Data, config: Config, gate: GateClient, home
     presence,
     gate,
     actions,
+    screen: new ScreenCode(),
+    invitations: new InvitationService(db, data.ledger, household),
+    rights,
   };
 }

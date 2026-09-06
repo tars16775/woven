@@ -51,8 +51,31 @@ export const Person = z.object({
   role: Role,
   createdAt: z.iso.datetime(),
   removedAt: z.iso.datetime().nullable(),
+  /** Guests: when their access ends. */
+  expiresAt: z.iso.datetime().nullable().optional(),
 });
 export type Person = z.infer<typeof Person>;
+
+export const Invitation = z.object({
+  id: Ulid,
+  person: Person,
+  createdBy: Ulid,
+  createdAt: z.iso.datetime(),
+  expiresAt: z.iso.datetime(),
+  acceptedAt: z.iso.datetime().nullable(),
+  /** Only present in the response that created it; the link the owner passes on. */
+  token: z.string().optional(),
+});
+export type Invitation = z.infer<typeof Invitation>;
+
+export const NewInvitation = z.object({
+  name: z.string().trim().min(1).max(80),
+  email: z.email().trim().toLowerCase().optional(),
+  role: Role.exclude(["owner"]),
+  /** Guests only: days of access. */
+  guestDays: z.number().int().min(1).max(90).optional(),
+});
+export type NewInvitation = z.infer<typeof NewInvitation>;
 
 /* Risk and capabilities ---------------------------------------------------- */
 

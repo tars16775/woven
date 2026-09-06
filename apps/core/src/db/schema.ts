@@ -25,6 +25,8 @@ export const people = sqliteTable(
     createdAt: text("created_at").notNull(),
     /** Set instead of deleting; the ledger records the removal. */
     removedAt: text("removed_at"),
+    /** Guests: when their access ends. */
+    expiresAt: text("expires_at"),
   },
   (t) => [index("people_household_idx").on(t.householdId), uniqueIndex("people_email_idx").on(t.householdId, t.email)],
 );
@@ -124,6 +126,26 @@ export const files = sqliteTable(
     deletedAt: text("deleted_at"),
   },
   (t) => [index("files_owner_path_idx").on(t.ownerId, t.path), index("files_sha_idx").on(t.sha256)],
+);
+
+/**
+ * Invitations (phase 10). The person row is created up front (pending until
+ * they hold a passkey); the token is hashed; guests carry an expiry.
+ */
+export const invitations = sqliteTable(
+  "invitations",
+  {
+    id: text("id").primaryKey(),
+    householdId: text("household_id").notNull().references(() => households.id),
+    personId: text("person_id").notNull().references(() => people.id),
+    tokenHash: text("token_hash").notNull(),
+    createdBy: text("created_by").notNull().references(() => people.id),
+    createdAt: text("created_at").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    acceptedAt: text("accepted_at"),
+    revokedAt: text("revoked_at"),
+  },
+  (t) => [uniqueIndex("invitations_token_idx").on(t.tokenHash), index("invitations_household_idx").on(t.householdId)],
 );
 
 /** Small key-value settings, JSON values validated at the boundary. */

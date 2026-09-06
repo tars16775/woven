@@ -68,6 +68,7 @@ export class SessionService {
       .where(and(eq(sessions.tokenHash, hashToken(token)), isNull(sessions.revokedAt), gt(sessions.expiresAt, nowIso), isNull(people.removedAt)))
       .get();
     if (!row) return null;
+    if (row.p.expiresAt && row.p.expiresAt <= nowIso) return null; // a guest whose stay has ended
     return {
       id: row.s.id,
       personId: row.s.personId,

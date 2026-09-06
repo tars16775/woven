@@ -36,6 +36,8 @@ export type EngineDeps = {
   policy: () => PolicyContext;
   /** Verify a fresh passkey assertion for strong authentication; resolves the person id it belongs to. */
   verifyAssertion: (key: string, credential: Record<string, unknown>) => Promise<string>;
+  /** Class H household changes, run only after the approval above. */
+  transferOwnership: (fromPersonId: string, toPersonId: string) => { from: string; to: string };
   now?: () => Date;
 };
 
@@ -210,6 +212,7 @@ export class ActionEngine {
       let observed: Record<string, unknown>;
       let sent: string | undefined;
       let where: "device" | "gate" | "inside" = "device";
+       
       switch (spec.executor) {
         case "home":
           observed = await this.deps.home.apply(row.target, spec.name, params);
@@ -230,7 +233,13 @@ export class ActionEngine {
           }
           break;
         }
-        case "household":
+        case "household": {
+          where = "inside";
+          if (spec.name !== "household.transfer_ownership") throw new ActionError(409, `${spec.name} is not wired yet.`);
+          if (!row.approvedBy) throw new ActionError(403, "Ownership only moves after the owner confirms with a passkey.");
+          observed = this.deps.transferOwnership(row.approvedBy, String(params.toPersonId));
+          break;
+        }
         case "core":
           throw new ActionError(409, `${spec.name} is not wired yet.`);
       }

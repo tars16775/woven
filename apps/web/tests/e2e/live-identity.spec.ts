@@ -61,3 +61,54 @@ test("a stranger's passkey does not open the house, and a house cannot be set up
   await page.goto("/signup");
   await expect(page.getByTestId("house-exists")).toContainText(demo.household, { timeout: 30_000 });
 });
+
+test("invite a member by link, join with a passkey, sign in by the screen code, export your data", async ({ page, browser }) => {
+  await signInWithOwnCode(page);
+  await page.goto("/dashboard/settings");
+  await page.getByTestId("invite").click({ timeout: 30_000 });
+  await page.getByRole("textbox", { name: "Name" }).fill("Priya");
+  await page.getByRole("textbox", { name: /Email/ }).fill("priya@example.com");
+  await page.getByRole("button", { name: "Make an invitation link" }).click();
+  const link = (await page.getByTestId("invite-link").textContent({ timeout: 15_000 }))!.trim();
+  expect(link).toMatch(/\/join\?token=/);
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByTestId("members")).toContainText("Priya");
+  await expect(page.getByTestId("members")).toContainText("Pending");
+
+  // Priya opens the link on her own device (a fresh context with its own authenticator).
+  const her = await browser.newContext();
+  const herPage = await her.newPage();
+  await virtualAuthenticator(herPage);
+  await herPage.goto(link);
+  await herPage.getByTestId("join").click({ timeout: 30_000 });
+  await expect(herPage).toHaveURL(/\/dashboard$/, { timeout: 20_000 });
+  const herSession = await herPage.evaluate(() => localStorage.getItem("woven:session"));
+  expect(JSON.parse(herSession!)).toMatchObject({ name: "Priya", role: "adult", method: "passkey" });
+  await her.close();
+
+  // A child without email signs in with the code on the box's screen (read from loopback, as the screen itself would).
+  await page.getByTestId("invite").click();
+  await page.getByRole("textbox", { name: "Name" }).fill("Sam Junior");
+  await page.getByRole("combobox").selectOption("child");
+  await page.getByRole("button", { name: "Make an invitation link" }).click();
+  await page.getByRole("button", { name: "Done" }).click();
+  const code = await page.evaluate(async () => {
+    const r = await fetch("http://127.0.0.1:4000/v1/screen/code", { cache: "no-store" });
+    return ((await r.json()) as { code: string }).code;
+  });
+  const kid = await browser.newContext();
+  const kidPage = await kid.newPage();
+  await kidPage.goto("/login");
+  await kidPage.getByRole("tab", { name: "Code on the screen" }).click({ timeout: 30_000 });
+  await expect(kidPage.getByRole("tab", { name: "Recovery code" })).toBeVisible({ timeout: 30_000 });
+  await kidPage.getByLabel("Your name").fill("Sam Junior");
+  for (let i = 0; i < 6; i += 1) await kidPage.getByLabel(`Digit ${i + 1} of 6`).fill(code[i]!);
+  await expect(kidPage).toHaveURL(/\/dashboard$/, { timeout: 20_000 });
+  const kidSession = await kidPage.evaluate(() => localStorage.getItem("woven:session"));
+  expect(JSON.parse(kidSession!)).toMatchObject({ name: "Sam Junior", role: "child", method: "code" });
+  await kid.close();
+
+  // The owner exports their own data; the toast names the folder on the box.
+  await page.getByTestId("export-me").click();
+  await expect(page.getByText(/Exported \d+ files and \d+ receipts to/)).toBeVisible({ timeout: 20_000 });
+});

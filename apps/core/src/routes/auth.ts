@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireSession } from "../auth/guard.ts";
 import { PasskeyError } from "../auth/passkeys.ts";
 import { SESSION_COOKIE, sessionCookie } from "../auth/sessions.ts";
+import { screenPage } from "../auth/screen.ts";
 import type { ZodTypeProvider } from "../zod.ts";
 
 const Options = z.object({ key: z.string(), options: z.record(z.string(), z.unknown()) });
@@ -125,6 +126,34 @@ export const authRoutes: FastifyPluginAsync = async (raw) => {
       const person = services.household.personByEmail(req.body.email);
       if (!person || !services.recovery.redeem(person, req.body.code)) throw new PasskeyError(401, "That code did not match.");
       setSession(reply, person, "recovery", req);
+      return view(req);
+    },
+  );
+
+  /**
+   * The code on the screen (phase 9). The screen itself is only served to the
+   * machine's own display (loopback); entering its code with your name from
+   * any device on the home network signs that device in as you.
+   */
+  const loopbackOnly = async (req: FastifyRequest, reply: FastifyReply) => {
+    const addr = req.socket.remoteAddress ?? "";
+    if (!/^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/.test(addr)) await reply.status(404).send({ error: "Nothing at this address on the box.", requestId: req.id });
+  };
+  app.get("/screen", { preHandler: loopbackOnly }, async (_req, reply) =>
+    reply.type("text/html; charset=utf-8").header("cache-control", "no-store").send(screenPage(config.name, services.household.household()?.name ?? null)),
+  );
+  app.get("/screen/code", { preHandler: loopbackOnly, schema: { response: { 200: z.object({ code: z.string().length(6), secondsLeft: z.number().int() }) } } }, async () => services.screen.current());
+
+  app.post(
+    "/auth/code/login",
+    { schema: { body: z.object({ name: z.string().trim().min(1).max(80), code: z.string().min(6).max(7) }), response: { 200: SessionView } } },
+    async (req, reply) => {
+      const h = services.household.household();
+      if (!h) throw new PasskeyError(401, "This box has no house yet.");
+      const person = services.household.people(h.id).find((p) => p.name.toLowerCase() === req.body.name.toLowerCase());
+      if (!person) throw new PasskeyError(401, "No one in the house goes by that name. Ask the owner to add you first.");
+      if (!services.screen.verify(req.body.code)) throw new PasskeyError(401, "That code did not match the screen. It changes every minute.");
+      setSession(reply, person, "code", req);
       return view(req);
     },
   );

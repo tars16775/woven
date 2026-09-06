@@ -37,7 +37,7 @@ if [ -d "$REPO/apps/core" ]; then
       if curl -sk -o /dev/null https://localhost:4000/v1/health; then break; fi
       sleep 1
     done
-    echo "Core is up: https://woven.local:4000 (trust page http://woven.local:4001)"
+    echo "Core is up: https://woven.local:4000 (trust page http://woven.local:4001, screen code http://127.0.0.1:4002/v1/screen)"
   fi
 fi
 

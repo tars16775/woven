@@ -148,9 +148,20 @@ export function LoginForm() {
       return;
     }
     setBusy(true);
-    // The real flow sends the six digits to the box, which matches them
-    // against the code on its screen and returns a session. In the preview
-    // any six digits pass.
+    if (connected) {
+      // The box matches the digits against the code on its screen and answers with a session.
+      try {
+        const view = await identity.loginWithCode(name.trim(), d.join(""));
+        signIn(sessionRecord(view, "code"));
+        router.replace(next);
+      } catch (err) {
+        setCodeError(explain(err));
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    // Preview without a Core: any six digits pass.
     await new Promise((r) => setTimeout(r, 600));
     setBusy(false);
     finish("code", { name: name.trim(), email: "" });
