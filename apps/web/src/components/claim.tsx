@@ -15,7 +15,7 @@ export function Fn({ notes, id }: { notes: readonly ClaimId[]; id: ClaimId }) {
   if (n === 0) return null;
   return (
     <sup className="ml-[1px] align-super text-[0.62em] font-normal leading-none">
-      <Link href={`#fn-${id}`} className="text-current no-underline opacity-60 transition-opacity hover:opacity-100" aria-label={`Footnote ${n}: ${claims[id].claim}`}>
+      <Link href={`#fn-${id}`} className="text-current no-underline hover:underline" aria-label={`Footnote ${n}: ${claims[id].claim}`}>
         {n}
       </Link>
     </sup>
@@ -33,7 +33,7 @@ export function Footnotes({ notes, className = "" }: { notes: readonly ClaimId[]
             const c = claims[id];
             return (
               <li key={id} id={`fn-${id}`} className="grid scroll-mt-24 grid-cols-[1.4rem_1fr] gap-2 text-[12.5px] leading-relaxed text-ash">
-                <span className="font-mono text-[11px] text-ash/70">{i + 1}</span>
+                <span className="font-mono text-[11px] text-ash">{i + 1}</span>
                 <span>
                   <AvailabilityTag status={c.status} className="mr-2 align-[1px]" />
                   {c.note}
@@ -56,7 +56,7 @@ export function Footnotes({ notes, className = "" }: { notes: readonly ClaimId[]
 
 const tone: Record<Availability, string> = {
   now: "bg-local-bg text-local",
-  box: "bg-chassis text-ash",
+  box: "bg-chassis text-ink/85",
   target: "bg-ask-bg text-ask",
 };
 

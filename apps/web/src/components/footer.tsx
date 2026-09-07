@@ -13,7 +13,7 @@ export function Footer() {
         <nav aria-label="Footer" className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
           {footerGroups.map((g) => (
             <div key={g.title}>
-              <h2 className="font-mono text-[11px] uppercase tracking-[0.16em] text-ash/80">{g.title}</h2>
+              <h2 className="font-mono text-[11px] uppercase tracking-[0.16em] text-ash">{g.title}</h2>
               <ul className="mt-4 space-y-2.5">
                 {g.links.map((l) => (
                   <li key={l.href}>

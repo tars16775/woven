@@ -112,9 +112,9 @@ export function Configurator() {
         {/* Choices */}
         <div className="px-6 pb-32 pt-8 lg:px-12 lg:pb-24 lg:pt-28">
           <div className="mx-auto max-w-[440px]">
-            <h1 className="font-display text-[34px] font-medium leading-none tracking-[-0.02em]">
+            <h2 className="font-display text-[34px] font-medium leading-none tracking-[-0.02em]">
               {t.name}
-            </h1>
+            </h2>
             <p className="mt-2 text-[14px] text-ash">
               Estimated delivery {estimatedDelivery[tier]} · Target price {formatPrice(t.priceFrom)}
             </p>

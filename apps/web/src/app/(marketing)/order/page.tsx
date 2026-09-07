@@ -10,8 +10,18 @@ export const metadata: Metadata = {
 
 export default function OrderPage() {
   return (
-    <Suspense fallback={<div className="min-h-svh bg-bone" />}>
-      <Configurator />
-    </Suspense>
+    <>
+      {/* The configurator is a client component, so the page's heading and its
+          one honest sentence are rendered here, on the server, where a crawler
+          and a reader without JavaScript will both find them. */}
+      <h1 className="sr-only">Reserve a Woven Core</h1>
+      <p className="sr-only">
+        Nothing is for sale yet. A reservation takes no money, is not an order, and the box is not
+        built. Prices and dates are engineering targets.
+      </p>
+      <Suspense fallback={<div className="min-h-svh bg-bone" />}>
+        <Configurator />
+      </Suspense>
+    </>
   );
 }
