@@ -31,7 +31,7 @@ await page.waitForSelector('nav[aria-label="Dashboard"]', { timeout: 90000 });
 
 for (const p of paths) {
   await page.goto(`http://localhost:3000${p}`, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(2500);
+  await page.waitForTimeout(6000);
   const name = p.replace(/\//g, "_") || "_root";
   await page.screenshot({ path: `${outDir}/${name}.png`, fullPage: true });
   console.log("shot", p);

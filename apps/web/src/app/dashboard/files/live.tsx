@@ -192,7 +192,9 @@ export function LiveFiles() {
       />
       <p className="mt-2 text-[13px] text-ash">{visible.find((s) => s.id === namespace)?.hint}</p>
 
-      <nav aria-label="Folder" className="mt-4 flex flex-wrap items-center gap-1 text-[13px] text-ash">
+      {/* The space is already named by the tab above; the crumb only earns its
+          line once there is somewhere to go back to. */}
+      <nav aria-label="Folder" className={`mt-4 flex-wrap items-center gap-1 text-[13px] text-ash ${crumbs.length === 0 ? "hidden" : "flex"}`}>
         <button type="button" onClick={() => setPath("/")} className="font-medium text-ink hover:underline">
           {spaces.find((s) => s.id === namespace)?.label}
         </button>
