@@ -820,3 +820,54 @@ export const ScreenState = z.object({
 });
 export type ScreenState = z.infer<typeof ScreenState>;
 
+
+/* Cameras ------------------------------------------------------------------
+ *
+ * Designed before the hardware exists (dashboard design phase 14), so the
+ * screen is finished and the Core is built to fit it rather than the other
+ * way round. Nothing here implies a camera is present: a Core with no capture
+ * answers `{ cameras: [], capture: "absent" }` and the room says so.
+ */
+
+export const CameraView = z.object({
+  id: z.string(),
+  name: z.string(),
+  /** Where it is, in the household's own words. */
+  place: z.string().nullable(),
+  /** "live" is streaming, "paused" is deliberately stopped, "lost" is not answering. */
+  state: z.enum(["live", "paused", "lost"]),
+  /** How the box reaches it. Never a vendor cloud. */
+  transport: z.enum(["rtsp", "onvif", "usb", "builtin"]),
+  /** Days of clips kept before the box deletes them itself. */
+  retentionDays: z.number().int().nonnegative(),
+  /** ISO time of the most recent detection, or null when there has been none. */
+  lastEventAt: z.iso.datetime().nullable(),
+  /** Whether detection runs for this camera at all. */
+  detection: z.boolean(),
+});
+export type CameraView = z.infer<typeof CameraView>;
+
+export const CameraEvent = z.object({
+  id: z.string(),
+  cameraId: z.string(),
+  at: z.iso.datetime(),
+  /** What the box's own detector saw. No identity, ever: this is not face recognition. */
+  kind: z.enum(["person", "vehicle", "animal", "package", "motion"]),
+  /** Seconds of clip kept for this event, or null when no clip was written. */
+  clipSeconds: z.number().nonnegative().nullable(),
+});
+export type CameraEvent = z.infer<typeof CameraEvent>;
+
+export const CamerasState = z.object({
+  /**
+   * Whether this Core can capture video at all. A Mac cannot: it has no
+   * capture hardware and no radios, and the room says that rather than
+   * showing an empty grid that looks like a fault.
+   */
+  capture: z.enum(["present", "absent"]),
+  /** Every camera is paused at once by the household, not one by one. */
+  pausedAll: z.boolean(),
+  cameras: z.array(CameraView),
+  events: z.array(CameraEvent),
+});
+export type CamerasState = z.infer<typeof CamerasState>;
