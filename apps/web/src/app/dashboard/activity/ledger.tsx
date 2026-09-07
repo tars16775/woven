@@ -1,7 +1,8 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
-import { Card, Meter, PageHeader, Pill, WherePill, whereRan } from "@/components/dashboard/ui";
+import { Card, Empty, Meter, PageHeader, Pill, Segmented, WherePill, whereRan } from "@/components/dashboard/ui";
+import { IconActivity } from "@/components/dashboard/icons";
 import type { Where } from "@/lib/dashboard/types";
 import { receiptLines, toActivity, type LiveActivityItem } from "@/lib/core/activity";
 import { useCore } from "@/lib/core/store";
@@ -32,7 +33,7 @@ export function ActivityLedger() {
   const share = activity.length ? Math.round((stayed / activity.length) * 100) : 100;
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div>
       <PageHeader
         title="Where your data went"
         sub="Every consequential action, who asked, where it ran, and what left."
@@ -61,22 +62,11 @@ export function ActivityLedger() {
         </div>
       </Card>
 
-      <div className="mt-6 flex flex-wrap gap-2" role="tablist" aria-label="Filter activity">
-        {filters.map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            role="tab"
-            aria-selected={filter === f.id}
-            onClick={() => setFilter(f.id)}
-            className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
-              filter === f.id ? "bg-ink text-bone" : "bg-white text-ink/80 ring-1 ring-ink/8 hover:ring-ink/20"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <Segmented className="mt-6" label="Filter activity" value={filter} onChange={setFilter} options={filters.map((f) => ({ id: f.id, label: f.label }))} />
+
+      {activity.length > 0 && rows.length === 0 && (
+        <p className="mt-6 text-[14px] text-ash">Nothing matches that filter. There are {activity.length} receipts under &ldquo;Everything&rdquo;.</p>
+      )}
 
       {days.map((day) => {
         const items = rows.filter((r) => r.day === day);
@@ -129,9 +119,13 @@ export function ActivityLedger() {
       })}
 
       {activity.length === 0 && (
-        <p className="mt-6 text-[14px] text-ash" data-testid="ledger-empty">
-          Nothing has happened on this Core yet.
-        </p>
+        <div className="mt-6" data-testid="ledger-empty">
+          <Empty
+            icon={<IconActivity size={28} />}
+            title="Nothing has happened yet"
+            body="Every consequential act on this Core writes a line here: who asked, where it ran, what was sent, and what the thing reported back. Each one is chained to the line before it, so a changed or missing entry is visible rather than deniable."
+          />
+        </div>
       )}
 
       <p className="mt-6 text-[12px] text-ash">

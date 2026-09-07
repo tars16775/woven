@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card, PageHeader } from "@/components/dashboard/ui";
+import { Button, Card, PageHeader, StatusDot } from "@/components/dashboard/ui";
+import { IconGate } from "@/components/dashboard/icons";
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { setGateOpen, useGateOpen } from "@/components/dashboard/state";
@@ -60,19 +61,24 @@ export function NetworkView() {
 
         <section
           aria-labelledby="gate-title"
-          className={`rounded-[14px] border p-5 transition-colors ${gateOpen ? "border-amber/50 bg-amber/8" : "border-ink/15 bg-chassis/40"}`}
+          className={`tap rounded-[14px] border p-5 ${gateOpen ? "border-amber/50 bg-amber/8" : "border-ink/15 bg-chassis/40"}`}
         >
-          <h2 id="gate-title" className={`text-[13px] font-semibold uppercase tracking-[0.1em] ${gateOpen ? "text-ask" : "text-ash"}`}>
-            The Gate
-          </h2>
-          <div className="mt-2 font-display text-[24px] font-medium tracking-[-0.02em]">{gateOpen ? "Open · asks first" : "Closed · nothing crosses"}</div>
+          <div className="flex items-center justify-between gap-3">
+            <h2 id="gate-title" className={`text-[13px] font-semibold uppercase tracking-[0.1em] ${gateOpen ? "text-ask" : "text-ash"}`}>
+              The Gate
+            </h2>
+            <IconGate size={20} className={gateOpen ? "text-ask" : "text-ash"} />
+          </div>
+          <div className="mt-2 font-display text-[24px] font-medium leading-tight tracking-[-0.02em]">{gateOpen ? "Open · asks first" : "Closed · nothing crosses"}</div>
           {!gateOpen && <p className="mt-2 text-[13px] text-ash">No crossings, no updates, no remote access until you open it. The Outside still routes the internet for the house.</p>}
           {gate.length === 0 ? (
             <p className="mt-4 text-[13px] text-ash" data-testid="gate-empty">
               Nothing has crossed yet. Every crossing writes a receipt, and they appear here as they happen.
             </p>
           ) : (
-            <ul className={`mt-4 space-y-3 ${gateOpen ? "" : "opacity-60"}`} data-testid="gate-crossings">
+            <>
+            <div className="mt-5 font-mono text-[10px] uppercase tracking-[0.16em] text-ash">Last crossings</div>
+            <ul className={`mt-2 space-y-3 ${gateOpen ? "" : "opacity-60"}`} data-testid="gate-crossings">
               {gate.map((g) => (
                 <li key={g.id} className="text-[13px]">
                   <div className="flex items-baseline justify-between gap-2">
@@ -84,16 +90,18 @@ export function NetworkView() {
                 </li>
               ))}
             </ul>
+            </>
           )}
         </section>
 
         <LiveOutside view={scan.view} />
       </div>
 
-      <Card className="mt-4">
-        <p className="text-[13px] text-ash">
-          The Outside runs on its own network processor with its own memory. The Inside reaches the internet only through the Gate, which forwards approved
-          tasks, verifies signed updates, and carries your key when you are away. The Gate keeps a record of every crossing and never stores your content.
+      <Card className="mt-4" title="Why there are two" action={<StatusDot tone={gateOpen ? "warn" : "good"}>{gateOpen ? "Gate open" : "Gate closed"}</StatusDot>}>
+        <p className="text-[13.5px] leading-relaxed text-ash">
+          The Outside runs on its own network processor with its own memory, and is the router for everyone in the house. The Inside has no route to the
+          internet at all: it reaches out only through the Gate, which forwards tasks you approved, verifies signed updates, and carries your key when you
+          are away. The Gate records every crossing and never stores what crossed.
         </p>
       </Card>
 

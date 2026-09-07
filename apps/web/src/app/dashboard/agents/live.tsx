@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Routine } from "@woven/schema";
-import { Card, PageHeader, Pill } from "@/components/dashboard/ui";
+import { Card, PageHeader, Pill, SkeletonRows } from "@/components/dashboard/ui";
 import { routines as routinesApi } from "@/lib/core/actions";
 import { explainAction } from "@/lib/core/actions";
 import { RoomNote } from "@/components/dashboard/room-note";
@@ -31,7 +31,7 @@ export function AgentsLive() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div>
       <PageHeader
         title="Agents"
         sub="Nothing runs on its own identity on this Core yet."
@@ -78,7 +78,7 @@ export function AgentsLive() {
             {error}
           </p>
         ) : routines === null ? (
-          <p className="text-[13px] text-ash">Loading…</p>
+          <SkeletonRows count={2} />
         ) : routines.length === 0 ? (
           <p className="text-[14px] text-ash">No routines yet. Make one from Home; it runs on the box with your permissions and leaves receipts in Activity.</p>
         ) : (
