@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Block, Code, PageFrame } from "@/components/page-frame";
 import { email } from "@/lib/brand";
+import { AvailabilityTag } from "@/components/claim";
 
 export const metadata: Metadata = {
   title: "Developers",
@@ -14,7 +15,7 @@ export default function DevelopersPage() {
     <PageFrame
       eyebrow="Developers"
       title="One endpoint on the LAN. Every action leaves a receipt."
-      intro="Woven Core exposes inference on the Inside, a capability API and an agent sandbox. Anything that can change the house passes the same permission engine as Tandem, and nothing runs as the user."
+      intro="Woven Core exposes a capability API today: every side effect it can cause is a named capability with a schema, a risk class, an approval rule and a receipt, and the engine that decides is a pure function you can test. Inference on the Inside, the agent sandbox and the robot endpoint are designed but not built, and each section below says which it is."
       aside={
         <div className="rounded-[14px] bg-bone p-5 text-[14px]">
           <div className="font-medium">Works with Woven</div>
@@ -29,6 +30,7 @@ export default function DevelopersPage() {
       }
     >
       <Block id="inference" title="Inference on the Inside">
+        <p className="not-prose mb-4"><AvailabilityTag status="box" /></p>
         <p>
           The box advertises itself with mDNS and serves an OpenAI-compatible endpoint. Any
           app that can talk to a chat completions API can use the household&apos;s model without
@@ -45,6 +47,7 @@ export default function DevelopersPage() {
       </Block>
 
       <Block id="capabilities" title="Capability API">
+        <p className="not-prose mb-4"><AvailabilityTag status="now" /></p>
         <p>
           Devices and services are exposed as typed capabilities, never as raw vendor calls.
           An action is prepared, optionally approved, executed with an idempotency key, then
@@ -71,6 +74,7 @@ GET /v1/executions/exe_41
       </Block>
 
       <Block id="agents" title="Agents">
+        <p className="not-prose mb-4"><AvailabilityTag status="box" /></p>
         <p>
           An agent is a container with a manifest. The manifest names the capabilities and
           namespaces it wants; the household grants a subset; the box issues short-lived
@@ -95,6 +99,7 @@ receipts: required`}</Code>
       </Block>
 
       <Block id="robots" title="Robots and devices">
+        <p className="not-prose mb-4"><AvailabilityTag status="box" /></p>
         <p>
           Robots use the same endpoint for high-level tasks and for inference against the
           household world model. Safety and motor control stay on the robot. Woven records
@@ -104,6 +109,7 @@ receipts: required`}</Code>
       </Block>
 
       <Block id="home-assistant" title="Home Assistant">
+        <p className="not-prose mb-4"><AvailabilityTag status="box" /></p>
         <p>
           Home Assistant runs inside the box. Existing integrations, automations and
           dashboards carry over. Woven adds the identity, permission and receipt layer on top,

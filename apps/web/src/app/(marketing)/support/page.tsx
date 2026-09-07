@@ -10,6 +10,10 @@ export const metadata: Metadata = {
 
 const faq: [string, string][] = [
   [
+    "Can I use Woven today?",
+    "Yes, the software. Woven Core runs on a Mac with Apple silicon and does everything on this site marked available now: a household with passkeys and per-person spaces, files and photos with search, the Gate with its receipts, encryption at rest, nightly snapshots with a restore drill, remote access, and one switch that stops it all. It costs nothing. The radios, cameras, router, television output and the assistant's model need the box, and the dashboard says so on the screen where each would be.",
+  ],
+  [
     "Does the box need an internet connection?",
     "No. Setup, voice, home control, files, photos and cameras work inside, on your own network. An internet connection is needed for Gate crossings, remote access from outside the house, and software updates.",
   ],
@@ -19,11 +23,11 @@ const faq: [string, string][] = [
   ],
   [
     "Can I use my existing Home Assistant setup?",
-    "Yes. Woven Core runs Home Assistant inside and can import an existing configuration during setup. Zigbee networks migrate with their keys, so devices do not need re-pairing.",
+    "That is the plan, and none of it is built. Home Assistant is meant to run inside Woven with your configuration imported during setup, and Zigbee networks to migrate with their keys so nothing is re-paired. No integration has been written and no migration has been attempted, so treat this as an intention rather than a feature.",
   ],
   [
     "How does a compute module upgrade work?",
-    "Power down, open the service panel, pull the module by its handle, seat the new one until it locks, power up. The chassis checks the module's identity and power envelope before household storage unlocks. No re-pairing, no rebuilt automations.",
+    "As designed: power down, open the service panel, pull the module by its handle, seat the new one until it locks, power up, and the chassis checks the module's identity and power envelope before household storage unlocks. No chassis or module has been manufactured, so nothing has been swapped or timed.",
   ],
   [
     "Is my data encrypted?",
@@ -31,11 +35,11 @@ const faq: [string, string][] = [
   ],
   [
     "What do you collect?",
-    "Reliability and health telemetry that you can read on the box and switch off. Never message content, files, photos, voice or camera data. Diagnostics bundles for support require your explicit consent each time.",
+    "Nothing. There is no service collecting anything, and a Core on your Mac reaches us in no way at all. The software can send one line a night saying its version and how long it has been up; that is off unless you turn it on, it goes out through the Gate like anything else, and it leaves a receipt you can read. Diagnostics bundles are written on the box and only leave if you send one.",
   ],
   [
     "Can I cancel a reservation?",
-    "Any time before the box ships, for a full refund of the deposit. Nothing else is charged until you confirm at shipment.",
+    "There is nothing to cancel. A reservation takes no money and, until an ordering service exists, is a note kept in your own browser. When deposits are taken they are refundable any time before shipment, and the balance is charged only when you confirm.",
   ],
 ];
 
@@ -44,7 +48,7 @@ export default function SupportPage() {
     <PageFrame
       eyebrow="Support"
       title="Set up in two minutes. Reach a person in one."
-      intro="Most questions are answered on the box's own screen. For the rest, here is what you need."
+      intro="The box does not exist yet; the software does, and runs on a Mac. Below is how setting up works, what people ask most, and how to reach someone."
       aside={
         <div className="rounded-[14px] bg-bone p-5 text-[14px]">
           <div className="font-medium">Talk to a person</div>
@@ -62,7 +66,32 @@ export default function SupportPage() {
         </div>
       }
     >
-      <Block id="setup" title="Setup">
+      <Block id="setup" title="Setting up on a Mac, today">
+        <ol className="max-w-[640px] space-y-4">
+          {[
+            ["Run it", "One command builds and starts a Core from a checkout, or installs it as a login service. Your data goes in a folder you choose."],
+            ["Make your house", "Name the house and yourself, add a passkey with Touch ID, and write down the recovery codes. About a minute."],
+            ["Add the rest", "Other devices at home trust the household certificate once, then use the dashboard. Other Macs back up to it with a token you make in Settings."],
+          ].map(([t, d], i) => (
+            <li key={t} className="flex gap-4">
+              <span className="mt-0.5 font-mono text-[12px] text-amber">{i + 1}</span>
+              <div>
+                <div className="font-medium">{t}</div>
+                <p className="text-ash">{d}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-5 max-w-[640px] text-[14px] text-ash">
+          The commands are on{" "}
+          <Link href="/mac" className="font-medium text-ink underline decoration-amber decoration-2 underline-offset-4">
+            the Mac page
+          </Link>
+          .
+        </p>
+      </Block>
+
+      <Block id="setup-box" title="Setting up the box, when there is one">
         <ol className="max-w-[640px] space-y-4">
           {[
             ["Plug in", "Connect power and, if you have it, Ethernet. Wi-Fi works too. The screen wakes and shows a code."],
@@ -78,6 +107,9 @@ export default function SupportPage() {
             </li>
           ))}
         </ol>
+        <p className="mt-5 max-w-[640px] text-[14px] text-ash">
+          Written from the design. No box has been built, so nobody has done this yet.
+        </p>
       </Block>
 
       <Block id="questions" title="Common questions">
