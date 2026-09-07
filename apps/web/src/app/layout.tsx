@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     template: "%s | Woven",
   },
   description:
-    "Your files, photos, cameras and smart home. A private assistant. Your TV and your Wi-Fi. Everything of yours stays inside the house.",
+    "Your files, photos, cameras and smart home. A private assistant. Your TV and your Wi-Fi. Everything of yours stays inside the house. The box ships in 2027; the software runs on a Mac today.",
   metadataBase: new URL(SITE_URL),
 };
 
