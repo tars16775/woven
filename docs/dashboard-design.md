@@ -85,8 +85,6 @@ Design first, in order. Each phase lands as its own commit.
 
 | Phase | Landed | Note |
 | --- | --- | --- |
-</content>
-</invoke>
 | 1 | tokens | radii, elevation, surfaces, motion, layout constants |
 | 2 | primitives | the full set; Switch is honest about latency, Empty is a room not an apology |
 | 3 | icons | 28 shapes, one hand, no dependency |
