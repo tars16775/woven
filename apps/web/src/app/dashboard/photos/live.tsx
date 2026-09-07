@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, Field, PageHeader, Pill, inputClass } from "@/components/dashboard/ui";
+import { Button, ButtonLink, Card, Empty, Skeleton, Field, PageHeader, Pill, inputClass } from "@/components/dashboard/ui";
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { explainAction } from "@/lib/core/actions";
@@ -12,6 +12,7 @@ import { Approvals } from "@/components/dashboard/approvals";
 import { CoreImage } from "@/components/dashboard/core-image";
 import { useSession } from "@/lib/auth";
 import { RoomNote } from "@/components/dashboard/room-note";
+import { IconChevron, IconPhotos, IconSearch } from "@/components/dashboard/icons";
 
 const monthName = (ym: string) => new Date(`${ym}-01T00:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
@@ -120,12 +121,49 @@ export function LivePhotos() {
     }
   };
 
+  /* One tile, used by the timeline, the search results and nothing else, so a
+     change to how a photo looks lands in both places at once. */
+  const Tile = ({ photo, onOpen }: { photo: Photo; onOpen: () => void }) => (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={photo.name}
+      className="tap block aspect-square w-full overflow-hidden rounded-[8px] bg-chassis hover:opacity-90"
+    >
+      <CoreImage src={api.thumbUrl(photo.id)} alt="" loading="lazy" className="h-full w-full object-cover" />
+    </button>
+  );
+
   const byMonth = new Map<string, Photo[]>();
   for (const p of items) {
     const k = p.takenAt.slice(0, 7);
     byMonth.set(k, [...(byMonth.get(k) ?? []), p]);
   }
   const canImport = session?.role === "owner" || session?.role === "adult";
+
+  /* Whatever the grid is showing is what the lightbox walks through, so the
+     arrows follow search results when a search is open and the timeline
+     otherwise. */
+  const shown = results ? results.results.slice(0, 24) : items;
+  const step = (delta: number) => {
+    if (!open) return;
+    const i = shown.indexOf(open);
+    const next = shown[i + delta];
+    if (i >= 0 && next) setOpen(next);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      step(e.key === "ArrowLeft" ? -1 : 1);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, shown]);
+
 
   return (
     <div className="mx-auto max-w-[1100px]">
@@ -157,14 +195,17 @@ export function LivePhotos() {
           <label className="sr-only" htmlFor="photo-search">
             Search photos
           </label>
-          <input
-            id="photo-search"
-            className={`${inputClass} py-3 text-[15px]`}
-            placeholder="the lake trip, a red bicycle, snow…"
-            value={query}
-            onChange={(e) => void search(e.target.value)}
-            data-testid="photo-search"
-          />
+          <div className="relative">
+            <IconSearch size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ash" />
+            <input
+              id="photo-search"
+              className={`${inputClass} py-3 pl-11 text-[15px]`}
+              placeholder="the lake trip, a red bicycle, snow…"
+              value={query}
+              onChange={(e) => void search(e.target.value)}
+              data-testid="photo-search"
+            />
+          </div>
           {results && (
             <p className="mt-2 text-[12px] text-ash">
               {results.indexed} of {results.total} photos searchable{results.indexed < results.total ? " · the rest are being read" : ""}
@@ -179,21 +220,44 @@ export function LivePhotos() {
           <ul className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-6" data-testid="search-results">
             {results.results.slice(0, 24).map((p) => (
               <li key={p.id}>
-                <button type="button" onClick={() => setOpen(p)} className="block aspect-square w-full overflow-hidden rounded-[8px] bg-chassis" aria-label={p.name}>
-                  <CoreImage src={api.thumbUrl(p.id)} alt="" loading="lazy" className="h-full w-full object-cover" />
-                </button>
+                <Tile photo={p} onOpen={() => setOpen(p)} />
               </li>
             ))}
           </ul>
         </section>
       )}
 
+      {/* Nothing read yet: hold the shape of the grid rather than an empty page. */}
+      {!stats && (
+        <ul className="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-6" aria-hidden>
+          {Array.from({ length: 12 }, (_, i) => (
+            <li key={i}>
+              <Skeleton className="aspect-square w-full" rounded="sm" />
+            </li>
+          ))}
+        </ul>
+      )}
+
       {stats && stats.total === 0 && (
-        <Card>
-          <p className="text-[14px] text-ash" data-testid="no-photos">
-            No photos yet. Upload images on the Files page, or import a folder that is already on the box (an export from another library, for example). Every image becomes a photo the moment it lands.
-          </p>
-        </Card>
+        <div data-testid="no-photos">
+          <Empty
+            icon={<IconPhotos size={28} />}
+            title="No photos yet"
+            body="Every image that lands on the box becomes a photo: its date, camera and place are read from the file itself and kept here. Faces are off by design, and search runs on your Core, which is why it still works with the Gate closed."
+            action={
+              <>
+                {canImport && (
+                  <Button kind="primary" className="px-4 py-2" onClick={() => setImporting(true)}>
+                    Import a folder
+                  </Button>
+                )}
+                <ButtonLink kind="soft" href="/dashboard/files" className="px-4 py-2">
+                  Upload from Files
+                </ButtonLink>
+              </>
+            }
+          />
+        </div>
       )}
 
       {!results && [...byMonth.entries()].map(([month, list]) => (
@@ -204,9 +268,7 @@ export function LivePhotos() {
           <ul className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-6" data-testid={`month-${month}`}>
             {list.map((p) => (
               <li key={p.id}>
-                <button type="button" onClick={() => setOpen(p)} className="block aspect-square w-full overflow-hidden rounded-[8px] bg-chassis" aria-label={p.name}>
-                  <CoreImage src={api.thumbUrl(p.id)} alt="" loading="lazy" className="h-full w-full object-cover" />
-                </button>
+                <Tile photo={p} onOpen={() => setOpen(p)} />
               </li>
             ))}
           </ul>
@@ -226,6 +288,12 @@ export function LivePhotos() {
           </div>
         )}
         <DialogActions>
+          <Button kind="soft" className="px-4 py-2.5" onClick={() => step(-1)} disabled={!open || shown.indexOf(open) <= 0} aria-label="Previous photo">
+            <IconChevron dir="left" size={16} />
+          </Button>
+          <Button kind="soft" className="px-4 py-2.5" onClick={() => step(1)} disabled={!open || shown.indexOf(open) >= shown.length - 1} aria-label="Next photo">
+            <IconChevron size={16} />
+          </Button>
           <Button kind="soft" className="flex-1 py-2.5" onClick={() => setOpen(null)} data-autofocus>
             Close
           </Button>
