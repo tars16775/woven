@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { Button, Card, Meter, PageHeader, Pill } from "@/components/dashboard/ui";
+import { Button, Card, Empty, Menu, Meter, PageHeader, Pill, Segmented, SkeletonRows } from "@/components/dashboard/ui";
+import { IconDownload, IconFiles, IconUpload } from "@/components/dashboard/icons";
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { explainAction } from "@/lib/core/actions";
@@ -180,24 +181,16 @@ export function LiveFiles() {
         </Card>
       )}
 
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Space">
-        {visible.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            role="tab"
-            aria-selected={namespace === s.id}
-            title={s.hint}
-            onClick={() => {
-              setNamespace(s.id);
-              setPath("/");
-            }}
-            className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${namespace === s.id ? "bg-ink text-bone" : "bg-white text-ink/80 ring-1 ring-ink/8 hover:ring-ink/20"}`}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        label="Space"
+        value={namespace}
+        onChange={(id) => {
+          setNamespace(id);
+          setPath("/");
+        }}
+        options={visible.map((s) => ({ id: s.id, label: s.label }))}
+      />
+      <p className="mt-2 text-[13px] text-ash">{visible.find((s) => s.id === namespace)?.hint}</p>
 
       <nav aria-label="Folder" className="mt-4 flex flex-wrap items-center gap-1 text-[13px] text-ash">
         <button type="button" onClick={() => setPath("/")} className="font-medium text-ink hover:underline">
@@ -217,11 +210,31 @@ export function LiveFiles() {
         {error ? (
           <p className="text-[14px] text-ask">{error}</p>
         ) : !listing ? (
-          <p className="text-[14px] text-ash">Reading…</p>
+          <SkeletonRows count={4} />
         ) : listing.folders.length === 0 && listing.files.length === 0 ? (
-          <p className="text-[14px] text-ash" data-testid="empty">
-            Nothing here yet. Upload something, or run <code className="font-mono text-[12px]">pnpm backup</code> on the box to bring a folder in.
-          </p>
+          <div data-testid="empty">
+            <Empty
+              icon={<IconFiles size={28} />}
+              title={path === "/" ? "Nothing in here yet" : "This folder is empty"}
+              body={
+                <>
+                  Files you put here are written to your own drive, encrypted, and stored once however many devices send the same one. Nothing is copied
+                  to anyone else&apos;s computer.
+                </>
+              }
+              action={
+                <>
+                  <Button kind="primary" className="px-4 py-2" onClick={() => input.current?.click()}>
+                    <IconUpload size={16} />
+                    Upload a file
+                  </Button>
+                  <span className="text-[13px] text-ash">
+                    or run <code className="font-mono text-[12px]">woven-backup</code> on another Mac
+                  </span>
+                </>
+              }
+            />
+          </div>
         ) : (
           <ul className="divide-y divide-ink/6" data-testid="listing">
             {listing.folders.map((f) => (
@@ -260,31 +273,30 @@ export function LiveFiles() {
                     </div>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
+                <div className="flex shrink-0 items-center gap-0.5">
                   <a
                     href={files.contentUrl(f.id, true)}
+                    aria-label={`Save ${f.name}`}
+                    title="Save a copy"
                     onClick={(e) => {
                       if (isRemoteUrl(files.contentUrl(f.id, true))) {
                         e.preventDefault();
                         openCoreUrl(files.contentUrl(f.id, true), { download: f.name }).catch((err: unknown) => say(explainAction(err)));
                       }
                     }}
-                    className="rounded-[8px] px-2 py-1 text-[13px] text-ash hover:bg-ink/6 hover:text-ink"
+                    className="tap rounded-[8px] p-1.5 text-ash hover:bg-bone hover:text-ink"
                   >
-                    Save
+                    <IconDownload size={18} />
                   </a>
-                  <Button kind="quiet" onClick={() => setRename({ file: f, name: f.name })}>
-                    Rename
-                  </Button>
-                  <Button kind="quiet" onClick={() => setShare(f)}>
-                    Share
-                  </Button>
-                  <Button kind="quiet" onClick={() => setLink({ file: f, hours: 24 * 7, made: null })} aria-label={`Link to ${f.name}`}>
-                    Link
-                  </Button>
-                  <Button kind="quiet" onClick={() => remove(f)} aria-label={`Delete ${f.name}`}>
-                    Delete
-                  </Button>
+                  <Menu
+                    label={`More for ${f.name}`}
+                    items={[
+                      { label: "Rename", onClick: () => setRename({ file: f, name: f.name }) },
+                      { label: "Share with the house", onClick: () => setShare(f) },
+                      { label: "Make a link", onClick: () => setLink({ file: f, hours: 24 * 7, made: null }) },
+                      { label: "Delete", onClick: () => remove(f), danger: true },
+                    ]}
+                  />
                 </div>
               </li>
             ))}

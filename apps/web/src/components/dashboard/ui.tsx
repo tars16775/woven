@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import type { ButtonHTMLAttributes, ComponentProps, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { IconMore } from "./icons";
 import type { Where } from "@/lib/dashboard/types";
 
 /**
@@ -535,6 +539,82 @@ export function Note({
   return (
     <div role={role} className={`rounded-[12px] px-4 py-3 text-[13px] leading-relaxed ring-1 ${t} ${className}`}>
       {children}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------- menu */
+
+/**
+ * A small overflow menu, for rows that have more actions than fit.
+ *
+ * Deliberately plain: a popover positioned by the browser rather than by a
+ * measuring library, closed by Escape, a click outside, or choosing
+ * something. Five text buttons in a row is a wall; one is a door.
+ */
+export function Menu({
+  label,
+  items,
+  align = "right",
+}: {
+  label: string;
+  items: { label: string; onClick: () => void; danger?: boolean }[];
+  align?: "left" | "right";
+}) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={box} className="relative">
+      <button
+        type="button"
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="tap rounded-[8px] p-1.5 text-ash hover:bg-bone hover:text-ink"
+      >
+        <IconMore size={18} />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className={`dash-panel absolute z-20 mt-1 min-w-[168px] overflow-hidden rounded-[12px] bg-white py-1 shadow-[var(--shadow-pop)] ring-1 ring-ink/8 ${
+            align === "right" ? "right-0" : "left-0"
+          }`}
+        >
+          {items.map((it) => (
+            <button
+              key={it.label}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                it.onClick();
+              }}
+              className={`tap block w-full px-3.5 py-2 text-left text-[13.5px] hover:bg-bone ${it.danger ? "text-[#a13a2a]" : "text-ink"}`}
+            >
+              {it.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

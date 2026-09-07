@@ -1,5 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { collectConsoleErrors, signInWithPasskey } from "./helpers";
+
+/** Files rows keep their rarer actions behind an overflow menu (design phase 12). */
+async function deleteFile(page: Page, name: string, timeout = 30_000) {
+  await page.getByRole("button", { name: `More for ${name}` }).click({ timeout });
+  await page.getByRole("menuitem", { name: "Delete" }).click();
+}
+
 
 /**
  * The dashboard against a real Woven Core (LIVE_CORE=1 starts one on :4000).
@@ -100,9 +107,9 @@ test("Files uploads to the box in chunks, lists, serves and deletes; an image sh
   await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
 
   await page.goto("/dashboard/files");
-  await page.getByRole("button", { name: "Delete hello.txt" }).click({ timeout: 30_000 });
+  await deleteFile(page, "hello.txt");
   await expect(page.getByTestId("listing")).not.toContainText("hello.txt", { timeout: 15_000 });
-  await page.getByRole("button", { name: "Delete dot.png" }).click();
+  await deleteFile(page, "dot.png");
   await expect(page.getByTestId("empty")).toBeVisible({ timeout: 15_000 });
 });
 
@@ -134,7 +141,7 @@ test("the TV page lists media from the box and plays it", async ({ page }) => {
   await expect(player).toBeVisible();
   await expect.poll(async () => player.evaluate((el) => (el as HTMLMediaElement).readyState), { timeout: 20_000 }).toBeGreaterThanOrEqual(1);
   await page.goto("/dashboard/files");
-  await page.getByRole("button", { name: "Delete tone.wav" }).click({ timeout: 30_000 });
+  await deleteFile(page, "tone.wav");
   await expect(page.getByTestId("listing")).not.toContainText("tone.wav", { timeout: 15_000 }).catch(() => undefined);
 });
 
