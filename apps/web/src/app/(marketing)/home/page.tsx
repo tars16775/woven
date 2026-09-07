@@ -6,6 +6,8 @@ import { ScreenActivity } from "@/components/screen";
 import { Section } from "@/components/section";
 import { TVFrame } from "@/components/tv-frame";
 import { AppRooms } from "@/components/phone/screens";
+import { ClaimTag, Fn, Footnotes } from "@/components/claim";
+import type { ClaimId } from "@/lib/claims";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -34,6 +36,9 @@ const receipt = [
   ["21:40:05", "Receipt", "Written. Visible on the screen and in Activity.", "inside"],
 ];
 
+/** The notes at the foot of this page, in the order their markers appear. */
+const notes = ["radios", "receipts", "cameras", "tv", "router"] as const satisfies readonly ClaimId[];
+
 export default function HomePage() {
   return (
     <>
@@ -41,8 +46,14 @@ export default function HomePage() {
         theme="white"
         titleAs="h1"
         eyebrow="Home"
+        tag={<ClaimTag id="radios" />}
         title="Your smart home, with a brain in the house."
-        subtitle="The radios are in the chassis. Devices pair once, routines run inside, and everything keeps answering when the internet does not, because it never needed it."
+        subtitle={
+          <>
+            The radios are in the chassis. Devices pair once, routines run inside, and everything keeps answering when the internet does not, because it never needed it.
+            <Fn notes={notes} id="radios" />
+          </>
+        }
         primary={{ label: "Reserve a Core", href: "/order" }}
         secondary={{ label: "Supported devices", href: "#devices" }}
         align="end"
@@ -53,6 +64,7 @@ export default function HomePage() {
       <Feature
         theme="light"
         eyebrow="Radios"
+        tag={<ClaimTag id="radios" />}
         title="Matter, Thread and Zigbee. No dongles."
         body={
           <>
@@ -132,6 +144,7 @@ export default function HomePage() {
       <Feature
         theme="white"
         eyebrow="Offline"
+        tag={<ClaimTag id="radios" />}
         title="Unplug the internet. The house still listens."
         body={
           <>
@@ -183,6 +196,7 @@ export default function HomePage() {
         theme="light"
         flip
         eyebrow="Cameras"
+        tag={<ClaimTag id="cameras" />}
         title="Detection, alerts and archives that stay home."
         body={
           <>
@@ -207,6 +221,7 @@ export default function HomePage() {
         id="tv"
         theme="light"
         eyebrow="On your TV · included"
+        tag={<ClaimTag id="tv" />}
         title="The biggest screen in the house, finally yours."
         body={
           <>
@@ -280,6 +295,8 @@ export default function HomePage() {
           </div>
         </Reveal>
       </section>
+
+      <Footnotes notes={notes} />
     </>
   );
 }

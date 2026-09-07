@@ -65,7 +65,9 @@ export function Section({
           </p>
         )}
         <Title
-          className={`mt-2 font-display text-[32px] font-medium leading-[1.02] tracking-[-0.02em] md:text-[44px] md:leading-[1.05] ${titleClassName}`}
+          className={`mt-2 font-display font-medium leading-[1.02] tracking-[-0.025em] md:leading-[1.04] ${
+            titleAs === "h1" ? "text-[38px] md:text-[58px] lg:text-[68px]" : "text-[32px] md:text-[44px]"
+          } ${titleClassName}`}
         >
           {title}
         </Title>

@@ -36,6 +36,8 @@ export function ApplyForm() {
   const [errors, setErrors] = useState<Partial<Record<Key, string>>>({});
   const [busy, setBusy] = useState(false);
   const [savedNow, setSavedNow] = useState(false);
+  /** Whether the application reached anyone, or only this browser. */
+  const [delivery, setDelivery] = useState<"sending" | "received" | "local">("local");
   const refs = useRef<Partial<Record<Key, HTMLInputElement | HTMLTextAreaElement | null>>>({});
 
   const value = (k: Key): string => {
@@ -71,7 +73,11 @@ export function ApplyForm() {
     }
     setBusy(true);
     const app = saveApplication({ code: saved?.code, ...v, setup: setupValue });
-    void siteApi.application({ code: app.code, name: app.name, email: app.email, city: app.city, people: app.people, setup: app.setup, why: app.why });
+    setDelivery("sending");
+    void siteApi
+      .application({ code: app.code, name: app.name, email: app.email, city: app.city, people: app.people, setup: app.setup, why: app.why })
+      .then((r) => setDelivery(r.sent ? "received" : "local"))
+      .catch(() => setDelivery("local"));
     setTyped({});
     setSetup(null);
     setEditing(false);
@@ -82,9 +88,9 @@ export function ApplyForm() {
   if (saved && !editing) {
     return (
       <div className="rounded-[14px] bg-white p-6 ring-1 ring-ink/5" aria-live="polite">
-        <div className="flex items-center gap-2 text-[13px] font-medium text-local">
-          <span className="block h-[6px] w-[6px] rounded-full bg-local" aria-hidden />
-          {savedNow ? "Saved just now" : "Saved on this device"}
+        <div className={`flex items-center gap-2 text-[13px] font-medium ${delivery === "local" ? "text-ash" : "text-local"}`}>
+          <span className={`block h-[6px] w-[6px] rounded-full ${delivery === "local" ? "bg-ash" : "bg-local"}`} aria-hidden />
+          {delivery === "sending" ? "Sending…" : delivery === "received" ? "We have it" : savedNow ? "Saved just now" : "Saved on this device"}
         </div>
         <div className="mt-3 font-display text-[24px] font-medium tracking-[-0.02em]">
           Your application is saved.
@@ -92,8 +98,9 @@ export function ApplyForm() {
         <p className="mt-2 text-[13px] text-ash">Application number</p>
         <p className="mt-1 font-mono text-[22px] tracking-[0.04em] text-ink">{saved.code}</p>
         <p className="mt-4 text-[15px] leading-relaxed text-ash">
-          Your application is saved on this device. When applications open we will ask you to submit it;
-          nothing has been sent yet.
+          {delivery === "received"
+            ? "We have your application and will read it ourselves. If you gave an email, a copy is on its way to it."
+            : "Saved in this browser. There is no application service running yet, so nothing has been sent; keep the number and we will ask you to submit it when applications open."}
         </p>
         <dl className="hairline mt-5 space-y-1.5 border-t pt-4 text-[13px]">
           <Pair k="Name" v={saved.name} />

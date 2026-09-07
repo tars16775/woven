@@ -4,6 +4,8 @@ import { AskDemo } from "@/components/ask-demo";
 import { Feature } from "@/components/feature";
 import { Reveal } from "@/components/reveal";
 import { Section } from "@/components/section";
+import { ClaimTag, Fn, Footnotes } from "@/components/claim";
+import type { ClaimId } from "@/lib/claims";
 
 export const metadata: Metadata = {
   title: "Tandem",
@@ -43,6 +45,9 @@ const routing = [
   ["Video generation", "Crosses the Gate, by permission", "Outside everyday use."],
 ];
 
+/** The notes at the foot of this page, in the order their markers appear. */
+const notes = ["tandem", "speed", "voice", "gate", "receipts", "agents", "insideShare"] as const satisfies readonly ClaimId[];
+
 export default function TandemPage() {
   return (
     <>
@@ -50,10 +55,27 @@ export default function TandemPage() {
         theme="dark"
         titleAs="h1"
         eyebrow="Tandem"
+        tag={<ClaimTag id="tandem" />}
         title="Ask. It stays home."
-        subtitle="A household assistant that runs inside. It knows your calendar, files, photos and home, answers in under a second, and asks before anything crosses the Gate. Try it: give the approval yourself."
+        subtitle={
+          <>
+            A household assistant that runs inside. It knows your calendar, files, photos and home,
+            answers in under a second
+            <Fn notes={notes} id="speed" />, and asks before anything crosses the Gate. Try it: give
+            the approval yourself.
+          </>
+        }
         primary={{ label: "Reserve a Core", href: "/order" }}
         secondary={{ label: "See what leaves", href: "/privacy" }}
+        foot={
+          <>
+            The demonstration above is scripted. On a Core today the assistant answers by rules over
+            what the box holds and says so on the screen; the model that reads a sentence, and the
+            voice that speaks to it, need the box.
+            <Fn notes={notes} id="tandem" />
+            <Fn notes={notes} id="voice" />
+          </>
+        }
       >
         <AskDemo />
       </Section>
@@ -105,13 +127,19 @@ export default function TandemPage() {
       <section data-theme="light" className="bg-bone text-ink">
         <div className="mx-auto max-w-[1100px] px-6 py-24 lg:px-10">
           <Reveal>
-            <p className="text-[13px] font-medium text-ash">How an action happens</p>
+            <p className="flex flex-wrap items-center gap-2.5 text-[13px] font-medium text-ash">
+              How an action happens
+              <ClaimTag id="receipts" />
+            </p>
             <h2 className="mt-2 max-w-[640px] font-display text-[32px] font-medium leading-[1.08] tracking-[-0.02em] md:text-[38px]">
               The model suggests. The policy decides. The device confirms.
             </h2>
             <p className="mt-4 max-w-[560px] text-[15px] leading-relaxed text-ash">
               Tandem is an orchestrator, not a single model with a key to the house. Every
-              request that could change something passes through the same nine steps.
+              request that could change something passes through the same nine steps. This part is
+              built and running today: the permission engine, the approvals bound to the exact
+              parameters, and the receipt at the end.
+              <Fn notes={notes} id="receipts" />
             </p>
           </Reveal>
           <ol className="mt-12 grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -138,10 +166,19 @@ export default function TandemPage() {
       <section data-theme="white" className="bg-white text-ink">
         <div className="mx-auto max-w-[1100px] px-6 py-24 lg:px-10">
           <Reveal>
-            <p className="text-[13px] font-medium text-ash">Permissions</p>
+            <p className="flex flex-wrap items-center gap-2.5 text-[13px] font-medium text-ash">
+              Permissions
+              <ClaimTag id="gate" />
+            </p>
             <h2 className="mt-2 max-w-[640px] font-display text-[32px] font-medium leading-[1.08] tracking-[-0.02em] md:text-[38px]">
               Eight classes of action. You set the line.
             </h2>
+            <p className="mt-4 max-w-[560px] text-[15px] leading-relaxed text-ash">
+              Built and running. The engine is a pure function of the request: same request, same
+              answer, every time, and five thousand random requests are checked against these rules
+              on every change.
+              <Fn notes={notes} id="gate" />
+            </p>
           </Reveal>
           <div className="mt-10 overflow-x-auto">
             <table className="w-full min-w-[560px] text-[14px]">
@@ -175,6 +212,7 @@ export default function TandemPage() {
         id="agents"
         theme="dark"
         eyebrow="Agents"
+        tag={<ClaimTag id="agents" />}
         title="Where your agents are allowed to run."
         body={
           <>
@@ -299,6 +337,8 @@ export default function TandemPage() {
           </div>
         </Reveal>
       </section>
+
+      <Footnotes notes={notes} />
     </>
   );
 }

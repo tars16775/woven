@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { claimIds, claims, claimsByStatus } from "@/lib/claims";
@@ -35,7 +35,11 @@ describe("the claims registry", () => {
   });
 
   it("keeps every footnote a page references, in the order it is used", () => {
-    const pages = ["src/app/(marketing)/page.tsx"];
+    // Every marketing page that uses the system, found rather than listed.
+    const pages = readdirSync(join(root, "src/app/(marketing)"), { withFileTypes: true })
+      .flatMap((e) => (e.isDirectory() ? [`src/app/(marketing)/${e.name}/page.tsx`] : e.name === "page.tsx" ? ["src/app/(marketing)/page.tsx"] : []))
+      .filter((p) => existsSync(join(root, p)) && read(p).includes("<Fn notes={notes}"));
+    expect(pages.length, "no page uses the footnote system").toBeGreaterThanOrEqual(3);
     for (const page of pages) {
       const src = read(page);
       const declared = /const notes = \[([\s\S]*?)\] as const/.exec(src);

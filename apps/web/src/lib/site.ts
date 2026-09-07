@@ -115,18 +115,50 @@ export const nav = {
   ],
 };
 
-export const footerLinks = [
-  { label: "Woven © 2026", href: "/" },
-  { label: "What is real", href: "/status" },
-  { label: "Privacy & Legal", href: "/legal" },
-  { label: "Founding Homes", href: "/founding-homes" },
-  { label: "Support", href: "/support" },
-  { label: "Press", href: "/press" },
-  { label: "Careers", href: "/careers" },
-  { label: "Developers", href: "/developers" },
-  { label: "Woven on your Mac", href: "/mac" },
-  { label: "Contact", href: "/contact" },
+/** The footer directory, in columns, the way a shop's index reads. */
+export const footerGroups: { title: string; links: { label: string; href: string }[] }[] = [
+  {
+    title: "The box",
+    links: [
+      { label: "Woven Core", href: "/core" },
+      { label: "Woven Core+", href: "/core-plus" },
+      { label: "Woven Core Pro", href: "/core-pro" },
+      { label: "Compare", href: "/core-plus#compare" },
+      { label: "Tech specs", href: "/core-plus#specs" },
+      { label: "Reserve", href: "/order" },
+    ],
+  },
+  {
+    title: "What it does",
+    links: [
+      { label: "Tandem", href: "/tandem" },
+      { label: "Home and TV", href: "/home" },
+      { label: "Privacy and the Gate", href: "/privacy" },
+      { label: "Run it on a Mac", href: "/mac" },
+      { label: "For developers", href: "/developers" },
+    ],
+  },
+  {
+    title: "Honestly",
+    links: [
+      { label: "What is real", href: "/status" },
+      { label: "Founding Homes", href: "/founding-homes" },
+      { label: "Support", href: "/support" },
+      { label: "Privacy and legal", href: "/legal" },
+    ],
+  },
+  {
+    title: "Woven",
+    links: [
+      { label: "Press", href: "/press" },
+      { label: "Careers", href: "/careers" },
+      { label: "Contact", href: "/contact" },
+    ],
+  },
 ];
+
+/** Flat list, for anything that wants one line of links. */
+export const footerLinks = footerGroups.flatMap((g) => g.links);
 
 /** The architectural claim the whole pitch rests on. */
 export const sides = {

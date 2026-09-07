@@ -7,6 +7,8 @@ type Props = {
   id?: string;
   theme?: "light" | "dark" | "white";
   eyebrow?: string;
+  /** Small tag beside the eyebrow: whether this runs today or waits on the box. */
+  tag?: ReactNode;
   title: string;
   body: ReactNode;
   /** Image on the right by default; flip to put it on the left. */
@@ -25,6 +27,7 @@ export function Feature({
   id,
   theme = "white",
   eyebrow,
+  tag,
   title,
   body,
   flip = false,
@@ -45,8 +48,11 @@ export function Feature({
         }`}
       >
         <Reveal className="max-w-[460px] md:justify-self-center">
-          {eyebrow && (
-            <p className="text-[13px] font-medium text-[var(--section-muted)]">{eyebrow}</p>
+          {(eyebrow || tag) && (
+            <p className="flex flex-wrap items-center gap-2.5 text-[13px] font-medium text-[var(--section-muted)]">
+              {eyebrow}
+              {tag}
+            </p>
           )}
           <h2 className="mt-2 font-display text-[32px] font-medium leading-[1.08] tracking-[-0.02em] md:text-[38px]">
             {title}

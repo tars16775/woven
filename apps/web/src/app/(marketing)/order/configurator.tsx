@@ -26,6 +26,9 @@ function isTier(v: string | null): v is TierId {
  * Design-studio layout: the product stays put on the left while the
  * choices scroll on the right. Every choice changes the box in view.
  */
+/** Whether the reservation reached anyone, or only this browser. */
+type Delivery = "sending" | "received" | "emailed" | "local";
+
 export function Configurator() {
   const params = useSearchParams();
   const session = useSession();
@@ -40,6 +43,7 @@ export function Configurator() {
   const [cloud, setCloud] = useState(cloudPlans[1].id);
   const [picked, setPicked] = useState<string[]>([]);
   const [reserved, setReserved] = useState<Reservation | null>(null);
+  const [delivery, setDelivery] = useState<Delivery>("sending");
 
   // Changing the model resets storage to the included option and writes the
   // URL. Native replaceState is picked up by the Next router, so
@@ -78,8 +82,13 @@ export function Configurator() {
       email: session?.email,
     });
     setReserved(r);
-    // Also to the site's backend when one is configured, so a confirmation can go out by email. Best effort.
-    void siteApi.reservation({ code: r.code, tier: r.tier, finish: r.finish, storage: r.storage, cloud: r.cloud, addons: r.addons, total: r.total, deposit: r.deposit, ...(r.name ? { name: r.name } : {}), ...(r.email ? { email: r.email } : {}) });
+    setDelivery("sending");
+    // The reservation lives in this browser either way. Whether it also reached
+    // anyone is a fact the confirmation reports rather than assumes.
+    void siteApi
+      .reservation({ code: r.code, tier: r.tier, finish: r.finish, storage: r.storage, cloud: r.cloud, addons: r.addons, total: r.total, deposit: r.deposit, ...(r.name ? { name: r.name } : {}), ...(r.email ? { email: r.email } : {}) })
+      .then((res) => setDelivery(res.sent ? (res.mail === "sent" ? "emailed" : "received") : "local"))
+      .catch(() => setDelivery("local"));
   };
 
   return (
@@ -228,7 +237,7 @@ export function Configurator() {
 
             {/* Summary or confirmation */}
             {reserved ? (
-              <Confirmation r={reserved} onAnother={() => setReserved(null)} />
+              <Confirmation r={reserved} delivery={delivery} onAnother={() => setReserved(null)} />
             ) : (
               <div className="mt-12 rounded-[14px] bg-white p-6 ring-1 ring-ink/5">
                 <dl className="space-y-2 text-[14px]">
@@ -274,7 +283,7 @@ export function Configurator() {
 }
 
 /** What the person keeps after reserving: a code, what they chose, and what happens next. */
-function Confirmation({ r, onAnother }: { r: Reservation; onAnother: () => void }) {
+function Confirmation({ r, delivery, onAnother }: { r: Reservation; delivery: Delivery; onAnother: () => void }) {
   const t = tiers[r.tier];
   const storageOpt = storageOptions[r.tier].find((s) => s.id === r.storage);
   const cloudOpt = cloudPlans.find((c) => c.id === r.cloud);
@@ -282,9 +291,9 @@ function Confirmation({ r, onAnother }: { r: Reservation; onAnother: () => void 
   const chosen = r.addons.map((id) => addons.find((a) => a.id === id)).filter(Boolean);
   return (
     <section aria-labelledby="reserved-heading" className="mt-12 rounded-[14px] bg-white p-6 ring-1 ring-ink/5">
-      <div className="flex items-center gap-2 text-[13px] font-medium text-local">
-        <span className="block h-[6px] w-[6px] rounded-full bg-local" aria-hidden />
-        Reserved on this device
+      <div className={`flex items-center gap-2 text-[13px] font-medium ${delivery === "local" ? "text-ash" : "text-local"}`}>
+        <span className={`block h-[6px] w-[6px] rounded-full ${delivery === "local" ? "bg-ash" : "bg-local"}`} aria-hidden />
+        {delivery === "sending" ? "Saving…" : delivery === "local" ? "Saved on this device" : "We have it"}
       </div>
       <h2 id="reserved-heading" className="mt-3 font-display text-[26px] font-medium leading-none tracking-[-0.02em]">
         Your place is held.
@@ -320,11 +329,28 @@ function Confirmation({ r, onAnother }: { r: Reservation; onAnother: () => void 
 
       <div className="mt-5 rounded-[10px] bg-bone p-4 text-[13px]">
         <div className="font-medium">What happens next</div>
-        <ol className="mt-2 space-y-1.5 text-ash">
-          <li>1. We hold your place.</li>
-          <li>2. Before shipping in {estimatedDelivery[r.tier]} we confirm the final price with you.</li>
-          <li>3. You pay the balance only when you confirm. Cancel any time for a full refund of the deposit.</li>
-        </ol>
+        {delivery === "local" ? (
+          <>
+            <ol className="mt-2 space-y-1.5 text-ash">
+              <li>1. Nothing was sent. There is no ordering service running yet, so this reservation exists only in this browser.</li>
+              <li>2. Keep the code. When reservations open, it is how you claim this configuration and its target price.</li>
+              <li>3. Nothing is owed, and no card was asked for.</li>
+            </ol>
+            <p className="mt-3 text-ash">
+              If you would rather be on a list a person reads,{" "}
+              <Link href="/founding-homes" className="font-medium text-ink underline decoration-amber decoration-2 underline-offset-4">
+                apply to be a Founding Home
+              </Link>
+              .
+            </p>
+          </>
+        ) : (
+          <ol className="mt-2 space-y-1.5 text-ash">
+            <li>1. We have your place and the configuration above.{delivery === "emailed" ? " A copy is in your inbox." : ""}</li>
+            <li>2. Before shipping in {estimatedDelivery[r.tier]} we confirm the final price with you.</li>
+            <li>3. You pay only when you confirm. Cancel any time for a full refund of the deposit.</li>
+          </ol>
+        )}
       </div>
 
       <Link href={`/order/status?code=${encodeURIComponent(r.code)}`} className="btn btn-primary mt-5 w-full">
@@ -338,8 +364,10 @@ function Confirmation({ r, onAnother }: { r: Reservation; onAnother: () => void 
         Reserve another
       </button>
       <p className="mt-4 text-[11px] leading-relaxed text-ash">
-        Saved in this browser only. There is no ordering service yet, so nothing has been sent and no card
-        was asked for. Keep the code; it is how you find this reservation again.
+        {delivery === "local"
+          ? "Saved in this browser only. Clearing this browser's data loses it, and the code is the only copy."
+          : "Also saved in this browser, so the code works even if you lose the email."}{" "}
+        Prices and dates on this page are engineering targets for a box that has not been built.
       </p>
     </section>
   );
