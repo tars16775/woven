@@ -1,9 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useReducedMotion } from "motion/react";
 import { CanvasStage } from "./three/canvas-stage";
 import { CoreDevice } from "./core-device";
+import { useReducedMotionAfterMount } from "./three/reduced-motion";
 
 const CoreModel = dynamic(() => import("./three/core-model"), { ssr: false, loading: () => null });
 
@@ -36,7 +36,7 @@ export function Core3D({
   hero = ignite,
   className = "",
 }: Props) {
-  const reduce = useReducedMotion() ?? false;
+  const reduce = useReducedMotionAfterMount();
   // The power-on plays once: the scene latches it in a ref on mount, and it
   // stays mounted while the loop is paused and resumed, so nothing replays.
 

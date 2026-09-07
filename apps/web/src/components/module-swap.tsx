@@ -1,10 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { InsideDiagram } from "./three/canvas-fallbacks";
 import { CanvasStage } from "./three/canvas-stage";
+import { useReducedMotionAfterMount } from "./three/reduced-motion";
 
 const InsideScene = dynamic(() => import("./three/inside-scene"), { ssr: false, loading: () => null });
 
@@ -41,7 +41,7 @@ type Props = {
 export function ModuleSwap({ skipHref = "#privacy" }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const progress = useRef(0);
-  const reduce = useReducedMotion() ?? false;
+  const reduce = useReducedMotionAfterMount();
   const [p, setP] = useState(0);
 
   useEffect(() => {

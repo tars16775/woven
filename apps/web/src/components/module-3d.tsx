@@ -1,9 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useReducedMotion } from "motion/react";
 import { ModuleDiagram } from "./three/canvas-fallbacks";
 import { CanvasStage } from "./three/canvas-stage";
+import { useReducedMotionAfterMount } from "./three/reduced-motion";
 
 const ModuleShowcase = dynamic(() => import("./three/module-showcase"), { ssr: false, loading: () => null });
 
@@ -15,7 +15,7 @@ const description =
 
 /** The compute module on its own. Give it a sized container. */
 export function Module3D({ className = "" }: { className?: string }) {
-  const reduce = useReducedMotion() ?? false;
+  const reduce = useReducedMotionAfterMount();
   return (
     <CanvasStage className={className} label="The Woven compute module" description={description} fallback={<ModuleDiagram />}>
       {(active) => <ModuleShowcase reduceMotion={reduce} active={active} />}
