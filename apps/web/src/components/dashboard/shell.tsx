@@ -15,6 +15,7 @@ import { ThemeStyle, useDocumentTheme, useTheme } from "./theme";
 import { useGateOpen } from "./state";
 import { SearchBox } from "./search-box";
 import { NoCore } from "./no-core";
+import { TourBar } from "./tour";
 import { Avatar } from "./ui";
 import { roomIcon, type RoomHref } from "./icons";
 import { useT, type MessageKey } from "@/lib/i18n";
@@ -387,6 +388,9 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           </main>
         </div>
+
+        {/* Walks between rooms, so it lives above the shell rather than in a page. */}
+        <TourBar />
       </div>
     </ToastProvider>
   );

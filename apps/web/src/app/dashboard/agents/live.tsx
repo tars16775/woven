@@ -6,6 +6,7 @@ import type { Routine } from "@woven/schema";
 import { Card, PageHeader, Pill } from "@/components/dashboard/ui";
 import { routines as routinesApi } from "@/lib/core/actions";
 import { explainAction } from "@/lib/core/actions";
+import { RoomNote } from "@/components/dashboard/room-note";
 
 /**
  * The honest Agents page (gap 10). This Core has no agent runtime yet:
@@ -40,6 +41,8 @@ export function AgentsLive() {
           </Pill>
         }
       />
+
+      <RoomNote id="room:agents" />
 
       <Card title="What this means">
         <p className="text-[14px] leading-relaxed">

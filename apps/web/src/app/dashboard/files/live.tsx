@@ -9,6 +9,7 @@ import { bytes, files, shares, type FileEntry, type FileListing, type FilesSumma
 import { useSession } from "@/lib/auth";
 import { isRemoteUrl, openCoreUrl } from "@/lib/core/transport";
 import type { Namespace } from "@woven/schema";
+import { RoomNote } from "@/components/dashboard/room-note";
 
 const spaces: { id: Namespace; label: string; hint: string }[] = [
   { id: "personal", label: "Mine", hint: "Only you. Not even the owner." },
@@ -164,6 +165,8 @@ export function LiveFiles() {
           </>
         }
       />
+
+      <RoomNote id="room:files" />
 
       {progress && (
         <Card className="mb-4">

@@ -5,6 +5,7 @@ import { Card, Meter, PageHeader, Pill, WherePill, whereRan } from "@/components
 import type { Where } from "@/lib/dashboard/types";
 import { receiptLines, toActivity, type LiveActivityItem } from "@/lib/core/activity";
 import { useCore } from "@/lib/core/store";
+import { RoomNote } from "@/components/dashboard/room-note";
 
 const filters: { id: "all" | Where; label: string }[] = [
   { id: "all", label: "Everything" },
@@ -41,6 +42,8 @@ export function ActivityLedger() {
           </Pill>
         }
       />
+
+      <RoomNote id="room:activity" />
 
       <Card dark>
         <div className="flex flex-wrap items-end justify-between gap-4">

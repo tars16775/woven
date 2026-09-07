@@ -15,6 +15,7 @@ import { NotificationsCard } from "@/components/dashboard/notifications-card";
 import { useSession } from "@/lib/auth";
 import { explain, identity } from "@/lib/core/identity";
 import type { Person as CorePerson } from "@woven/schema";
+import { RoomNote } from "@/components/dashboard/room-note";
 
 type Open = null | "transfer" | "reset";
 
@@ -48,6 +49,8 @@ export function SettingsView() {
   return (
     <div className="mx-auto max-w-[1100px]">
       <PageHeader title="Settings" sub={session?.household ?? ""} />
+
+      <RoomNote id="room:settings" />
 
       <PasskeysCard />
 

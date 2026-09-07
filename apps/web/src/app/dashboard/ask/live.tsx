@@ -7,6 +7,7 @@ import { useToast } from "@/components/dashboard/toast";
 import { ask, type AskAnswer } from "@/lib/core/ask";
 import { actions, describe } from "@/lib/core/actions";
 import { explainAction } from "@/lib/core/actions";
+import { RoomNote } from "@/components/dashboard/room-note";
 
 type Msg = { id: number; role: "user"; text: string } | { id: number; role: "box"; answer: AskAnswer; decided?: "approved" | "declined" };
 
@@ -73,6 +74,8 @@ export function LiveAskChat() {
           </Pill>
         }
       />
+
+      <RoomNote id="room:ask" />
 
       <div className="flex-1 overflow-y-auto rounded-[14px] bg-white p-4 ring-1 ring-ink/5 md:p-6">
         {msgs.length === 0 && (

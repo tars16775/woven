@@ -17,6 +17,7 @@ import { coreClient, useCore } from "@/lib/core/store";
 import { PilotCard } from "@/components/dashboard/pilot-card";
 import { PowerCard } from "@/components/dashboard/power-card";
 import type { Integrity } from "@/lib/core/client";
+import { RoomNote } from "@/components/dashboard/room-note";
 
 type Phase = "ready" | "restarting";
 
@@ -178,6 +179,8 @@ export function CoreView() {
           </div>
         }
       />
+
+      <RoomNote id="room:core" />
 
       <ConnectCore />
       <PowerCard />

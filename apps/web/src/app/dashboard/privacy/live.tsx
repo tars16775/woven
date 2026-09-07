@@ -8,6 +8,7 @@ import { MemoryCard } from "@/components/dashboard/memory-card";
 import { privacy, type PrivacySummary } from "@/lib/core/ask";
 import { explainAction } from "@/lib/core/actions";
 import { useCore } from "@/lib/core/store";
+import { RoomNote } from "@/components/dashboard/room-note";
 
 const bytes = (n: number) => (n < 1e3 ? `${n} B` : n < 1e6 ? `${(n / 1e3).toFixed(1)} KB` : n < 1e9 ? `${(n / 1e6).toFixed(1)} MB` : `${(n / 1e9).toFixed(2)} GB`);
 
@@ -52,6 +53,8 @@ export function LivePrivacy() {
           </Pill>
         }
       />
+
+      <RoomNote id="room:privacy" />
       <div className="mb-4">
         <MemoryCard />
       </div>

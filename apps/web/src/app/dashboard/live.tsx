@@ -14,6 +14,9 @@ import { identity } from "@/lib/core/identity";
 import { memoryLabel, storageLabel, temperatureLabel, useLiveCore } from "@/lib/core/live";
 import { useCore } from "@/lib/core/store";
 import { toActivity } from "@/lib/core/activity";
+import { Welcome } from "@/components/dashboard/welcome";
+import { startTour } from "@/components/dashboard/tour";
+import { RoomNote } from "@/components/dashboard/room-note";
 
 function greeting() {
   const h = new Date().getHours();
@@ -74,6 +77,7 @@ export function LiveOverview() {
 
   return (
     <div className="mx-auto max-w-[1100px]">
+      <RoomNote id="room:overview" />
       <h1 className="font-display text-[34px] font-medium leading-none tracking-[-0.02em] md:text-[40px]">
         {greeting()}, {session?.name?.split(" ")[0] ?? "there"}
       </h1>
@@ -82,6 +86,10 @@ export function LiveOverview() {
       </p>
 
       <div className="mt-6">
+        <Welcome onStartTour={startTour} />
+      </div>
+
+      <div className="mt-4">
         <PowerCard compact />
       </div>
 

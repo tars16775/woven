@@ -9,6 +9,7 @@ import { useCore } from "@/lib/core/store";
 import { timeOf } from "@/lib/core/format";
 import { LiveInside, LiveOutside, useNetworkScan } from "./live-cards";
 import type { LedgerRow } from "@woven/schema";
+import { RoomNote } from "@/components/dashboard/room-note";
 
 const formatBytes = (n: number) => (n < 1e3 ? `${n} bytes` : n < 1e6 ? `${(n / 1e3).toFixed(1)} KB` : `${(n / 1e6).toFixed(1)} MB`);
 
@@ -51,6 +52,8 @@ export function NetworkView() {
         sub="Two networks in one box. The Inside has no route to the internet. The Outside is the router."
         action={gateOpen ? <Button onClick={() => setConfirm(true)}>Close the Gate</Button> : <Button kind="primary" onClick={openGate}>Open the Gate</Button>}
       />
+
+      <RoomNote id="room:network" />
 
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.6fr_1fr]">
         <LiveInside view={scan.view} error={scan.error} />

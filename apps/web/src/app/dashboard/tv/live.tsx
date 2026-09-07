@@ -7,6 +7,7 @@ import { explainAction } from "@/lib/core/actions";
 import { bytes, media as api, photos as photosApi, type MediaItem, type Photo } from "@/lib/core/files";
 import { CoreImage } from "@/components/dashboard/core-image";
 import { useCoreUrl } from "@/lib/core/transport";
+import { RoomNote } from "@/components/dashboard/room-note";
 
 const clock = (s: number | null) => (s === null ? "" : `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`);
 
@@ -77,6 +78,8 @@ export function LiveTV() {
           </Button>
         }
       />
+
+      <RoomNote id="room:tv" />
 
       <div ref={stage} className="overflow-hidden rounded-[14px] bg-graphite text-bone ring-1 ring-white/8">
         <div className="relative aspect-video w-full bg-black">

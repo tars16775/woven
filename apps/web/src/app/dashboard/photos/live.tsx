@@ -11,6 +11,7 @@ import { identity } from "@/lib/core/identity";
 import { Approvals } from "@/components/dashboard/approvals";
 import { CoreImage } from "@/components/dashboard/core-image";
 import { useSession } from "@/lib/auth";
+import { RoomNote } from "@/components/dashboard/room-note";
 
 const monthName = (ym: string) => new Date(`${ym}-01T00:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
@@ -133,6 +134,8 @@ export function LivePhotos() {
         sub={stats ? `${stats.total.toLocaleString()} photos · ${stats.newThisWeek} new this week · ${stats.withPlace} with a place · indexed on the box, faces off` : "Reading the box…"}
         action={canImport ? <Button kind="primary" className="px-5 py-2" onClick={() => setImporting(true)}>Import a folder</Button> : undefined}
       />
+
+      <RoomNote id="room:photos" />
 
       <Approvals />
 

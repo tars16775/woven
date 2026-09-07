@@ -8,6 +8,7 @@ import { Approvals } from "@/components/dashboard/approvals";
 import { RoutinesCard } from "@/components/dashboard/routines-card";
 import { actions, describe, explainAction, home, type ActionRecord, type HomeState } from "@/lib/core/actions";
 import { useCore } from "@/lib/core/store";
+import { RoomNote } from "@/components/dashboard/room-note";
 
 const kindLabel: Record<string, string> = { light: "Light", plug: "Plug", thermostat: "Thermostat", lock: "Lock", sensor: "Sensor", camera: "Camera", robot: "Robot", speaker: "Speaker" };
 
@@ -102,6 +103,8 @@ export function LiveHomeControls() {
     return (
       <div className="mx-auto max-w-[1100px]">
         <PageHeader title="Home" sub="Reading the house…" />
+
+        <RoomNote id="room:home" />
       </div>
     );
   }

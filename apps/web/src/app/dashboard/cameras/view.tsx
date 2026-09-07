@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, PageHeader, Pill } from "@/components/dashboard/ui";
+import { RoomNote } from "@/components/dashboard/room-note";
 
 /**
  * No camera capture exists on a Mac and none can be paired yet, so this page
@@ -18,6 +19,8 @@ export function CamerasView() {
           </Pill>
         }
       />
+
+      <RoomNote id="room:cameras" />
       <Card title="What this means">
         <p className="text-[14px] leading-relaxed">
           This Core has no camera capture. Detection on the box&apos;s own processor, clips that stay inside, and the pause switch arrive with the box and
