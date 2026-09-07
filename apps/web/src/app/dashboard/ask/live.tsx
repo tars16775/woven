@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { PageHeader, Pill, whereLabel } from "@/components/dashboard/ui";
+import { Button, PageHeader, Pill, whereLabel } from "@/components/dashboard/ui";
+import { IconChevron } from "@/components/dashboard/icons";
 import { useToast } from "@/components/dashboard/toast";
 import { ask, type AskAnswer } from "@/lib/core/ask";
 import { actions, describe } from "@/lib/core/actions";
@@ -11,7 +12,9 @@ import { RoomNote } from "@/components/dashboard/room-note";
 
 type Msg = { id: number; role: "user"; text: string } | { id: number; role: "box"; answer: AskAnswer; decided?: "approved" | "declined" };
 
-const starters = ["What happened today?", "Find the lease", "Turn the kitchen light off", "How is the box?"];
+/* Questions the rules can actually answer today. A starter that returns "I do
+   not know" teaches the wrong lesson on the first try. */
+const starters = ["What happened today?", "How is the box?", "What crossed the Gate?", "What is backed up?"];
 
 /**
  * Ask against the household's own Core (gap 11). Every answer comes from
@@ -77,7 +80,7 @@ export function LiveAskChat() {
 
       <RoomNote id="room:ask" />
 
-      <div className="flex-1 overflow-y-auto rounded-[14px] bg-white p-4 ring-1 ring-ink/5 md:p-6">
+      <div className="flex-1 overflow-y-auto rounded-[14px] bg-white p-4 shadow-[var(--shadow-card)] ring-1 ring-ink/5 md:p-6">
         {msgs.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center text-center">
             <span className="orb" style={{ ["--orb" as string]: "14px" }} />
@@ -86,7 +89,7 @@ export function LiveAskChat() {
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
               {starters.map((s) => (
-                <button key={s} type="button" onClick={() => void send(s)} className="rounded-full bg-bone px-3.5 py-1.5 text-[13px] font-medium hover:bg-chassis">
+                <button key={s} type="button" onClick={() => void send(s)} className="tap rounded-full bg-bone px-3.5 py-1.5 text-[13px] font-medium hover:bg-chassis">
                   {s}
                 </button>
               ))}
@@ -94,7 +97,7 @@ export function LiveAskChat() {
           </div>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-4" role="log" aria-live="polite" aria-label="Answers">
           {msgs.map((m) => {
             if (m.role === "user")
               return (
@@ -127,20 +130,22 @@ export function LiveAskChat() {
                     )}
                   </div>
                   {pending && a.action && (
-                    <div className="mt-2 rounded-[12px] border border-amber/50 bg-ask-bg/60 p-3">
+                    <div className="mt-2 rounded-[12px] bg-ask-bg p-3.5 ring-1 ring-amber/30">
                       <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-ask">Asks first · {a.action.decision.reason}</div>
-                      <div className="mt-1 text-[14px] font-medium">{a.action.preview}</div>
-                      <div className="mt-3 flex gap-2">
-                        <button type="button" onClick={() => void decide(m.id, a.action!.id, "approved")} className="btn btn-primary min-w-0 h-9 px-4 text-[13px]">
+                      <div className="mt-1.5 text-[14px] font-medium">{a.action.preview}</div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button kind="primary" className="px-4 py-2" onClick={() => void decide(m.id, a.action!.id, "approved")}>
                           Approve once
-                        </button>
-                        <button type="button" onClick={() => void decide(m.id, a.action!.id, "declined")} className="btn btn-secondary min-w-0 h-9 px-4 text-[13px]">
+                        </Button>
+                        <Button kind="soft" className="px-4 py-2" onClick={() => void decide(m.id, a.action!.id, "declined")}>
                           Not now
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   )}
-                  <div className="mt-1 pl-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ash">
+                  {/* Where it ran, how long it took, and what it read. Every
+                      answer carries this, so none of them has to be trusted. */}
+                  <div className="tnum mt-1 pl-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ash">
                     {whereLabel[a.where]} · {a.ms} ms · {a.source}
                     {a.action ? ` · ${a.action.status}` : ""}
                   </div>
@@ -148,18 +153,38 @@ export function LiveAskChat() {
               </div>
             );
           })}
-          {busy && <div className="pl-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ash">looking · inside</div>}
+          {busy && (
+            <div className="flex items-center gap-2 pl-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ash" role="status">
+              <span className="orb" style={{ ["--orb" as string]: "7px" }} />
+              looking · inside
+            </div>
+          )}
           <div ref={endRef} />
         </div>
       </div>
 
-      <form onSubmit={onSubmit} className="mt-3 flex items-center gap-2 rounded-full bg-white px-2 py-1.5 ring-1 ring-ink/8 focus-within:ring-ink/25">
+      <form onSubmit={onSubmit} className="tap mt-3 flex items-center gap-2 rounded-full bg-white px-2 py-1.5 shadow-[var(--shadow-card)] ring-1 ring-ink/8 focus-within:ring-ink/25">
         <span className="ml-2 orb" style={{ ["--orb" as string]: "9px" }} />
-        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask the box…" aria-label="Ask the box" className="min-w-0 flex-1 bg-transparent px-2 py-2 text-[15px] outline-none placeholder:text-ash" />
-        <button type="submit" aria-label="Send" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-bone disabled:opacity-40" disabled={!input.trim() || busy}>
-          ↑
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Ask the box…"
+          aria-label="Ask the box"
+          autoComplete="off"
+          className="min-w-0 flex-1 bg-transparent px-2 py-2 text-[15px] outline-none placeholder:text-ash"
+        />
+        <button
+          type="submit"
+          aria-label="Send"
+          className="tap flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-bone disabled:opacity-40"
+          disabled={!input.trim() || busy}
+        >
+          <IconChevron dir="up" size={16} />
         </button>
       </form>
+      <p className="mt-2 px-3 text-[12px] text-ash">
+        Questions are answered from the box&apos;s own data. If one needs something outside, it will say so and offer a single crossing at the Gate.
+      </p>
     </div>
   );
 }
