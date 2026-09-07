@@ -33,6 +33,19 @@ The service install (`packaging/install.sh`) is the real thing: a login service,
 | Accessibility: axe on the public pages and login, reduced motion | built; serious findings fail the build | `tests/e2e/a11y.spec.ts` |
 | Languages: English complete, German partial | layer built | `tests/unit/i18n.test.ts` |
 
+## What the site says
+
+Every measurable claim on the public site is a row in `apps/web/src/lib/claims.ts` with a status:
+running today, waiting on the box, or a target with nothing measured behind it. The footnotes at
+the foot of each page and the `/status` page both render from that file, and a unit test refuses a
+footnote marker that cites a claim the page did not declare or that does not exist. The landing
+page leads with what a household can run tonight, tags every section that needs hardware, and says
+in the hero that the box is not built and a reservation takes no money. The privacy policy opens
+by saying that no Woven service holds anything, because none is running.
+
+`docs/claims-register.md` stays the review process with owners and dates. The code registry is what
+a visitor sees, and the two must agree before a release.
+
 ## What stands between this and a public launch
 
 1. **A release key.** `node packaging/keygen.mjs`, commit the public key, set `WOVEN_RELEASE_KEY`. Until then no release can be published and the hosted installer cannot verify anything.
@@ -42,7 +55,10 @@ The service install (`packaging/install.sh`) is the real thing: a login service,
 5. **A language model on the box.** Ask is rules today and says so. The site's Tandem copy is ahead of the software; it is labelled preview on every screen that is not real.
 6. **An external penetration test** of the Core, the relay and the tunnel before strangers point browsers at it.
 7. **Hardware.** Cameras, radios, the screen and the Outside processor are the box's. On a Mac the pages say what is missing rather than pretending.
-8. **Public repository or hosted installer.** While the repository is private, `curl | bash` needs a signed-in `gh`.
+8. **Public repository or hosted installer.** While the repository is private, `curl | bash` needs a signed-in `gh`. The Mac page leads with the source path for that reason.
+9. **The reservation and application forms reach nobody** until the site API is deployed and the
+   site build is given its address. Both now say so on screen rather than promising a place is
+   held.
 
 ## How to run everything
 

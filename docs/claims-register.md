@@ -37,6 +37,14 @@ Status values: Target (labelled as an engineering target on the site), Draft (cl
 | 29 | Woven does not sell or share household data and runs no advertising business | /legal privacy | Privacy policy reviewed by counsel; board resolution | TBD (legal) | 2027-01-15 | Draft |
 | 30 | Chassis lasts eight to ten years; compute module replaced every three to four years | Home (#module), product (#module), /press boilerplate | Component lifetime analysis; module roadmap commitment | TBD (mechanical + founders) | 2027-06-01 | Target |
 
+## Where this lives now
+
+The public half of this register is code: `apps/web/src/lib/claims.ts` holds every claim the site
+makes with a status (`now`, `box`, `target`) and the note a visitor reads. The site's footnotes and
+the `/status` page render from it, and `apps/web/tests/unit/claims.test.ts` fails the build if a page
+cites a claim that does not exist, if a hardware feature is marked as shipping, or if a price or a
+date is presented as settled. This table stays the internal review: owners, evidence and dates.
+
 ## Process
 
 1. Before a release, the owner of each row confirms the status. Anything past its review date without evidence is changed on the site to a labelled target or removed in the same release.
