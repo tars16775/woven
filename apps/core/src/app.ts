@@ -44,6 +44,7 @@ import { remoteRoutes } from "./routes/remote.ts";
 import { pushRoutes } from "./routes/push.ts";
 import type { RelayClient } from "./remote/client.ts";
 import type { SettingsStore } from "./settings.ts";
+import { ALWAYS_ON, type Power } from "./power.ts";
 
 export type AppDeps = {
   config: Config;
@@ -63,6 +64,8 @@ export type AppDeps = {
   relay?: RelayClient;
   /** Dashboard-changeable settings (the second snapshot location). Tests may leave it out. */
   settings?: SettingsStore;
+  /** The kill switch. Absent in tests that do not need it. */
+  power?: Power;
 };
 
 /**
@@ -110,6 +113,13 @@ export async function buildApp(deps: AppDeps) {
   app.decorate("deps", deps);
   app.decorateRequest("session", null);
   app.addHook("onRequest", attachSession);
+  // The kill switch: while the Core is off, only the routes that show the state and flip it answer.
+  app.addHook("onRequest", async (req, reply) => {
+    if (!deps.power || deps.power.on) return;
+    const path = req.url.split("?")[0]!;
+    if (!path.startsWith("/v1/") || ALWAYS_ON.some((r) => r.test(path))) return;
+    return reply.status(503).header("retry-after", "30").send({ error: "The Core is switched off. Switch it on from the Core page.", power: "off", requestId: req.id });
+  });
   // Metrics by route pattern and status class only; never the path a person asked for.
   app.addHook("onResponse", async (req, reply) => {
     const route = req.routeOptions.url ?? "(none)";

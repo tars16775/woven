@@ -11,6 +11,8 @@ import { memoryLabel, storageLabel, storageUsedLabel, temperatureLabel, useLiveC
 import { useCore } from "@/lib/core/store";
 import { toActivity } from "@/lib/core/activity";
 import { Approvals } from "@/components/dashboard/approvals";
+import { useSession } from "@/lib/auth";
+import { LiveOverview } from "./live";
 
 function greeting() {
   const h = new Date().getHours();
@@ -26,7 +28,15 @@ const leaseSummary = [
   ["Notice", "Reply by September 1 to negotiate · after that the new rent stands"],
 ];
 
+/** The box's own numbers when a Core issued the session; the preview house otherwise. */
 export function OverviewView() {
+  const connection = useCore();
+  const session = useSession();
+  if (connection.phase === "connected" && session && !session.simulated) return <LiveOverview />;
+  return <PreviewOverview />;
+}
+
+function PreviewOverview() {
   const [summary, setSummary] = useState(false);
   const say = useToast();
   const scheduled = useScheduledBackups();

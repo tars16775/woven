@@ -22,6 +22,14 @@ docs/adr        architecture decision records
 docs/backend-plan.md  the 50 phases
 ```
 
+## Try it on this Mac, nothing installed
+
+```bash
+packaging/try.sh --seed
+```
+
+Builds the Core and the dashboard from this checkout and runs them in the foreground with data in a folder you can delete. See [docs/launch-readiness.md](docs/launch-readiness.md) for what works today and what is still ahead of a public launch.
+
 ## Install it on a Mac (the service)
 
 ```bash

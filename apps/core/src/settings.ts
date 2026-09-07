@@ -4,6 +4,10 @@ import { join } from "node:path";
 export type Settings = {
   /** A second place for snapshots (gap 23): another drive, or a folder the household chose. */
   snapshotMirror: string | null;
+  /** The kill switch: "off" survives a restart. */
+  power?: "on" | "off";
+  powerSince?: string | null;
+  powerBy?: string | null;
 };
 
 /**
@@ -25,7 +29,7 @@ export class SettingsStore {
       // first start
     }
     // A choice made in the dashboard (even "none") outlives whatever the environment says.
-    this.current = { snapshotMirror: "snapshotMirror" in saved ? (saved.snapshotMirror ?? null) : (seed.snapshotMirror ?? null) };
+    this.current = { snapshotMirror: "snapshotMirror" in saved ? (saved.snapshotMirror ?? null) : (seed.snapshotMirror ?? null), power: saved.power ?? "on", powerSince: saved.powerSince ?? null, powerBy: saved.powerBy ?? null };
     if (!("snapshotMirror" in saved)) this.save();
   }
 

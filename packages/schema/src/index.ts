@@ -167,6 +167,7 @@ export const EventType = z.enum([
   "remote.revoked",
   "core.started",
   "core.integrity_checked",
+  "core.power",
 ]);
 export type EventType = z.infer<typeof EventType>;
 
@@ -260,6 +261,8 @@ export const CoreStatus = z.object({
   metrics: Metrics,
   gate: z.enum(["open", "closed", "absent"]),
   dataRoot: z.string(),
+  /** The kill switch. Off: nothing runs, nothing leaves, only this status and the switch answer. */
+  power: z.object({ power: z.enum(["on", "off"]), since: z.iso.datetime().nullable(), by: z.string().nullable() }).optional(),
 });
 export type CoreStatus = z.infer<typeof CoreStatus>;
 

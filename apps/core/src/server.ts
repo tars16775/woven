@@ -11,6 +11,7 @@ import { derive, KeyStore } from "./keystore.ts";
 import { RelayClient } from "./remote/client.ts";
 import { relayIdentity } from "./remote/identity.ts";
 import { SettingsStore } from "./settings.ts";
+import { Power } from "./power.ts";
 import { noteInstalledVersion } from "./update.ts";
 import { access } from "node:fs/promises";
 import { scheduleNightly } from "./maintenance.ts";
@@ -106,8 +107,12 @@ async function main() {
     });
     logger.info({ relay: config.relay, coreId: identity.coreId }, "remote access is on; connecting to the relay");
   }
-  const app = await buildApp({ config, logger, hardware, data, services, ...(tls ? { tls } : {}), version, startedAt, logFile: join(paths.logs, "core.log"), restart, ...(relay ? { relay } : {}), settings });
-  relay?.start();
+  // The kill switch: off closes the Gate, drops the relay and stops the jobs below; the state survives a restart.
+  const power = new Power(settings, services.gate, data.ledger, services.alerts);
+  if (relay) power.attach({ onOff: () => relay.stop(), onOn: () => relay.start() });
+  const app = await buildApp({ config, logger, hardware, data, services, ...(tls ? { tls } : {}), version, startedAt, logFile: join(paths.logs, "core.log"), restart, ...(relay ? { relay } : {}), settings, power });
+  await power.resume();
+  if (!power.on) logger.warn("the Core is switched off; only the switch answers");
   const scheme = tls ? "https" : "http";
   // The same API in plain HTTP, reachable only from this machine. Loopback
   // cannot be sniffed from the network, so it needs no certificate, and the
@@ -123,6 +128,7 @@ async function main() {
       })
     : null;
   const stopNightly = config.env === "production" || config.env === "development" ? scheduleNightly(data, logger, {
+          skip: () => !power.on,
           mirror: () => settings.get().snapshotMirror,
           sweep: async () => (await services.files.sweepUploads()) + services.memory.sweep(),
           report: (facts) => {
@@ -173,7 +179,9 @@ async function main() {
   alertTimer.unref();
 
   // Scheduled routines: once a minute, on the minute.
-  const routineTimer = setInterval(() => void services.routines.tick().catch((err: unknown) => logger.warn({ err }, "routine tick failed")), 60_000);
+  const routineTimer = setInterval(() => {
+    if (power.on) void services.routines.tick().catch((err: unknown) => logger.warn({ err }, "routine tick failed"));
+  }, 60_000);
   routineTimer.unref();
 
   const bonjour = config.mdns ? new Bonjour() : null;

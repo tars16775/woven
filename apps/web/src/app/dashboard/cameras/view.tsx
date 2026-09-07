@@ -6,6 +6,8 @@ import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { setCamerasPaused, useCamerasPaused } from "@/components/dashboard/state";
 import { cameras } from "@/lib/dashboard/data";
+import { useSession } from "@/lib/auth";
+import { useCore } from "@/lib/core/store";
 
 const events = [
   ["18:12", "Front door", "Package", "Clip saved · 14 s"],
@@ -14,7 +16,28 @@ const events = [
   ["Yesterday 19:02", "Back garden", "Person", "Clip saved · 31 s"],
 ];
 
+/** No camera capture exists on a Mac, and none is paired: the connected page says so instead of showing the preview. */
 export function CamerasView() {
+  const core = useCore();
+  const session = useSession();
+  if (core.phase === "connected" && session && !session.simulated) return <NoCamerasYet />;
+  return <PreviewCameras />;
+}
+
+function NoCamerasYet() {
+  return (
+    <div className="mx-auto max-w-[1100px]">
+      <PageHeader title="Cameras" sub="Nothing is paired with this Core." action={<Pill tone="neutral"><span data-testid="cameras-none">No cameras yet</span></Pill>} />
+      <Card title="What this means">
+        <p className="text-[14px] leading-relaxed">
+          This Core has no camera capture. Detection on the box&apos;s own processor, clips that stay inside, and the pause switch arrive with the box and its radios; a Mac has none of that hardware, and nothing here will pretend otherwise. When cameras can be paired, this page fills in with the real ones.
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+function PreviewCameras() {
   const paused = useCamerasPaused();
   const [confirm, setConfirm] = useState(false);
   const say = useToast();
@@ -41,7 +64,12 @@ export function CamerasView() {
             ? "All paused · nothing is detected or recorded · clips you already have stay on the box"
             : `${live} live · detection on the NPU · clips stay on the box · no facial recognition`
         }
-        action={paused ? <Button onClick={resumeAll}>Resume cameras</Button> : <Button onClick={() => setConfirm(true)}>Pause all cameras</Button>}
+        action={
+          <div className="flex items-center gap-2">
+            <Pill tone="warn">Preview</Pill>
+            {paused ? <Button onClick={resumeAll}>Resume cameras</Button> : <Button onClick={() => setConfirm(true)}>Pause all cameras</Button>}
+          </div>
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-2">

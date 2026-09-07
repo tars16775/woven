@@ -194,6 +194,15 @@ export function Shell({ children }: { children: ReactNode }) {
 
         {/* Main */}
         <div className="flex min-w-0 flex-1 flex-col">
+          {isLive && connection.phase === "connected" && connection.status?.power?.power === "off" && (
+            <div className="flex items-center justify-center gap-2 bg-ink px-4 py-1.5 text-center text-[12px] text-bone" data-testid="power-banner" role="status">
+              <span className="font-medium">The Core is switched off.</span>
+              <span className="text-ash-2">Nothing runs, nothing leaves, nothing answers.</span>
+              <Link href="/dashboard/core" className="font-medium underline underline-offset-2">
+                Switch it on
+              </Link>
+            </div>
+          )}
           {!isLive && (
             <div className="flex items-center justify-center gap-2 bg-ask-bg px-4 py-1.5 text-center text-[12px] text-ask" data-testid="preview-badge" role="status">
               <span className="font-medium">{t("preview.title")}</span>

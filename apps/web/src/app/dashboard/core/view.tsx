@@ -17,6 +17,7 @@ import { identity, type Alert } from "@/lib/core/identity";
 import { memoryLabel, storageLabel, temperatureLabel, useLiveCore } from "@/lib/core/live";
 import { coreClient, useCore } from "@/lib/core/store";
 import { PilotCard } from "@/components/dashboard/pilot-card";
+import { PowerCard } from "@/components/dashboard/power-card";
 import type { Integrity } from "@/lib/core/client";
 
 const upgradeSteps = [
@@ -208,6 +209,7 @@ export function CoreView() {
       />
 
       <ConnectCore />
+      <PowerCard />
 
       {alerts.length > 0 && (
         <Card className="mb-4" title="Needs a look" action={<Pill tone={alerts.some((a) => a.level === "urgent") ? "warn" : "neutral"}>{alerts.length}</Pill>}>

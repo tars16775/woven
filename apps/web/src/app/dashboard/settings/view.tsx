@@ -142,7 +142,9 @@ export function SettingsView() {
         )}
 
         <Card title="Integrations">
-          {integrations.length > 0 ? (
+          {live ? (
+            <p className="text-[14px] text-ash">Nothing is connected. This Core talks to nothing outside the house except what you approve at the Gate, crossing by crossing.</p>
+          ) : integrations.length > 0 ? (
             <ul className="divide-y divide-ink/6">
               {integrations.map((i) => (
                 <li key={i.name} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
@@ -177,12 +179,20 @@ export function SettingsView() {
 
         <Card title="Assistant">
           <ul className="divide-y divide-ink/6 text-[14px]">
-            {[
-              ["Wake word", "“Tandem” · processed on the box"],
-              ["Where it runs", "Inside first · crosses the Gate only when you approve"],
-              ["Memory", "Per person · view, edit, delete in Privacy"],
-              ["Spend limit for agents", "$50 per order · approved merchants"],
-            ].map(([k, v]) => (
+            {(live
+              ? [
+                  ["What answers", "Rules over the box's own data · no language model on this Core yet"],
+                  ["Where it runs", "Inside · nothing crosses the Gate for a question"],
+                  ["Memory", "Per person · view, edit, delete in Privacy"],
+                  ["Spend limit", "$50 per order before approval is asked · from the policy engine"],
+                ]
+              : [
+                  ["Wake word", "“Tandem” · processed on the box"],
+                  ["Where it runs", "Inside first · crosses the Gate only when you approve"],
+                  ["Memory", "Per person · view, edit, delete in Privacy"],
+                  ["Spend limit for agents", "$50 per order · approved merchants"],
+                ]
+            ).map(([k, v]) => (
               <li key={k} className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
                 <span className="font-medium">{k}</span>
                 <span className="text-right text-[13px] text-ash">{v}</span>

@@ -13,6 +13,8 @@ export type MaintenanceOptions = {
   report?: (facts: { ledgerOk: boolean; objectsBad: number; mirrorOk: boolean | null }) => void;
   /** The opt-in health ping (gap 25), after the night's work. */
   ping?: () => Promise<void>;
+  /** True when the night's work should not run (the Core is switched off). */
+  skip?: () => boolean;
   /** Local hour (0-23) to run. Default 3 in the morning, when the house is quiet. */
   hour?: number;
   /** How many snapshots to keep. Default 14. */
@@ -79,6 +81,11 @@ export function scheduleNightly(data: Data, logger: Logger, opts: MaintenanceOpt
   let timer: NodeJS.Timeout | null = null;
   const arm = () => {
     timer = setTimeout(() => {
+      if (opts.skip?.()) {
+        logger.info("nightly maintenance skipped: the Core is switched off");
+        arm();
+        return;
+      }
       runNightly(data, logger, opts.keep, { mirror: opts.mirror ?? null, ...(opts.sweep ? { sweep: opts.sweep } : {}), ...(opts.report ? { report: opts.report } : {}), ...(opts.ping ? { ping: opts.ping } : {}) }).catch((err: unknown) => logger.error({ err }, "nightly maintenance failed"));
       arm();
     }, msUntilHour(hour, now()));

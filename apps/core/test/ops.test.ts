@@ -82,7 +82,7 @@ describe("the second snapshot location (gap 23)", () => {
     expect(set.statusCode).toBe(200);
     expect(set.json<BackupStatus>()).toMatchObject({ mirror, mirrorPresent: true });
     expect(settings.get().snapshotMirror).toBe(mirror);
-    expect(JSON.parse(await readFile(join(dataRoot, "settings.json"), "utf8"))).toEqual({ snapshotMirror: mirror });
+    expect(JSON.parse(await readFile(join(dataRoot, "settings.json"), "utf8"))).toMatchObject({ snapshotMirror: mirror, power: "on" });
     // A snapshot taken now is copied there.
     const snap = await app.inject({ method: "POST", url: "/v1/system/backups/snapshot", headers: auth(owner) });
     expect(snap.json<BackupStatus>().snapshots[0]?.mirrored).toBe(true);

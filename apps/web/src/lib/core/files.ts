@@ -1,6 +1,6 @@
 "use client";
 
-import { ActionRecord, FileEntry, FileListing, FilesSummary, MediaItem, NetworkView, Photo, PhotoStats, PhotoTimeline, SearchResult, Share, StorageHealth, UpdateCheck, type Namespace } from "@woven/schema";
+import { ActionRecord, BackupStatus, FileEntry, FileListing, FilesSummary, MediaItem, NetworkView, Photo, PhotoStats, PhotoTimeline, SearchResult, Share, StorageHealth, UpdateCheck, type Namespace } from "@woven/schema";
 import { z } from "zod";
 import { CoreError } from "./client";
 import { NoCoreError } from "./identity";
@@ -127,6 +127,9 @@ export const system = {
   storage: () => call("/v1/system/storage", StorageHealth),
   diagnostics: () => call("/v1/system/diagnostics", z.object({ dir: z.string(), files: z.array(z.string()), takenAt: z.string() }), post({})),
   restart: () => call("/v1/system/restart", z.object({ restarting: z.literal(true) }), post({})),
+  /** The kill switch (owner). */
+  power: (power: "on" | "off") => call("/v1/system/power", z.object({ power: z.enum(["on", "off"]), since: z.string().nullable(), by: z.string().nullable() }), post({ power })),
+  backups: () => call("/v1/system/backups", BackupStatus),
 };
 export type { StorageHealth };
 

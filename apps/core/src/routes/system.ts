@@ -1,4 +1,5 @@
 import { Alert, BackupStatus, CoreConfig, CoreStatus, StorageHealth, UpdateCheck } from "@woven/schema";
+const PowerState = CoreStatus.shape.power.unwrap();
 import { z } from "zod";
 import { writeDiagnostics } from "../diagnostics.ts";
 import { requireRole, requireSession } from "../auth/guard.ts";
@@ -32,9 +33,18 @@ export const systemRoutes: FastifyPluginAsync = async (raw) => {
         metrics,
         gate: app.deps.services.gate.cached().state,
         dataRoot: config.dataRoot,
+        ...(app.deps.power ? { power: app.deps.power.get() } : {}),
       });
     },
   );
+
+  /** The kill switch (owner). Off closes the Gate, drops the relay and stops every job; on brings the jobs and the relay back, the Gate stays closed. */
+  app.post("/system/power", { preHandler: requireRole("owner"), schema: { body: z.object({ power: z.enum(["on", "off"]) }), response: { 200: PowerState } } }, async (req) => {
+    const { power } = app.deps;
+    if (!power) throw Object.assign(new Error("This Core has no power switch."), { statusCode: 409 });
+    const p = req.session!.person;
+    return req.body.power === "off" ? power.off({ id: p.id, name: p.name }) : power.on_({ id: p.id, name: p.name });
+  });
 
   app.get("/system/config", { preHandler: requireSession, schema: { response: { 200: CoreConfig } } }, async () => {
     const { config, version, tls } = app.deps;
