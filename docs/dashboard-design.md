@@ -87,3 +87,10 @@ Design first, in order. Each phase lands as its own commit.
 | --- | --- | --- |
 </content>
 </invoke>
+| 1 | tokens | radii, elevation, surfaces, motion, layout constants |
+| 2 | primitives | the full set; Switch is honest about latency, Empty is a room not an apology |
+| 3 | icons | 28 shapes, one hand, no dependency |
+| 4 | shell | five groups, account foot, no stale numbers |
+| 5 | motion | three arrivals, one focus ring, nothing loops |
+| 6-8 | arrival | welcome, walkthrough, room notes; guide state per person |
+| 9 | demo | a real Core with `WOVEN_DEMO=on`, labelled on every screen |

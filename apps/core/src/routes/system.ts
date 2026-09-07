@@ -34,6 +34,7 @@ export const systemRoutes: FastifyPluginAsync = async (raw) => {
         gate: app.deps.services.gate.cached().state,
         dataRoot: config.dataRoot,
         ...(app.deps.power ? { power: app.deps.power.get() } : {}),
+        ...(config.demo ? { demo: true } : {}),
       });
     },
   );

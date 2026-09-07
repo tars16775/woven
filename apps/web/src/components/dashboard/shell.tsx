@@ -16,6 +16,7 @@ import { useGateOpen } from "./state";
 import { SearchBox } from "./search-box";
 import { NoCore } from "./no-core";
 import { TourBar } from "./tour";
+import { DemoBanner } from "./demo-banner";
 import { Avatar } from "./ui";
 import { roomIcon, type RoomHref } from "./icons";
 import { useT, type MessageKey } from "@/lib/i18n";
@@ -264,6 +265,8 @@ export function Shell({ children }: { children: ReactNode }) {
 
         {/* Main */}
         <div className="flex min-w-0 flex-1 flex-col">
+          {/* A demonstration says so on every screen and cannot be dismissed. */}
+          <DemoBanner />
           {connected && connection.status?.power?.power === "off" && (
             <div className="flex items-center justify-center gap-2 bg-ink px-4 py-1.5 text-center text-[12px] text-bone" data-testid="power-banner" role="status">
               <span className="font-medium">The Core is switched off.</span>

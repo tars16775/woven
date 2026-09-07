@@ -263,6 +263,12 @@ export const CoreStatus = z.object({
   dataRoot: z.string(),
   /** The kill switch. Off: nothing runs, nothing leaves, only this status and the switch answer. */
   power: z.object({ power: z.enum(["on", "off"]), since: z.iso.datetime().nullable(), by: z.string().nullable() }).optional(),
+  /**
+   * This Core is a demonstration, not somebody's house. Set by the operator
+   * (WOVEN_DEMO=on) and never inferred. The dashboard says so on every screen,
+   * because the one thing a demo must not do is look like your own data.
+   */
+  demo: z.boolean().optional(),
 });
 export type CoreStatus = z.infer<typeof CoreStatus>;
 

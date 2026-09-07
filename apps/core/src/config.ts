@@ -54,6 +54,8 @@ const Env = z.object({
   WOVEN_RELAY: z.string().default(""),
   /** Opt-in (gap 25): once a night, tell woventechnology.com "a core of version X is alive, up N days", through the Gate, with a receipt. Nothing about the household. Off by default. */
   WOVEN_HEALTH_PING: z.enum(["on", "off"]).default("off"),
+  /** This Core is a demonstration, not somebody's house. Never inferred; an operator sets it. */
+  WOVEN_DEMO: z.enum(["on", "off"]).default("off"),
   /** Where the household data key lives: the login "keychain" (macOS) or a "file" in the keys folder. Defaults by platform. */
   WOVEN_KEY: z.enum(["keychain", "file"]).optional(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
@@ -79,6 +81,13 @@ export type Config = {
   relay: string | null;
   /** The opt-in nightly health ping. */
   healthPing: boolean;
+  /**
+   * A demonstration Core: real software, real ledger, example household. The
+   * dashboard labels every screen so nobody mistakes it for their own data,
+   * and the marketing site can point a public tour at it without shipping a
+   * fake dashboard.
+   */
+  demo: boolean;
   /** Folder with the static site, or null for API only. */
   siteDir: string | null;
   logLevel: z.infer<typeof Env>["LOG_LEVEL"];
@@ -107,6 +116,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     snapshotMirror: e.WOVEN_SNAPSHOT_MIRROR.trim() || null,
     relay: e.WOVEN_RELAY.trim() ? e.WOVEN_RELAY.trim().replace(/^http/, "ws").replace(/\/+$/, "") : null,
     healthPing: e.WOVEN_HEALTH_PING === "on",
+    demo: e.WOVEN_DEMO === "on",
     siteDir: e.WOVEN_SITE === "off" ? null : e.WOVEN_SITE === "auto" ? defaultSiteDir() : e.WOVEN_SITE,
     logLevel: e.LOG_LEVEL,
   };
