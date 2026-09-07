@@ -199,9 +199,13 @@ body {
   border-color: color-mix(in srgb, currentColor 14%, transparent);
 }
 
-/* Anchored sections land below the fixed nav */
+/* Anchored sections land below the fixed nav, and below the product bar on
+   pages that have one. */
 [id] {
   scroll-margin-top: 56px;
+}
+[data-product-nav] [id] {
+  scroll-margin-top: 108px;
 }
 
 /* Power-on sequence for the hero device */

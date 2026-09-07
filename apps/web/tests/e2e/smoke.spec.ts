@@ -72,3 +72,25 @@ test.describe("platform files", () => {
     expect(ico.headers()["content-type"]).toMatch(/image\/(x-icon|vnd\.microsoft\.icon)/);
   });
 });
+
+test("the product bar appears once the hero is past, and jumps to a section", async ({ page }) => {
+  await page.goto("/core-plus", { waitUntil: "domcontentloaded" });
+  const bar = page.getByRole("navigation", { name: "Woven Core+ sections" });
+  await expect(bar).toBeHidden();
+  await page.mouse.wheel(0, 2000);
+  await expect(bar).toBeVisible();
+  await expect(bar).toContainText("Woven Core+");
+  await bar.getByRole("link", { name: "Specs" }).click();
+  await expect(page.locator("#specs")).toBeInViewport();
+});
+
+test("the landing page shows its copy without waiting for an animation", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  const h1 = page.getByRole("heading", { level: 1 });
+  await expect(h1).toBeVisible();
+  // The hero is never hidden by the reveal; the failsafe is for the rest.
+  const opacity = await h1.evaluate((el) => getComputedStyle(el.closest("[data-reveal]") ?? el).opacity);
+  expect(Number(opacity)).toBe(1);
+  await expect(page.getByText("The box is not built yet", { exact: false })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Run it on your Mac" })).toBeVisible();
+});

@@ -9,7 +9,7 @@ import { Reveal } from "@/components/reveal";
 import { InTheBox, ScreenReady } from "@/components/screen";
 import { SpecStrip } from "@/components/spec-strip";
 import { SpecTable } from "@/components/spec-table";
-import { StickyBar } from "@/components/sticky-bar";
+import { ProductNav } from "@/components/product-nav";
 import { TVFrame } from "@/components/tv-frame";
 import { AppHome, AppPrivacy } from "@/components/phone/screens";
 import { formatPrice, tierOrder, tiers, type TierId } from "@/lib/site";
@@ -51,7 +51,7 @@ export default async function TierPage({ params }: PageProps<"/[tier]">) {
   const id = t.id;
 
   return (
-    <>
+    <div data-product-nav>
       {/* Hero with stat strip */}
       <section
         data-theme="light"
@@ -378,8 +378,20 @@ export default async function TierPage({ params }: PageProps<"/[tier]">) {
         </Reveal>
       </section>
 
-      <StickyBar name={t.name} price={formatPrice(t.priceFrom)} href={`/order?tier=${id}`} />
+      <ProductNav
+        name={t.name}
+        price={formatPrice(t.priceFrom)}
+        items={[
+          { label: "Overview", href: "#store" },
+          { label: "Think", href: "#think" },
+          { label: "Connect", href: "#connect" },
+          { label: "Router", href: "#router" },
+          { label: "Specs", href: "#specs" },
+          { label: "Compare", href: "#compare" },
+        ]}
+        cta={{ label: "Reserve", href: `/order?tier=${id}` }}
+      />
       <Footnotes notes={notes} />
-    </>
+    </div>
   );
 }
