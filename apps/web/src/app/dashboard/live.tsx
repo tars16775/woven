@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Alert, BackupStatus, HomeState, PilotNumbers, PrivacySummary, PushSubscriptionView, RemoteStatus } from "@woven/schema";
-import { Card, Pill, Stat, WherePill } from "@/components/dashboard/ui";
+import { Card, Pill, Row, Rows, Skeleton, Stat, StatusDot, WherePill } from "@/components/dashboard/ui";
 import { Approvals } from "@/components/dashboard/approvals";
 import { PowerCard } from "@/components/dashboard/power-card";
 import { useSession } from "@/lib/auth";
@@ -15,8 +15,10 @@ import { memoryLabel, storageLabel, temperatureLabel, useLiveCore } from "@/lib/
 import { useCore } from "@/lib/core/store";
 import { toActivity } from "@/lib/core/activity";
 import { Welcome } from "@/components/dashboard/welcome";
+import { useGuide } from "@/lib/dashboard/guide";
 import { startTour } from "@/components/dashboard/tour";
 import { RoomNote } from "@/components/dashboard/room-note";
+import { IconAlert, IconChevron } from "@/components/dashboard/icons";
 
 function greeting() {
   const h = new Date().getHours();
@@ -34,10 +36,23 @@ type Facts = {
   remoteStatus: RemoteStatus | null;
 };
 
+/** A figure that is not known yet holds its space rather than showing a zero. */
+function Figure({ value, ready }: { value: string; ready: boolean }) {
+  if (!ready) return <Skeleton className="h-[20px] w-20" rounded="sm" />;
+  return <span className="tnum">{value}</span>;
+}
+
 /**
- * The Overview against the household's own Core. Every figure is the box's,
- * computed when the page asks. A new house also gets a short list of what is
- * worth setting up, each item checked against what the Core actually has.
+ * The Overview (phase 10).
+ *
+ * One question, answered in the first screenful: is the house all right? The
+ * order is deliberate. Anything wanting a decision comes before anything
+ * merely reporting, and the machine's own numbers come last, because a
+ * household checks on its box far less often than it checks on its house.
+ *
+ * Every figure is the Core's, computed when the page asks. A figure that has
+ * not arrived holds its space instead of showing a zero, because a zero that
+ * later becomes 4.2 TB was a lie for as long as it was on screen.
  */
 export function LiveOverview() {
   const session = useSession();
@@ -47,6 +62,10 @@ export function LiveOverview() {
   const rows = connection.phase === "connected" ? connection.rows : [];
   const off = connection.phase === "connected" && connection.status?.power?.power === "off";
   const adult = session?.role === "owner" || session?.role === "adult";
+  const statusIn = connection.phase === "connected" && connection.status !== null;
+  // Two pieces of first-run furniture stacked would be a wall of guidance.
+  // The welcome already says what the Overview is, so the note waits its turn.
+  const welcoming = useGuide("welcome").show;
 
   useEffect(() => {
     if (off) return;
@@ -74,34 +93,51 @@ export function LiveOverview() {
     { done: facts.remoteStatus === null ? null : facts.remoteStatus.devices > 0, title: "Reach it from away", detail: facts.remoteStatus?.enabled ? "Pair this browser while you are at home." : "Set a relay address on the Core to turn this on.", href: "/dashboard/settings" },
   ];
   const left = setup.filter((s) => s.done === false);
+  const settled = setup.every((s) => s.done !== null);
+
+  /* The one line under the greeting. It never pads with ellipses: what is
+     known is said, and what is not is left out until it arrives. */
+  const subParts: string[] = [];
+  if (off) subParts.push("The Core is switched off");
+  else {
+    if (machine.model !== "…") subParts.push(machine.model);
+    if (machine.uptime !== "…" && machine.uptime !== "—") subParts.push(`up ${machine.uptime}`);
+    if (facts.numbers) subParts.push(`${facts.numbers.people} ${facts.numbers.people === 1 ? "person" : "people"}`);
+  }
 
   return (
-    <div className="mx-auto max-w-[1100px]">
-      <RoomNote id="room:overview" />
+    <div>
+      {!welcoming && <RoomNote id="room:overview" />}
+
       <h1 className="font-display text-[34px] font-medium leading-none tracking-[-0.02em] md:text-[40px]">
         {greeting()}, {session?.name?.split(" ")[0] ?? "there"}
       </h1>
-      <p className="mt-2 text-[14px] text-ash" data-testid="overview-sub">
-        {off ? "The Core is switched off." : `${machine.model} · up ${machine.uptime} · ${facts.numbers ? `${facts.numbers.people} ${facts.numbers.people === 1 ? "person" : "people"}` : "…"}`}
+      <p className="mt-2 min-h-[21px] text-[14px] text-ash" data-testid="overview-sub">
+        {subParts.join(" · ")}
       </p>
 
       <div className="mt-6">
         <Welcome onStartTour={startTour} />
       </div>
 
-      <div className="mt-4">
-        <PowerCard compact />
-      </div>
-
+      {/* Anything wanting a decision, before anything merely reporting. */}
       {!off && urgent.length > 0 && (
-        <Card className="mt-4" title="Needs a look" action={<Pill tone="warn">{urgent.length}</Pill>}>
-          <ul className="divide-y divide-ink/6" data-testid="overview-alerts">
+        <Card
+          className="mt-4"
+          title="Needs a look"
+          action={<Pill tone={urgent.some((a) => a.level === "urgent") ? "warn" : "neutral"}>{urgent.length}</Pill>}
+        >
+          <Rows>
             {urgent.map((a) => (
-              <li key={a.id} className="py-2.5 text-[14px] first:pt-0 last:pb-0">
-                <span className="font-medium">{a.title}</span> <span className="text-ash">{a.detail}</span>
-              </li>
+              <Row
+                key={a.id}
+                lead={<IconAlert size={18} className={a.level === "urgent" ? "text-ask" : "text-ash"} />}
+                title={a.title}
+                detail={a.detail}
+                trail={<Pill tone={a.level === "urgent" ? "warn" : "neutral"}>{a.level}</Pill>}
+              />
             ))}
-          </ul>
+          </Rows>
         </Card>
       )}
 
@@ -111,78 +147,117 @@ export function LiveOverview() {
         </div>
       )}
 
-      <div className="dash-lock mt-4 flex flex-col gap-4 rounded-[16px] bg-graphite p-5 text-bone ring-1 ring-white/8 md:flex-row md:items-center md:justify-between md:p-6">
+      <div className="mt-4">
+        <PowerCard compact />
+      </div>
+
+      {/* The house, in one card: where work happened, and what the machine has left. */}
+      <section className="dash-lock mt-4 flex flex-col gap-5 rounded-[20px] bg-graphite p-5 text-bone ring-1 ring-white/8 md:flex-row md:items-center md:justify-between md:p-6">
         <div className="flex items-center gap-4">
-          <span className="orb shrink-0" style={{ ["--orb" as string]: "14px" }} />
+          <span className={off ? "block h-[14px] w-[14px] shrink-0 rounded-full bg-ash-2" : "orb shrink-0"} style={off ? undefined : { ["--orb" as string]: "14px" }} />
           <div>
-            <div className="font-display text-[24px] font-medium leading-none tracking-[-0.02em]">{off ? "Switched off" : machine.gate === "open" ? "Gate open · asks first" : "All inside"}</div>
-            <div className="mt-1.5 text-[14px] text-ash-2">
-              {facts.summary ? `${facts.summary.insideShare}% inside over ${facts.summary.days} days · ${facts.summary.crossings} ${facts.summary.crossings === 1 ? "crossing" : "crossings"} · ${bytes(facts.summary.bytesCrossedToday)} left today` : "Counting from the ledger…"}
+            <div className="font-display text-[24px] font-medium leading-none tracking-[-0.02em]">
+              {off ? "Switched off" : machine.gate === "open" ? "Gate open · asks first" : "All inside"}
+            </div>
+            <div className="mt-2 text-[14px] text-ash-2">
+              {facts.summary
+                ? `${facts.summary.insideShare}% inside over ${facts.summary.days} days · ${facts.summary.crossings} ${facts.summary.crossings === 1 ? "crossing" : "crossings"} · ${bytes(facts.summary.bytesCrossedToday)} left today`
+                : "Counting from the ledger…"}
             </div>
           </div>
         </div>
         <dl className="grid grid-cols-3 gap-6 text-right md:gap-10">
           <div>
-            <dd className="font-display text-[20px] font-medium">{memoryLabel(machine)}</dd>
-            <dt className="text-[12px] text-ash-2">Memory</dt>
+            <dd className="font-display text-[20px] font-medium">
+              <Figure value={memoryLabel(machine)} ready={statusIn} />
+            </dd>
+            <dt className="mt-1 text-[12px] text-ash-2">Memory</dt>
           </div>
           <div>
-            <dd className="font-display text-[20px] font-medium">{storageLabel(machine)}</dd>
-            <dt className="text-[12px] text-ash-2">Storage</dt>
+            <dd className="font-display text-[20px] font-medium">
+              <Figure value={storageLabel(machine)} ready={statusIn} />
+            </dd>
+            <dt className="mt-1 text-[12px] text-ash-2">Storage</dt>
           </div>
           <div>
-            <dd className="font-display text-[20px] font-medium">{machine.temperatureC === null ? `up ${machine.uptime}` : temperatureLabel(machine)}</dd>
-            <dt className="text-[12px] text-ash-2">{machine.temperatureC === null ? "Uptime" : machine.fan}</dt>
+            <dd className="font-display text-[20px] font-medium">
+              <Figure value={machine.temperatureC === null ? `up ${machine.uptime}` : temperatureLabel(machine)} ready={statusIn} />
+            </dd>
+            <dt className="mt-1 text-[12px] text-ash-2">{machine.temperatureC === null ? "Uptime" : machine.fan}</dt>
           </div>
         </dl>
-      </div>
+      </section>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-testid="overview-stats">
-        <Stat label="Files" value={facts.numbers ? bytes(facts.numbers.files.bytes) : "…"} sub={facts.numbers ? `${facts.numbers.files.items} ${facts.numbers.files.items === 1 ? "file" : "files"} · stored once` : "counting"} href="/dashboard/files" />
-        <Stat label="Photos" value={facts.numbers ? facts.numbers.photos.toLocaleString() : "…"} sub={facts.numbers?.photos ? "indexed on the box" : "none yet"} href="/dashboard/photos" />
-        <Stat label="Home" value={devices === null ? "…" : `${devices} ${devices === 1 ? "device" : "devices"}`} sub={facts.homeState ? `${facts.homeState.adapter} · ${facts.homeState.presence.adultsHome ? "someone home" : "nobody home"}` : "reading"} href="/dashboard/home" />
-        <Stat label="Receipts today" value={String(receiptsToday)} sub={facts.numbers ? `${facts.numbers.ledgerRows} in the ledger` : "counting"} href="/dashboard/activity" />
+        <Stat
+          label="Files"
+          value={facts.numbers ? bytes(facts.numbers.files.bytes) : <Skeleton className="h-[26px] w-24" rounded="sm" />}
+          sub={facts.numbers ? `${facts.numbers.files.items} ${facts.numbers.files.items === 1 ? "file" : "files"} · stored once` : "counting"}
+          href="/dashboard/files"
+        />
+        <Stat
+          label="Photos"
+          value={facts.numbers ? facts.numbers.photos.toLocaleString() : <Skeleton className="h-[26px] w-16" rounded="sm" />}
+          sub={facts.numbers ? (facts.numbers.photos ? "indexed on the box" : "none yet") : "counting"}
+          href="/dashboard/photos"
+        />
+        <Stat
+          label="Home"
+          value={devices === null ? <Skeleton className="h-[26px] w-24" rounded="sm" /> : `${devices} ${devices === 1 ? "device" : "devices"}`}
+          sub={facts.homeState ? `${facts.homeState.adapter} · ${facts.homeState.presence.adultsHome ? "someone home" : "nobody home"}` : "reading"}
+          href="/dashboard/home"
+        />
+        <Stat
+          label="Receipts today"
+          value={String(receiptsToday)}
+          sub={facts.numbers ? `${facts.numbers.ledgerRows} in the ledger` : "counting"}
+          href="/dashboard/activity"
+        />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-        <Card title={left.length ? "Worth setting up" : "Set up"} action={left.length ? <Pill tone="neutral">{left.length} left</Pill> : <Pill tone="good">Done</Pill>}>
-          <ul className="divide-y divide-ink/6" data-testid="overview-setup">
+        <Card
+          title={left.length ? "Worth setting up" : "Set up"}
+          action={!settled ? undefined : left.length ? <Pill tone="neutral">{left.length} left</Pill> : <StatusDot tone="good">Done</StatusDot>}
+        >
+          <Rows>
             {setup.map((s) => (
-              <li key={s.title} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
+              <div key={s.title} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0" data-testid="overview-setup">
                 <div className="flex gap-3">
                   <span className={`mt-[6px] block h-[8px] w-[8px] shrink-0 rounded-full ${s.done ? "bg-local" : s.done === null ? "bg-ink/20" : "bg-amber"}`} />
                   <div>
                     <div className="text-[15px] font-medium">{s.title}</div>
-                    <div className="mt-0.5 text-[13px] text-ash">{s.detail}</div>
+                    <div className="mt-0.5 text-[13px] leading-relaxed text-ash">{s.detail}</div>
                   </div>
                 </div>
                 {s.done ? (
                   <Pill tone="good">Done</Pill>
                 ) : (
-                  <Link href={s.href} className="inline-flex shrink-0 items-center rounded-[8px] bg-bone px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-chassis">
+                  <Link href={s.href} className="tap inline-flex shrink-0 items-center gap-1 rounded-[8px] bg-bone px-3 py-1.5 text-[13px] font-medium hover:bg-chassis">
                     Open
+                    <IconChevron size={14} className="opacity-50" />
                   </Link>
                 )}
-              </li>
+              </div>
             ))}
-          </ul>
+          </Rows>
         </Card>
 
         <Card
           title="Today"
           action={
-            <Link href="/dashboard/activity" className="text-[13px] font-medium text-ash hover:text-ink">
+            <Link href="/dashboard/activity" className="tap text-[13px] font-medium text-ash hover:text-ink">
               All activity
             </Link>
           }
         >
           {today.length === 0 ? (
-            <p className="text-[14px] text-ash">No receipts yet today.</p>
+            <p className="py-2 text-[14px] text-ash">Nothing has happened yet today. Every consequential act writes a line here as it happens.</p>
           ) : (
             <ul className="divide-y divide-ink/6">
               {today.map((a) => (
                 <li key={a.id} className="grid grid-cols-[44px_1fr_auto] items-baseline gap-3 py-2.5 text-[13px] first:pt-0 last:pb-0">
-                  <span className="font-mono text-[11px] text-ash">{a.time}</span>
+                  <span className="tnum font-mono text-[11px] text-ash">{a.time}</span>
                   <span className="min-w-0">
                     <span className="font-medium">{a.title}</span> <span className="text-ash">{a.detail}</span>
                   </span>
@@ -194,10 +269,15 @@ export function LiveOverview() {
         </Card>
       </div>
 
-      <Link href="/dashboard/ask" className="mt-6 flex items-center gap-3 rounded-full bg-white px-4 py-3 text-[15px] text-ash ring-1 ring-ink/8 transition-colors hover:ring-ink/20">
+      <Link
+        href="/dashboard/ask"
+        className="tap mt-6 flex items-center gap-3 rounded-full bg-white px-4 py-3 text-[15px] text-ash shadow-[var(--shadow-card)] ring-1 ring-ink/8 hover:ring-ink/20"
+      >
         <span className="orb" style={{ ["--orb" as string]: "10px" }} />
         Ask the box…
-        <span className="ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-ink text-bone">↑</span>
+        <span className="ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-ink text-bone">
+          <IconChevron dir="up" size={16} />
+        </span>
       </Link>
     </div>
   );

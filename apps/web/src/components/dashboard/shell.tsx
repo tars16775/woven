@@ -295,7 +295,7 @@ export function Shell({ children }: { children: ReactNode }) {
               {connectionChip}
               {connectionChip && gateChip && <span aria-hidden>·</span>}
               {gateChip}
-              {connected && (
+              {connected && connection.status !== null && (
                 <>
                   <span aria-hidden>·</span>
                   <span className="tnum" data-testid="core-memory">

@@ -59,11 +59,13 @@ export function deriveLive(state: CoreState): LiveCore {
       model: "…",
       cpu: null,
       os: null,
+      // Nothing is known yet. Screens show a placeholder for these rather than
+      // a zero, which would be wrong for as long as it was on the screen.
       memory: { used: 0, total: 0, unit: "GB" },
-      storage: { used: "…", usedUnit: "GB", total: "…", unit: "GB", usedBytes: 0, totalBytes: 0 },
+      storage: { used: "—", usedUnit: "GB", total: "—", unit: "GB", usedBytes: 0, totalBytes: 0 },
       temperatureC: null,
-      fan: "…",
-      uptime: "…",
+      fan: "—",
+      uptime: "—",
       gate: state.gate?.state ?? "absent",
       dataRoot: null,
     };
@@ -93,7 +95,7 @@ export function useLiveCore(): LiveCore {
 
 /** "38 / 64 GB" */
 export function memoryLabel(l: LiveCore) {
-  if (!l.connected) return "—";
+  if (!l.connected || l.memory.total === 0) return "—";
   return `${l.memory.used} / ${l.memory.total} ${l.memory.unit}`;
 }
 /** "1.2 / 2 TB", "312 / 994 GB", or "4 GB / 1.6 TB" when the units differ. */
