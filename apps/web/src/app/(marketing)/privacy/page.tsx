@@ -6,6 +6,8 @@ import { Reveal } from "@/components/reveal";
 import { ScreenActivity } from "@/components/screen";
 import { Section } from "@/components/section";
 import { TwoSides } from "@/components/two-sides";
+import { AvailabilityTag, Fn, Footnotes } from "@/components/claim";
+import type { Availability, ClaimId } from "@/lib/claims";
 
 export const metadata: Metadata = {
   title: "Privacy",
@@ -16,7 +18,7 @@ export const metadata: Metadata = {
 const promises = [
   {
     title: "Four things never leave.",
-    body: "Voice, home control, cameras and your files, photos and memory are processed on the box. These categories are pinned to Inside in the software, not in a settings page.",
+    body: "Your files, photos and memory are processed on the box today, and voice, home control and cameras will be when the box exists. These categories are pinned to Inside in the software, not in a settings page.",
   },
   {
     title: "Everything else asks first.",
@@ -32,13 +34,16 @@ const promises = [
   },
 ];
 
-const security = [
-  ["Secure element + TPM 2.0", "Per-device identity. Keys never leave the box."],
-  ["Encrypted at rest", "Household storage unlocks only for an attested compute module."],
-  ["Signed A/B updates", "Every update is signed and can roll back on its own."],
-  ["No inbound ports", "Remote access is an outbound, mutually authenticated tunnel."],
-  ["Locked debug", "Production debug ports are disabled. Service access is audited."],
-  ["Disclosure program", "A published security contact, severity SLAs, and a support window."],
+/** The notes at the foot of this page, in the order their markers appear. */
+const notes = ["gate", "receipts", "killSwitch", "encryption", "secureElement", "remote", "insideShare"] as const satisfies readonly ClaimId[];
+
+const security: { name: string; detail: string; status: Availability }[] = [
+  { name: "Encrypted at rest", detail: "The database, every file and the box's private keys, under a household key. On a Mac that key is in your login Keychain.", status: "now" },
+  { name: "Signed updates, with rollback", detail: "A release is verified before anything in it is used, the previous one is kept, and it comes back on its own if the new one does not start.", status: "now" },
+  { name: "No inbound ports", detail: "Remote access is one outbound connection, and every frame through it is encrypted end to end under a key only your browser and your box hold.", status: "now" },
+  { name: "One switch stops it", detail: "Off closes the Gate, drops the connection and refuses everything until you switch it on. It survives a restart.", status: "now" },
+  { name: "Secure element and attestation", detail: "Per-device identity in hardware, and storage that unlocks only for an attested compute module.", status: "box" },
+  { name: "Locked debug, disclosure programme", detail: "Production debug ports disabled, audited service access, a published security contact and a support window.", status: "target" },
 ];
 
 export default function PrivacyPage() {
@@ -116,15 +121,21 @@ export default function PrivacyPage() {
             </h2>
             <p className="mt-4 max-w-[560px] text-[15px] leading-relaxed text-ash">
               Woven Core maps its controls to the NIST consumer IoT baseline and the 2026
-              manufacturer guidance. The model is never a security boundary.
+              manufacturer guidance. The model is never a security boundary. Four of the six below
+              are built and tested today
+              <Fn notes={notes} id="encryption" />; the hardware ones wait on the box
+              <Fn notes={notes} id="secureElement" />.
             </p>
           </Reveal>
           <div className="mt-12 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-            {security.map(([t, d], i) => (
-              <Reveal key={t} delay={i * 0.04}>
+            {security.map((item, i) => (
+              <Reveal key={item.name} delay={i * 0.04}>
                 <div className="hairline border-t pt-4">
-                  <div className="font-display text-[18px] font-medium tracking-[-0.01em]">{t}</div>
-                  <p className="mt-1.5 text-[14px] leading-relaxed text-ash">{d}</p>
+                  <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                    <span className="font-display text-[18px] font-medium tracking-[-0.01em]">{item.name}</span>
+                    <AvailabilityTag status={item.status} />
+                  </div>
+                  <p className="mt-1.5 text-[14px] leading-relaxed text-ash">{item.detail}</p>
                 </div>
               </Reveal>
             ))}
@@ -146,8 +157,8 @@ export default function PrivacyPage() {
                 <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-local">We say</div>
                 <ul className="mt-3 space-y-2 text-[15px]">
                   <li>Inside first. A crossing when needed and permitted.</li>
-                  <li>Here is exactly what is stored on Core and what is in Woven Cloud.</li>
-                  <li>Measured inside share, shown on your screen.</li>
+                  <li>Here is exactly what is stored on your box, and what a Woven service would hold if one existed.</li>
+                  <li>The share that stayed inside, counted by your own box and shown on your own screen.</li>
                   <li>A published security support period and end-of-life policy.</li>
                 </ul>
               </div>
@@ -191,6 +202,7 @@ export default function PrivacyPage() {
           </div>
         </Reveal>
       </section>
+      <Footnotes notes={notes} />
     </>
   );
 }

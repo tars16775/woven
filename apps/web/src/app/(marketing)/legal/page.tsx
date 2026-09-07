@@ -40,6 +40,14 @@ export default function LegalPage() {
     >
       <Block id="privacy" title="Privacy policy">
         <p>
+          <strong>Today, in plain terms.</strong> Woven runs no service that holds anything of
+          yours. There are no accounts, no cloud storage, no relay we operate and no telemetry
+          being collected, because none of it has been built or deployed. If you run a Core on your
+          own Mac, everything it holds is on your machine and reaches us in no way at all. The rest
+          of this policy describes what the box and its optional services will do, and it takes
+          effect when they exist.
+        </p>
+        <p>
           <strong>What stays on the box.</strong> Voice and conversations, home control and
           automations, cameras and clips, and your files, photos and memory are processed and
           stored on Woven Core. Woven does not receive them.
@@ -50,19 +58,24 @@ export default function LegalPage() {
           history are excluded. Each crossing is recorded on the box with its contents.
         </p>
         <p>
-          <strong>What Woven Cloud holds.</strong> Your account, the encrypted relay used for
-          remote access, update metadata, and, if you enable it, encrypted off-site backup
-          whose keys stay on your box.
+          <strong>What a Woven service would hold.</strong> Nothing yet: no such service is
+          running. When one is, it holds your account, the relay used for remote access, and update
+          metadata, plus encrypted off-site backup if you turn it on. The relay is designed so that
+          it cannot read what passes through it: your browser and your box encrypt every frame
+          end to end under a key exchanged at home, and the relay carries ciphertext and keeps
+          nothing.
         </p>
         <p>
-          <strong>Telemetry.</strong> Reliability and health metrics with pseudonymous device
-          identifiers. Readable on the box, switchable off, never containing content.
+          <strong>Telemetry.</strong> None is collected. The software can send one nightly line
+          saying its version and how long it has been running, and that is off unless you turn it
+          on; it goes out through the Gate like anything else and leaves a receipt you can read.
+          Content is never part of it.
         </p>
         <p>
-          <strong>Your rights.</strong> Export, delete and correct from the app. Deleting a
-          memory removes it from retrieval and from backups within the documented window.
-          Deleting the account removes cloud data within thirty days, subject to legal
-          retention we will name specifically.
+          <strong>Your rights.</strong> Export, delete and correct from the app; all three are
+          built and running today. Deleting a memory blanks it immediately and it is gone from the
+          next snapshot. Deleting your account leaves only a ledger row saying it happened. There is
+          no cloud data to delete, because there is none.
         </p>
         <p>
           <strong>No advertising.</strong> Woven does not sell or share household data and
@@ -76,7 +89,9 @@ export default function LegalPage() {
 
       <Block id="terms" title="Terms">
         <p>
-          Reservations are refundable deposits. The balance is charged only when you confirm
+          Nothing is for sale. A reservation takes no money, is not an order and creates no
+          obligation on either side; today it is a note kept in your own browser. When reservations
+          open, deposits are refundable and the balance is charged only when you confirm
           at shipment. Prices and specifications shown before shipment are targets and may
           change; you can cancel for a full refund if they do.
         </p>

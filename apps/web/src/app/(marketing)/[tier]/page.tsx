@@ -13,6 +13,8 @@ import { StickyBar } from "@/components/sticky-bar";
 import { TVFrame } from "@/components/tv-frame";
 import { AppHome, AppPrivacy } from "@/components/phone/screens";
 import { formatPrice, tierOrder, tiers, type TierId } from "@/lib/site";
+import { ClaimTag, Fn, Footnotes } from "@/components/claim";
+import type { ClaimId } from "@/lib/claims";
 
 export const dynamicParams = false;
 
@@ -39,6 +41,9 @@ const statusByTier: Record<TierId, string> = {
   "core-pro": "16 cameras · 3 agents · inside",
 };
 
+/** The notes at the foot of every product page, in the order their markers appear. */
+const notes = ["price", "delivery", "tandem", "radios", "receipts", "tv", "router", "moduleSwap", "secureElement", "wifi", "power", "warranty", "support"] as const satisfies readonly ClaimId[];
+
 export default async function TierPage({ params }: PageProps<"/[tier]">) {
   const { tier } = await params;
   const t = tiers[tier as TierId];
@@ -54,11 +59,21 @@ export default async function TierPage({ params }: PageProps<"/[tier]">) {
       >
         <Reveal className="px-6 pt-24 text-center md:pt-28">
           <p className="text-[13px] font-medium text-ash">{t.eyebrow}</p>
-          <h1 className="mt-2 font-display text-[40px] font-medium leading-[1.05] tracking-[-0.02em] md:text-[44px]">
+          <h1 className="mt-2 font-display text-[38px] font-medium leading-[1.02] tracking-[-0.025em] md:text-[58px] lg:text-[68px] md:leading-[1.04]">
             {t.name}
           </h1>
-          <p className="mx-auto mt-2 max-w-[560px] text-[14px] leading-relaxed text-ash md:text-[15px]">
+          <p className="mx-auto mt-3 max-w-[560px] text-[14px] leading-relaxed text-ash md:text-[15px]">
             {t.tagline}
+          </p>
+          <p className="mx-auto mt-3 max-w-[560px] text-[14px] text-ash">
+            From {formatPrice(t.priceFrom)}
+            <Fn notes={notes} id="price" />, shipping in 2027
+            <Fn notes={notes} id="delivery" />. The box is not built yet, and a reservation takes no
+            money.{" "}
+            <Link href="/mac" className="font-medium text-ink underline decoration-amber decoration-2 underline-offset-4">
+              The software runs on a Mac today
+            </Link>
+            .
           </p>
         </Reveal>
         <div className="flex flex-1 items-center justify-center px-6 py-6">
@@ -103,6 +118,7 @@ export default async function TierPage({ params }: PageProps<"/[tier]">) {
         theme="dark"
         flip
         eyebrow="Think"
+        tag={<ClaimTag id="tandem" />}
         title={`A ${t.modelClass} model, resident and private.`}
         body={
           <>
@@ -133,6 +149,7 @@ export default async function TierPage({ params }: PageProps<"/[tier]">) {
         id="connect"
         theme="white"
         eyebrow="Connect"
+        tag={<ClaimTag id="radios" />}
         title="Matter, Thread and Zigbee, built in."
         body={
           <>
@@ -185,6 +202,7 @@ export default async function TierPage({ params }: PageProps<"/[tier]">) {
         theme="dark"
         flip
         eyebrow="Govern"
+        tag={<ClaimTag id="receipts" />}
         title="Where your data went today."
         body={
           <>
@@ -214,6 +232,7 @@ export default async function TierPage({ params }: PageProps<"/[tier]">) {
         id="tv"
         theme="light"
         eyebrow="On your TV · included"
+        tag={<ClaimTag id="tv" />}
         title="Plug it into the television."
         body={
           <>
@@ -238,6 +257,7 @@ export default async function TierPage({ params }: PageProps<"/[tier]">) {
         theme="dark"
         flip
         eyebrow="Outside · the router"
+        tag={<ClaimTag id="router" />}
         title="It is your Wi-Fi too."
         body={
           <>
@@ -279,6 +299,7 @@ export default async function TierPage({ params }: PageProps<"/[tier]">) {
         id="module"
         theme="light"
         eyebrow="Upgrade"
+        tag={<ClaimTag id="moduleSwap" />}
         title="Buy the chassis once. Upgrade the brain."
         body={
           <>
@@ -311,6 +332,7 @@ export default async function TierPage({ params }: PageProps<"/[tier]">) {
         theme="white"
         flip
         eyebrow="In the box"
+        tag={<ClaimTag id="delivery" />}
         title="Everything you need. Nothing to subscribe to."
         body={
           <>
@@ -357,6 +379,7 @@ export default async function TierPage({ params }: PageProps<"/[tier]">) {
       </section>
 
       <StickyBar name={t.name} price={formatPrice(t.priceFrom)} href={`/order?tier=${id}`} />
+      <Footnotes notes={notes} />
     </>
   );
 }
