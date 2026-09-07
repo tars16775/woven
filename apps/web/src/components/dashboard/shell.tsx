@@ -380,7 +380,9 @@ export function Shell({ children }: { children: ReactNode }) {
           <main id="main" className="flex-1 px-4 py-6 lg:px-8 lg:py-8">
             {/* Every screen below is drawn from a Core. When none is answering there is
                 nothing to draw, so the page says so rather than inventing a household. */}
-            <div className="mx-auto w-full max-w-[var(--page-max)]">
+            {/* Keyed on the route: the page settles when the room changes, and
+                stays still while a card inside it updates. */}
+            <div key={path} className="dash-page mx-auto w-full max-w-[var(--page-max)]">
               {connected || path.startsWith("/dashboard/core") ? children : <NoCore />}
             </div>
           </main>

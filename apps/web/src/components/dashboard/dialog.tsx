@@ -83,7 +83,7 @@ export function Dialog({ open, onClose, kicker, title, children, variant = "card
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex bg-[rgba(10,10,10,0.5)] ${drawer ? "justify-start" : "items-end justify-center p-4 sm:items-center"}`}
+      className={`dash-backdrop fixed inset-0 z-50 flex bg-[rgba(10,10,10,0.5)] ${drawer ? "justify-start" : "items-end justify-center p-4 sm:items-center"}`}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -96,8 +96,8 @@ export function Dialog({ open, onClose, kicker, title, children, variant = "card
         tabIndex={-1}
         className={
           drawer
-            ? `flex h-full w-[min(320px,86vw)] flex-col bg-bone p-5 text-ink shadow-[0_0_80px_-20px_rgba(0,0,0,0.5)] outline-none ${className}`
-            : `w-full ${size === "md" ? "max-w-[560px]" : "max-w-[440px]"} rounded-[16px] bg-white p-6 text-ink shadow-[0_40px_80px_-30px_rgba(0,0,0,0.5)] outline-none ring-1 ring-ink/8 ${className}`
+            ? `dash-drawer flex h-full w-[min(320px,86vw)] flex-col bg-bone p-5 text-ink shadow-[var(--shadow-sheet)] outline-none ${className}`
+            : `dash-panel w-full ${size === "md" ? "max-w-[560px]" : "max-w-[440px]"} rounded-[20px] bg-white p-6 text-ink shadow-[var(--shadow-sheet)] outline-none ring-1 ring-ink/8 ${className}`
         }
       >
         {kicker && <div className={`font-mono text-[11px] uppercase tracking-[0.16em] ${kickerTone}`}>{kicker}</div>}

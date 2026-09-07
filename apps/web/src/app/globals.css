@@ -434,3 +434,55 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .skeleton { animation: none; opacity: 0.7; }
 }
+
+/* ---- Dashboard motion and focus (phase 5) ---------------------------------
+   Three arrivals and one focus ring, and every one of them stops for a person
+   who asked for less movement. Nothing loops: an animation that repeats is a
+   thing to look at, and this is a thing to read. */
+
+@keyframes dash-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes dash-rise {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes dash-slide {
+  from { transform: translateX(-100%); }
+  to { transform: none; }
+}
+@keyframes dash-page {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.dash-backdrop { animation: dash-fade var(--dur) var(--ease-out-expo) both; }
+.dash-panel { animation: dash-rise var(--dur-slow) var(--ease-out-expo) both; }
+.dash-drawer { animation: dash-slide var(--dur-slow) var(--ease-out-expo) both; }
+
+/* A page settles rather than snapping in. Keyed on the route so it replays
+   when the room changes and not when a card inside it updates. */
+.dash-page { animation: dash-page var(--dur-slow) var(--ease-out-expo) both; }
+
+/* One focus ring for the whole dashboard: amber, outside the shape, never
+   clipped by an overflow. Mouse users never see it; keyboard users always do. */
+[data-dash-theme] :focus-visible {
+  outline: 2px solid var(--color-amber);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+/* On the amber controls themselves the ring would disappear into the fill. */
+[data-dash-theme] .btn-primary:focus-visible,
+[data-dash-theme] .bg-amber:focus-visible {
+  outline-color: var(--color-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-backdrop,
+  .dash-panel,
+  .dash-drawer,
+  .dash-page {
+    animation: none;
+  }
+}
