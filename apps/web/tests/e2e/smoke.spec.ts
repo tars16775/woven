@@ -75,10 +75,13 @@ test.describe("platform files", () => {
 
 test("the product bar appears once the hero is past, and jumps to a section", async ({ page }) => {
   await page.goto("/core-plus", { waitUntil: "domcontentloaded" });
+  // The bar is a client component; wait for it to exist before judging whether it shows.
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.locator("[data-product-nav]")).toBeAttached();
   const bar = page.getByRole("navigation", { name: "Woven Core+ sections" });
   await expect(bar).toBeHidden();
-  await page.mouse.wheel(0, 2000);
-  await expect(bar).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, window.innerHeight * 1.6));
+  await expect(bar).toBeVisible({ timeout: 15_000 });
   await expect(bar).toContainText("Woven Core+");
   await bar.getByRole("link", { name: "Specs" }).click();
   await expect(page.locator("#specs")).toBeInViewport();

@@ -16,12 +16,12 @@ test("picking Core Pro changes the estimated total", async ({ page }) => {
   const errors = collectConsoleErrors(page);
   await page.goto("/order");
 
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Woven Core+");
+  await expect(page.getByRole("heading", { level: 2, name: /^Woven Core/ }).first()).toHaveText("Woven Core+");
   await expect(total(page)).toHaveText("$1,499");
 
   await choose(page.getByRole("radio", { name: /^Core Pro/ }));
 
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Woven Core Pro");
+  await expect(page.getByRole("heading", { level: 2, name: /^Woven Core/ }).first()).toHaveText("Woven Core Pro");
   await expect(total(page)).toHaveText("$2,499");
   await expect(page).toHaveURL(/tier=core-pro/);
   expect(errors).toEqual([]);
