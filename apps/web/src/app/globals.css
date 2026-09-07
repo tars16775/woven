@@ -421,3 +421,16 @@ body {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
+
+/* Skeletons breathe rather than sweep: a shimmer that crosses the screen is a
+   second animation competing with the content that is about to replace it. */
+@keyframes skeleton {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.9; }
+}
+.skeleton {
+  animation: skeleton 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; opacity: 0.7; }
+}
