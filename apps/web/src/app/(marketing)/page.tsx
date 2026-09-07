@@ -8,6 +8,30 @@ import { TwoSides } from "@/components/two-sides";
 import { TVFrame } from "@/components/tv-frame";
 import { AppAsk, AppHome, AppPhotos, AppPrivacy, AppRooms } from "@/components/phone/screens";
 import { tiers, formatPrice } from "@/lib/site";
+import { ClaimTag, Fn, Footnotes } from "@/components/claim";
+import type { ClaimId } from "@/lib/claims";
+
+/** The notes at the foot of this page, in the order their markers appear. */
+const notes = [
+  "price",
+  "delivery",
+  "passkeys",
+  "photoSearch",
+  "gate",
+  "encryption",
+  "remote",
+  "killSwitch",
+  "speed",
+  "tandem",
+  "tv",
+  "radios",
+  "router",
+  "homeAssistant",
+  "moduleSwap",
+  "receipts",
+  "insideShare",
+  "agents",
+] as const satisfies readonly ClaimId[];
 
 const whyNot = [
   {
@@ -40,6 +64,16 @@ const whyNot = [
   },
 ];
 
+/** The six things a household can do tonight, on a Mac, with no hardware. */
+const today: { title: string; detail: string; note: ClaimId }[] = [
+  { title: "A house, with people in it", detail: "Passkeys, roles, guests with an end date, and spaces that are one person's even from the owner.", note: "passkeys" },
+  { title: "Files and photos, kept once", detail: "Back up a folder or a second Mac, browse it from any device at home, and search by name. Photos get a timeline you can search by what is in them.", note: "photoSearch" },
+  { title: "A Gate, and receipts", detail: "One process is the only way out. Every crossing is approved and recorded with what was sent and who said yes.", note: "gate" },
+  { title: "Encrypted, and backed up", detail: "The database, the files and the keys are encrypted on the drive. Snapshots run nightly, copy to a second drive, and the restore drill proves they work.", note: "encryption" },
+  { title: "Reachable from away", detail: "Pair a browser at home and reach the house from anywhere, end to end encrypted, with no open ports.", note: "remote" },
+  { title: "One switch that stops it", detail: "Off closes the Gate, drops the connection and refuses everything. It survives a restart, and it is a receipt like everything else.", note: "killSwitch" },
+];
+
 export default function HomePage() {
   const plus = tiers["core-plus"];
   const pro = tiers["core-pro"];
@@ -60,22 +94,93 @@ export default function HomePage() {
             Wi-Fi. Everything of yours stays inside the house.
             <br />
             From {formatPrice(plus.priceFrom)}
+            <Fn notes={notes} id="price" />, shipping in 2027
+            <Fn notes={notes} id="delivery" />
           </>
         }
         primary={{ label: "Reserve", href: "/order?tier=core-plus" }}
         secondary={{ label: "Learn more", href: "/core-plus" }}
-        cue="#sides"
+        foot={
+          <>
+            The box is not built yet, and a reservation takes no money. The software inside it is
+            written and running: you can{" "}
+            <Link href="/mac" className="font-medium underline decoration-amber decoration-2 underline-offset-4">
+              put a Core on a Mac tonight
+            </Link>
+            , free, and check every claim on this page yourself.
+          </>
+        }
+        cue="#today"
       >
         <Core3D label={plus.screenLabel} status="24 devices · inside · Gate closed" ignite className="h-[52svh] max-h-[620px] w-full max-w-[1100px]" />
       </Section>
+
+      {/* What runs today */}
+      <section id="today" data-theme="white" className="bg-white text-ink">
+        <div className="mx-auto max-w-[1100px] px-6 py-24 lg:px-10 md:py-28">
+          <Reveal>
+            <p className="flex flex-wrap items-center gap-2.5 text-[13px] font-medium text-ash">
+              Available tonight
+              <ClaimTag id="gate" />
+            </p>
+            <h2 className="mt-3 max-w-[840px] font-display text-[32px] font-medium leading-[1.05] tracking-[-0.02em] md:text-[46px]">
+              The box comes later. The software is already here.
+            </h2>
+            <p className="mt-4 max-w-[620px] text-[15px] leading-relaxed text-ash md:text-[16px]">
+              Woven Core runs on a Mac you already own. It is the same software the box will run,
+              with the same Gate, the same receipts and the same permissions. One command installs
+              it; your data stays in a folder you choose.
+            </p>
+          </Reveal>
+
+          <div className="mt-12 grid gap-px overflow-hidden rounded-[14px] bg-ink/8 sm:grid-cols-2 lg:grid-cols-3">
+            {today.map((t, i) => (
+              <Reveal key={t.title} delay={i * 0.04} className="bg-white">
+                <div className="h-full p-6">
+                  <h3 className="text-[16px] font-medium">
+                    {t.title}
+                    <Fn notes={notes} id={t.note} />
+                  </h3>
+                  <p className="mt-1.5 text-[13.5px] leading-relaxed text-ash">{t.detail}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal delay={0.1}>
+            <div className="mt-10 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+              <Link href="/mac" className="btn btn-primary">
+                Run it on your Mac
+              </Link>
+              <Link href="/status" className="btn btn-secondary">
+                What is real, and what is not
+              </Link>
+            </div>
+            <p className="mt-5 max-w-[640px] text-[12.5px] leading-relaxed text-ash">
+              Cameras, radios, the router, voice and the assistant&apos;s model need hardware that
+              does not exist yet. Every screen in the dashboard says so when it is connected to a
+              real Core, and this site keeps the same list on one page.
+            </p>
+          </Reveal>
+        </div>
+      </section>
 
       {/* The architecture */}
       <Section
         id="sides"
         theme="dark"
         eyebrow="How it is built"
+        tag={<ClaimTag id="gate" />}
         title="Two computers. One is on the internet."
-        subtitle="Two computers in one box, and only one of them is on the internet. The Inside holds everything of yours and has no route out. The Outside is your router. Between them is the Gate, and only what you approve crosses it."
+        subtitle={
+          <>
+            Two computers in one box, and only one of them is on the internet. The Inside holds
+            everything of yours and has no route out. The Outside is your router. Between them is
+            the Gate, and only what you approve crosses it.
+            <Fn notes={notes} id="gate" />
+          </>
+        }
+        foot="On a Mac the Gate is already there, as a separate process with its own allow list and its own log. In the box it is also a wire that is not connected."
         primary={{ label: "Privacy", href: "/privacy" }}
         secondary={{ label: "The spec", href: "/core-plus#specs" }}
       >
@@ -87,8 +192,23 @@ export default function HomePage() {
         id="tandem"
         theme="dark"
         eyebrow="Tandem"
+        tag={<ClaimTag id="tandem" />}
         title="Ask. It already knows the house."
-        subtitle="A household assistant that runs inside. It knows the calendar, the files, the photos and the home, answers in under a second, and asks before anything crosses the Gate."
+        subtitle={
+          <>
+            A household assistant that runs inside. It knows the calendar, the files, the photos
+            and the home, answers in under a second
+            <Fn notes={notes} id="speed" />, and asks before anything crosses the Gate.
+          </>
+        }
+        foot={
+          <>
+            Today the assistant is a rule engine over what your box already holds, and it says so on
+            every screen.
+            <Fn notes={notes} id="tandem" /> The model that reads a sentence needs the box&apos;s
+            memory.
+          </>
+        }
         primary={{ label: "Meet Tandem", href: "/tandem" }}
         secondary={{ label: "See what leaves", href: "/privacy" }}
         align="end"
@@ -109,8 +229,15 @@ export default function HomePage() {
         id="tv"
         theme="light"
         eyebrow="On your TV · included"
+        tag={<ClaimTag id="tv" />}
         title="Plug it into the television."
-        subtitle="One HDMI cable and the biggest screen in the house shows your photos, your movies, your cameras and Tandem. No subscription, no account, no ads, nothing watching back."
+        subtitle={
+          <>
+            One HDMI cable and the biggest screen in the house shows your photos, your movies, your
+            cameras and Tandem.
+            <Fn notes={notes} id="tv" /> No subscription, no account, no ads, nothing watching back.
+          </>
+        }
         primary={{ label: "Woven on TV", href: "/home#tv" }}
         secondary={{ label: "Woven Core+", href: "/core-plus" }}
       >
@@ -124,8 +251,15 @@ export default function HomePage() {
         id="home"
         theme="white"
         eyebrow="Home"
+        tag={<ClaimTag id="radios" />}
         title="Your smart home, with a brain in the house."
-        subtitle="Matter, Thread and Zigbee radios are built in. Lights, locks and thermostats answer in under a second, and keep answering when the internet is down, because they never needed it."
+        subtitle={
+          <>
+            Matter, Thread and Zigbee radios are built in.
+            <Fn notes={notes} id="radios" /> Lights, locks and thermostats answer in under a second,
+            and keep answering when the internet is down, because they never needed it.
+          </>
+        }
         primary={{ label: "Home", href: "/home" }}
         secondary={{ label: "Supported devices", href: "/home#devices" }}
         align="end"
@@ -143,8 +277,16 @@ export default function HomePage() {
         id="router"
         theme="white"
         eyebrow="Outside · the router"
+        tag={<ClaimTag id="router" />}
         title="It is your Wi-Fi too."
-        subtitle="Wi-Fi 7 for the whole house and a 10 GbE port to the internet, on a separate processor that cannot see inside. A guest network for visitors. Rules and schedules for every device. One box replaces the router, the hub and the NAS."
+        subtitle={
+          <>
+            Wi-Fi 7 for the whole house and a 10 GbE port to the internet, on a separate processor
+            that cannot see inside.
+            <Fn notes={notes} id="router" /> A guest network for visitors. Rules and schedules for
+            every device. One box replaces the router, the hub and the NAS.
+          </>
+        }
         primary={{ label: "How the Gate works", href: "/privacy#gate" }}
         secondary={{ label: "Why not something else?", href: "#why-not" }}
       >
@@ -172,7 +314,14 @@ export default function HomePage() {
         theme="white"
         eyebrow="Why not just…"
         title="A NAS, a Green, a Mac mini, a cloud assistant."
-        subtitle="Each does one part of the job well. None has a Gate, and none was built to run the household's assistant as a household, with permissions per person and a record of what left."
+        subtitle={
+          <>
+            Each does one part of the job well. None has a Gate, and none was built to run the
+            household&apos;s assistant as a household, with permissions per person and a record of
+            what left.
+            <Fn notes={notes} id="homeAssistant" />
+          </>
+        }
         primary={{ label: "Woven Core+", href: "/core-plus" }}
         secondary={{ label: "Compare the three boxes", href: "/core-plus#compare" }}
       >
@@ -203,14 +352,18 @@ export default function HomePage() {
       {/* Upgradeable compute: the module, then the exploded view */}
       <section id="module" data-theme="light" className="bg-bone text-ink">
         <Reveal className="px-6 pt-24 text-center md:pt-28">
-          <p className="text-[13px] font-medium text-ash">Upgradeable compute</p>
+          <p className="flex flex-wrap items-center justify-center gap-2.5 text-[13px] font-medium text-ash">
+            Upgradeable compute
+            <ClaimTag id="moduleSwap" />
+          </p>
           <h2 className="mt-2 font-display text-[32px] font-medium leading-[1.02] tracking-[-0.02em] md:text-[44px] md:leading-[1.05]">
             Buy the chassis once. Upgrade the brain.
           </h2>
           <p className="mx-auto mt-2 max-w-[600px] text-[14px] leading-relaxed text-ash md:text-[15px]">
             The chassis keeps your storage, radios, ports and keys for eight to ten years. The
             compute module carries the processor, the graphics, the neural engine and the
-            memory, and swaps in sixty seconds. Keep scrolling.
+            memory, and swaps in sixty seconds.
+            <Fn notes={notes} id="moduleSwap" /> Keep scrolling.
           </p>
         </Reveal>
         <div className="mx-auto mt-6 h-[48svh] max-h-[520px] w-full max-w-[900px] px-6">
@@ -235,8 +388,22 @@ export default function HomePage() {
         id="privacy"
         theme="dark"
         eyebrow="Where your data went today"
+        tag={<ClaimTag id="receipts" />}
         title="Privacy you can glance at."
-        subtitle="The front of the box and the app both keep one honest list: what stayed inside and what crossed the Gate, with what was sent and who approved it."
+        subtitle={
+          <>
+            The front of the box and the app both keep one honest list: what stayed inside and what
+            crossed the Gate, with what was sent and who approved it.
+            <Fn notes={notes} id="receipts" />
+          </>
+        }
+        foot={
+          <>
+            This is running today. The figures drawn on the screens above are illustrations; your own
+            box counts the real ones.
+            <Fn notes={notes} id="insideShare" />
+          </>
+        }
         primary={{ label: "Privacy", href: "/privacy" }}
         secondary={{ label: "Founding Homes", href: "/founding-homes" }}
         align="end"
@@ -280,8 +447,17 @@ export default function HomePage() {
         id="agents"
         theme="dark"
         eyebrow="Agents"
+        tag={<ClaimTag id="agents" />}
         title="Where your agents are allowed to run."
-        subtitle="Personal agents are arriving with shell access and your inbox. On Woven they run inside, sandboxed, with their own identity, scoped permissions and a receipt for everything they do. They cannot reach the internet unless you open the Gate."
+        subtitle={
+          <>
+            Personal agents are arriving with shell access and your inbox. On Woven they run inside,
+            sandboxed, with their own identity, scoped permissions and a receipt for everything they
+            do.
+            <Fn notes={notes} id="agents" /> They cannot reach the internet unless you open the Gate.
+          </>
+        }
+        foot="The permission engine, the receipts and the Gate an agent would run inside are built and tested today. The sandbox it runs in is not, and the list below is drawn."
         primary={{ label: "Learn more", href: "/tandem#agents" }}
         secondary={{ label: "Developers", href: "/developers" }}
       >
@@ -311,9 +487,16 @@ export default function HomePage() {
       <Section
         id="founding"
         theme="light"
-        eyebrow="Founding Homes · Q4 2026"
+        eyebrow="Founding Homes · late 2026"
+        tag={<ClaimTag id="delivery" />}
         title="Fifty households go first."
-        subtitle="Woven OS on off-the-shelf boxes, in real homes, before any chassis is tooled. Founding Homes get the hardware at cost and a direct line to the people building it."
+        subtitle={
+          <>
+            Woven OS on off-the-shelf boxes, in real homes, before any chassis is tooled.
+            <Fn notes={notes} id="delivery" /> Founding Homes get the hardware at cost and a direct
+            line to the people building it.
+          </>
+        }
         primary={{ label: "Apply", href: "/founding-homes" }}
         secondary={{ label: "Read the plan", href: "/founding-homes#plan" }}
       >
@@ -322,6 +505,8 @@ export default function HomePage() {
           <p className="mt-16 font-mono text-[12px] uppercase tracking-[0.2em] text-ash">50 homes · 6 weeks · at cost</p>
         </div>
       </Section>
+
+      <Footnotes notes={notes} />
     </>
   );
 }

@@ -21,7 +21,7 @@ async function audit(page: Page): Promise<Violation[]> {
   return result.violations;
 }
 
-const pages = ["/", "/core", "/order", "/privacy", "/support", "/mac", "/login", "/founding-homes"];
+const pages = ["/", "/core", "/order", "/privacy", "/support", "/mac", "/status", "/login", "/founding-homes"];
 
 for (const path of pages) {
   test(`${path} has no serious accessibility violations`, async ({ page }) => {

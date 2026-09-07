@@ -106,6 +106,7 @@ export const nav = {
     { label: "Tandem", href: "/tandem" },
     { label: "Home", href: "/home" },
     { label: "Privacy", href: "/privacy" },
+    { label: "On a Mac", href: "/mac" },
     { label: "Shop", href: "/order" },
   ],
   right: [
@@ -116,6 +117,7 @@ export const nav = {
 
 export const footerLinks = [
   { label: "Woven © 2026", href: "/" },
+  { label: "What is real", href: "/status" },
   { label: "Privacy & Legal", href: "/legal" },
   { label: "Founding Homes", href: "/founding-homes" },
   { label: "Support", href: "/support" },

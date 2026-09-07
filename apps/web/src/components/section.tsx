@@ -22,6 +22,10 @@ type Props = {
   titleClassName?: string;
   /** Anchor of the next section; shows the small chevron under the actions. */
   cue?: string;
+  /** Small tag beside the eyebrow: whether this runs today or waits on the box. */
+  tag?: ReactNode;
+  /** A line under the actions, for availability or a caveat. */
+  foot?: ReactNode;
 };
 
 /**
@@ -43,6 +47,8 @@ export function Section({
   titleAs = "h2",
   titleClassName = "",
   cue,
+  tag,
+  foot,
 }: Props) {
   const Title = titleAs;
   return (
@@ -52,9 +58,10 @@ export function Section({
       className={`relative flex min-h-svh flex-col bg-[var(--section-bg)] text-[var(--section-fg)] ${className}`}
     >
       <Reveal className="px-6 pt-24 text-center md:pt-28">
-        {eyebrow && (
-          <p className="text-[13px] font-medium tracking-[0.01em] text-[var(--section-muted)]">
+        {(eyebrow || tag) && (
+          <p className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-2 text-[13px] font-medium tracking-[0.01em] text-[var(--section-muted)]">
             {eyebrow}
+            {tag}
           </p>
         )}
         <Title
@@ -80,7 +87,7 @@ export function Section({
       {(primary || secondary) && (
         <div
           className={`flex flex-col items-center justify-center gap-3 px-6 sm:flex-row sm:gap-4 ${
-            cue ? "pb-16 md:pb-20" : "pb-12 md:pb-14"
+            foot ? "pb-4" : cue ? "pb-16 md:pb-20" : "pb-12 md:pb-14"
           }`}
         >
           {primary && (
@@ -94,6 +101,11 @@ export function Section({
             </Link>
           )}
         </div>
+      )}
+      {foot && (
+        <p className={`mx-auto max-w-[640px] px-6 text-center text-[12.5px] leading-relaxed text-[var(--section-muted)] ${cue ? "pb-16 md:pb-20" : "pb-12 md:pb-14"}`}>
+          {foot}
+        </p>
       )}
       {cue && <ScrollCue href={cue} />}
     </section>

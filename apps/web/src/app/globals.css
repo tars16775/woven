@@ -149,6 +149,23 @@ body {
     0 0 calc(var(--orb, 14px) * 5) calc(var(--orb, 14px) * 1.4) rgba(201, 150, 46, 0.22);
   animation: breathe 4.2s ease-in-out infinite;
 }
+/* Reveal (src/components/reveal.tsx). The hidden state is only ever set by
+   JavaScript after mount, so copy is never invisible to a browser that did
+   not run it. */
+[data-reveal] {
+  transition:
+    opacity 0.7s var(--ease-out-expo),
+    transform 0.7s var(--ease-out-expo);
+}
+[data-reveal="hidden"] {
+  opacity: 0;
+  transform: translateY(14px);
+}
+[data-reveal="shown"] {
+  opacity: 1;
+  transform: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Gap 28: nothing moves on its own for people who asked for that. Transitions collapse to an instant; the orb holds still. */
   *,
@@ -161,6 +178,10 @@ body {
   }
   .orb {
     animation: none;
+  }
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
   }
   html {
     scroll-behavior: auto;
