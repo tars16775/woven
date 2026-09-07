@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { demo, signInWithOwnCode } from "./helpers";
+import { demo, signInWithOwnCode, signInWithPasskey } from "./helpers";
 
 /**
  * Passkeys against a real Core (LIVE_CORE=1), with Chrome's virtual
@@ -115,7 +115,8 @@ test("invite a member by link, join with a passkey, sign in by the screen code, 
 });
 
 test("memory is the person's own: tell, keep, forget, and set retention", async ({ page }) => {
-  await signInWithOwnCode(page);
+  // The shared owner session is enough here; own codes are for tests that sign out.
+  await signInWithPasskey(page);
   await page.goto("/dashboard/privacy");
   await page.getByTestId("add-memory").click({ timeout: 30_000 });
   await page.getByRole("textbox", { name: "In your words" }).fill("I take my coffee black");

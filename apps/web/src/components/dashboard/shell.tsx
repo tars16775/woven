@@ -7,7 +7,7 @@ import { signIn, signOut, useSession } from "@/lib/auth";
 import { Wordmark } from "@/components/wordmark";
 import { Clock } from "@/components/clock";
 import { household, core } from "@/lib/dashboard/data";
-import { startCore, useCore } from "@/lib/core/store";
+import { retryCore, startCore, useCore } from "@/lib/core/store";
 import { identity, sessionRecord } from "@/lib/core/identity";
 import { memoryLabel, storageLabel, temperatureLabel, useLiveCore } from "@/lib/core/live";
 import { Dialog } from "./dialog";
@@ -282,7 +282,30 @@ export function Shell({ children }: { children: ReactNode }) {
           </Dialog>
 
           <main id="main" className="flex-1 px-4 py-6 lg:px-8 lg:py-8">
-            {children}
+            {/* A real household never sees the preview house: while its Core is being found again, the page waits. */}
+            {session.personId && !session.simulated && connection.phase !== "connected" && !path.startsWith("/dashboard/core") ? (
+              <div className="mx-auto max-w-[560px] rounded-[14px] bg-white p-6 text-center ring-1 ring-ink/5" data-testid="reconnecting" role="status">
+                <span className="orb" style={{ ["--orb" as string]: "12px" }} />
+                <div className="mt-5 font-display text-[22px] font-medium tracking-[-0.01em]">{connection.phase === "unreachable" ? "Your Core is not answering" : "Finding your Core…"}</div>
+                <p className="mt-2 text-[14px] text-ash">
+                  {connection.phase === "unreachable"
+                    ? "Nothing here is shown from memory or made up: this page waits for the box. Is the Mac awake and on the home network?"
+                    : "Looking on the home network, then through the relay if this browser is paired."}
+                </p>
+                {connection.phase === "unreachable" && (
+                  <div className="mt-4 flex justify-center gap-2">
+                    <button type="button" onClick={retryCore} className="btn btn-primary min-w-0 h-9 px-4 text-[13px]">
+                      Try again
+                    </button>
+                    <Link href="/dashboard/core" className="btn btn-secondary min-w-0 h-9 px-4 text-[13px]">
+                      Core page
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ) : (
+              children
+            )}
           </main>
         </div>
       </div>
