@@ -2,7 +2,7 @@
 FROM node:22-bookworm-slim AS build
 RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 WORKDIR /repo
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/site-api ./apps/site-api
 RUN pnpm install --frozen-lockfile --filter "./apps/site-api"
 RUN cd apps/site-api && pnpm build
