@@ -46,6 +46,21 @@ by saying that no Woven service holds anything, because none is running.
 `docs/claims-register.md` stays the review process with owners and dates. The code registry is what
 a visitor sees, and the two must agree before a release.
 
+## Deployed
+
+Railway project `woven`, in the `tars16775's Projects` workspace. Three services, each built from
+its own Dockerfile in this repository and deployed with `railway up --service <name>`.
+
+| Service | Address | Notes |
+| --- | --- | --- |
+| `site` | https://site-production-c740.up.railway.app | The public site. `NEXT_PUBLIC_WOVEN_LIVE=off`, so its dashboard is the labelled preview and never looks for a Core. |
+| `site-api` | https://site-api-production-e2be.up.railway.app | Reservations, applications, contact and pings, on a volume at `/data`. `ADMIN_TOKEN` is in the service's variables. |
+| `relay` | https://relay-production-2ee3.up.railway.app | Carries encrypted frames between a Core and its dashboards. Holds nothing. |
+
+Custom domains are not attached: Railway refuses the request on this account, which is what it does
+when the plan does not include them. Until then the site answers on its Railway address, and
+`SITE_ORIGINS` on the API lists that address alongside the real domain.
+
 ## What stands between this and a public launch
 
 1. **A release key.** `node packaging/keygen.mjs`, commit the public key, set `WOVEN_RELEASE_KEY`. Until then no release can be published and the hosted installer cannot verify anything.
