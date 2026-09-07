@@ -88,8 +88,8 @@ export default function FoundingHomesPage() {
           </Reveal>
           <ol className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
             {plan.map(([name, when, detail], i) => (
-              <Reveal key={name} delay={i * 0.05}>
-                <li className="border-t border-white/12 pt-4">
+              <li key={name} className="border-t border-white/12 pt-4">
+                <Reveal delay={i * 0.05}>
                   <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-amber-2">
                     {when}
                   </div>
@@ -97,8 +97,8 @@ export default function FoundingHomesPage() {
                     {name}
                   </div>
                   <p className="mt-2 text-[14px] leading-relaxed text-ash-2">{detail}</p>
-                </li>
-              </Reveal>
+                </Reveal>
+              </li>
             ))}
           </ol>
         </div>

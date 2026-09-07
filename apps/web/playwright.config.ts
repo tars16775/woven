@@ -40,9 +40,11 @@ export default defineConfig({
     ? [
         // Signs the seeded owner in once and saves the cookies; tests reuse them (helpers.ts) so one-time codes are not spent per test.
         { name: "live-setup", testMatch: /live-setup\.ts/, use: { ...devices["Desktop Chrome"] } },
-        { name: "chromium", dependencies: ["live-setup"], use: { ...devices["Desktop Chrome"] } },
+        { name: "chromium", dependencies: ["live-setup"], testIgnore: /live-power\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
+        // The kill switch turns the Core off; it runs alone, after everything else.
+        { name: "live-power", dependencies: ["chromium"], testMatch: /live-power\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
       ]
-    : [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+    : [{ name: "chromium", testIgnore: /live-power\.spec\.ts/, use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
       command: isCI ? "pnpm start --port 3000" : "pnpm dev --port 3000",
@@ -72,7 +74,7 @@ export default defineConfig({
               WOVEN_ORIGINS: baseURL,
               NODE_ENV: "production",
               LOG_LEVEL: "warn",
-              WOVEN_DEMO_RECOVERY_CODE: "demo-house,demo-key-1,demo-key-2,demo-key-3,demo-key-4,demo-key-5,demo-key-6",
+              WOVEN_DEMO_RECOVERY_CODE: "demo-house,demo-key-1,demo-key-2,demo-key-3,demo-key-4,demo-key-5,demo-key-6,demo-key-7,demo-key-8,demo-key-9",
               // A file key for the throwaway data root, so test runs never touch the login Keychain.
               WOVEN_KEY: "file",
             },

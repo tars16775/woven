@@ -116,8 +116,8 @@ export default function TandemPage() {
           </Reveal>
           <ol className="mt-12 grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
             {lifecycle.map(([name, detail], i) => (
-              <Reveal key={name} delay={i * 0.04}>
-                <li className="hairline border-t pt-4">
+              <li key={name} className="hairline border-t pt-4">
+                <Reveal delay={i * 0.04}>
                   <div className="flex items-baseline gap-3">
                     <span className="font-mono text-[11px] text-amber">
                       {String(i + 1).padStart(2, "0")}
@@ -127,8 +127,8 @@ export default function TandemPage() {
                     </span>
                   </div>
                   <p className="mt-1.5 text-[14px] leading-relaxed text-ash">{detail}</p>
-                </li>
-              </Reveal>
+                </Reveal>
+              </li>
             ))}
           </ol>
         </div>

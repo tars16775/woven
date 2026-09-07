@@ -99,7 +99,7 @@ export const demo = {
   /** Spent by live-setup.ts to create the shared session. */
   setupCode: "demo-house",
   /** For tests that need a session of their own (they sign out, etc.); tried in order. */
-  ownCodes: ["demo-key-1", "demo-key-2", "demo-key-3", "demo-key-4", "demo-key-5", "demo-key-6"],
+  ownCodes: ["demo-key-1", "demo-key-2", "demo-key-3", "demo-key-4", "demo-key-5", "demo-key-6", "demo-key-7", "demo-key-8", "demo-key-9"],
 };
 /** Where live-setup.ts leaves the signed-in state (cookies on the core, session in localStorage). */
 export const liveStatePath = path.resolve(__dirname, "../../test-results/live-state.json");
