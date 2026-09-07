@@ -6,6 +6,7 @@
   --color-bone-2: #eae8e2;
   --color-chassis: #e2e0da;
   --color-chassis-2: #c9c7c0;
+  --color-white: #ffffff; /* themed: the dark scheme swaps it, so bg-white follows */
   --color-graphite: #141414;
   --color-graphite-2: #1d1d1c;
   --color-ink: #1a1a1a;
@@ -26,6 +27,37 @@
   --radius-device: 22px;
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ---- Dashboard design tokens (phase 1) ----------------------------------
+     The marketing site is a poster; the dashboard is an instrument panel. It
+     needs a smaller, stricter set of decisions, and every screen draws from
+     exactly these. Surfaces are expressed in terms of the palette tokens, so
+     the dark scheme swaps them for free (see components/dashboard/theme.tsx). */
+
+  /* Corner radii. Four steps and a pill; nothing in between. */
+  --r-sm: 8px;    /* controls: buttons, inputs, chips */
+  --r-md: 12px;   /* wells, list rows, tiles */
+  --r-lg: 14px;   /* cards */
+  --r-xl: 20px;   /* sheets, dialogs, the hero card on Overview */
+  --r-pill: 9999px;
+
+  /* Elevation. This is a matte appliance: shadows are a whisper, and the
+     hairline ring does most of the separating. */
+  --shadow-card: 0 1px 2px rgba(20, 20, 20, 0.04);
+  --shadow-raised: 0 2px 8px rgba(20, 20, 20, 0.06), 0 1px 2px rgba(20, 20, 20, 0.04);
+  --shadow-pop: 0 8px 28px rgba(20, 20, 20, 0.12), 0 2px 6px rgba(20, 20, 20, 0.06);
+  --shadow-sheet: 0 24px 64px rgba(20, 20, 20, 0.22);
+
+  /* Motion. State is quick, arrival is unhurried, and both use one curve. */
+  --dur-fast: 140ms;
+  --dur: 200ms;
+  --dur-slow: 400ms;
+  --dur-arrive: 700ms;
+
+  /* Layout constants the shell and every page agree on. */
+  --rail: 236px;     /* sidebar width */
+  --topbar: 56px;    /* sticky header height */
+  --page-max: 1120px;
 }
 
 :root {
@@ -331,4 +363,61 @@ body {
   line-height: 1.3;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+/* ---- Dashboard surfaces (phase 1) -----------------------------------------
+   Named by depth, not by colour, so a screen never hard-codes "white". The
+   dark scheme redefines the palette tokens underneath and these follow. */
+[data-dash-theme] {
+  --surface-page: var(--color-bone);
+  --surface-card: var(--color-white, #ffffff);
+  --surface-inset: var(--color-bone);
+  --surface-sunk: var(--color-chassis);
+  --line: color-mix(in srgb, var(--color-ink) 8%, transparent);
+  --line-soft: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  --line-strong: color-mix(in srgb, var(--color-ink) 16%, transparent);
+}
+/* Graphite surfaces are dark in both schemes and carry their own lines. */
+[data-dash-theme] .dash-lock,
+[data-dash-theme] .bg-graphite {
+  --surface-card: var(--color-graphite-2);
+  --surface-inset: rgba(255, 255, 255, 0.06);
+  --surface-sunk: rgba(255, 255, 255, 0.1);
+  --line: rgba(255, 255, 255, 0.1);
+  --line-soft: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.2);
+}
+
+@utility surface-card {
+  background: var(--surface-card);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  outline: 1px solid var(--line-soft);
+  outline-offset: -1px;
+}
+@utility surface-inset {
+  background: var(--surface-inset);
+  border-radius: var(--r-md);
+}
+@utility hair {
+  border-color: var(--line);
+}
+@utility hair-strong {
+  border-color: var(--line-strong);
+}
+
+/* One transition for interactive state, used by every primitive. */
+@utility tap {
+  transition:
+    background-color var(--dur) var(--ease-out-expo),
+    color var(--dur) var(--ease-out-expo),
+    box-shadow var(--dur) var(--ease-out-expo),
+    outline-color var(--dur) var(--ease-out-expo),
+    opacity var(--dur) var(--ease-out-expo);
+}
+
+/* Numbers line up in columns. Used on every byte count, time and meter value. */
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
