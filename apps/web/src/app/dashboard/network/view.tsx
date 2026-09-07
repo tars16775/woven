@@ -47,7 +47,7 @@ export function NetworkView() {
   };
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div>
       <PageHeader
         title="Network"
         sub="Two networks in one box. The Inside has no route to the internet. The Outside is the router."

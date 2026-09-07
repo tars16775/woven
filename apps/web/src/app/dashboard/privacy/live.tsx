@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PrivacyPanel } from "@/components/privacy-panel";
-import { Card, Meter, PageHeader, Pill, WherePill } from "@/components/dashboard/ui";
+import { Card, Meter, PageHeader, Pill, Skeleton, SkeletonRows, StatusDot, WherePill } from "@/components/dashboard/ui";
 import { MemoryCard } from "@/components/dashboard/memory-card";
 import { privacy, type PrivacySummary } from "@/lib/core/ask";
 import { explainAction } from "@/lib/core/actions";
@@ -43,7 +43,7 @@ export function LivePrivacy() {
   const sub = summary ? `${summary.insideShare}% inside over ${summary.days} days · ${summary.crossings} ${summary.crossings === 1 ? "crossing" : "crossings"}, each approved by a person` : "Counting from the ledger…";
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div>
       <PageHeader
         title="Privacy"
         sub={<span data-testid="privacy-sub">{sub}</span>}
@@ -66,7 +66,9 @@ export function LivePrivacy() {
       <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
         <div className="grid gap-4">
           <Card dark>
-            <div className="font-display text-[30px] font-medium leading-none tracking-[-0.02em]">{summary ? `${summary.insideShare}% stayed in this box` : "…"}</div>
+            <div className="font-display text-[30px] font-medium leading-none tracking-[-0.02em]">
+              {summary ? <span className="tnum">{summary.insideShare}% stayed in this box</span> : <Skeleton className="h-[30px] w-[280px]" rounded="sm" />}
+            </div>
             <div className="mt-2 text-[14px] text-ash-2">
               {summary ? `${summary.events} receipts in ${summary.days} days · ${summary.inside} inside · ${summary.crossings} through the Gate · ${bytes(summary.bytesCrossedToday)} crossed today` : "Reading the receipts."}
             </div>
@@ -76,15 +78,17 @@ export function LivePrivacy() {
         </div>
         <div className="grid gap-4">
           <Card title={`Receipts by kind, ${summary?.days ?? 7} days`}>
-            {summary && summary.byType.length === 0 ? (
-              <p className="text-[14px] text-ash">Nothing in the window yet.</p>
+            {!summary ? (
+              <SkeletonRows count={4} />
+            ) : summary.byType.length === 0 ? (
+              <p className="text-[14px] text-ash">No receipts in the last {summary.days} days.</p>
             ) : (
               <ul className="divide-y divide-ink/6" data-testid="privacy-by-type">
                 {(summary?.byType ?? []).slice(0, 12).map((c) => (
                   <li key={c.type} className="flex items-center justify-between py-2.5 text-[14px] first:pt-0 last:pb-0">
                     <span className="font-medium">{typeLabel(c.type)}</span>
                     <span className="flex items-center gap-3">
-                      <span className="font-mono text-[12px] text-ash">{c.count}</span>
+                      <span className="tnum font-mono text-[12px] text-ash">{c.count}</span>
                       <WherePill where={c.type === "gate.crossing" ? "cloud" : "local"} />
                     </span>
                   </li>
@@ -93,10 +97,16 @@ export function LivePrivacy() {
             )}
           </Card>
           <Card title="Crossings">
-            {summary && summary.crossings7d.length === 0 ? (
-              <p className="text-[14px] text-ash" data-testid="privacy-no-crossings">
-                Nothing has crossed the Gate in {summary.days} days.
-              </p>
+            {!summary ? (
+              <SkeletonRows count={2} />
+            ) : summary.crossings7d.length === 0 ? (
+              <div data-testid="privacy-no-crossings">
+                <StatusDot tone="good">Nothing crossed</StatusDot>
+                <p className="mt-2 text-[14px] leading-relaxed text-ash">
+                  Nothing has left this house through the Gate in {summary.days} days. When something does, it appears here with the host it went to, what
+                  was sent, and who approved it.
+                </p>
+              </div>
             ) : (
               <ul className="divide-y divide-ink/6">
                 {(summary?.crossings7d ?? []).map((b) => (

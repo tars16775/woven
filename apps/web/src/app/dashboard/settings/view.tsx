@@ -13,6 +13,8 @@ import { BackupTokensCard } from "@/components/dashboard/backup-tokens-card";
 import { RemoteCard } from "@/components/dashboard/remote-card";
 import { NotificationsCard } from "@/components/dashboard/notifications-card";
 import { useSession } from "@/lib/auth";
+import { resetGuide, useSeenCount } from "@/lib/dashboard/guide";
+import { startTour } from "@/components/dashboard/tour";
 import { explain, identity } from "@/lib/core/identity";
 import type { Person as CorePerson } from "@woven/schema";
 import { RoomNote } from "@/components/dashboard/room-note";
@@ -23,6 +25,7 @@ type Open = null | "transfer" | "reset";
 export function SettingsView() {
   const say = useToast();
   const session = useSession();
+  const seen = useSeenCount();
   const [transferTo, setTransferTo] = useState<CorePerson[] | null>(null);
   const [transferPick, setTransferPick] = useState("");
   const [open, setOpen] = useState<Open>(null);
@@ -47,7 +50,7 @@ export function SettingsView() {
   };
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div>
       <PageHeader title="Settings" sub={session?.household ?? ""} />
 
       <RoomNote id="room:settings" />
@@ -71,6 +74,30 @@ export function SettingsView() {
           <p className="text-[14px] text-ash">
             Nothing is connected. This Core talks to nothing outside the house except what you approve at the Gate, crossing by crossing.
           </p>
+        </Card>
+
+        <Card title="Guidance">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="max-w-[46ch]">
+              <div className="text-[14px] font-medium">Show the introductions again</div>
+              <div className="mt-0.5 text-[13px] leading-relaxed text-ash">
+                The welcome, the walkthrough and the one-off note at the top of each room. Yours only, on this browser.
+              </div>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Button onClick={() => startTour()}>Take the walkthrough</Button>
+              <Button
+                kind="soft"
+                onClick={() => {
+                  resetGuide(session?.personId);
+                  say("The introductions will show again as you open each room.");
+                }}
+                disabled={seen === 0}
+              >
+                Reset
+              </Button>
+            </div>
+          </div>
         </Card>
 
         <Card title="Appearance">

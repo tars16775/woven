@@ -153,7 +153,7 @@ export function LiveFiles() {
   const visible = spaces.filter((s) => session?.role !== "child" || s.id === "personal" || s.id === "household").filter((s) => session?.role !== "guest" || s.id === "personal");
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div>
       <PageHeader
         title="Files"
         sub={disk ? `${bytes(disk.usedBytes)} of ${bytes(disk.totalBytes)} used on the box${quotaLine ? ` · ${quotaLine}` : ""} · stored once, however many devices` : "Reading the box…"}

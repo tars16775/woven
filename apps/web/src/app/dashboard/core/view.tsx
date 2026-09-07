@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CoreDevice } from "@/components/core-device";
-import { Button, Card, Meter, PageHeader, Pill } from "@/components/dashboard/ui";
+import { Button, Card, Meter, PageHeader, Pill, Skeleton } from "@/components/dashboard/ui";
+import { IconRefresh } from "@/components/dashboard/icons";
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { ConnectCore } from "@/components/dashboard/connect-core";
@@ -151,7 +152,7 @@ export function CoreView() {
       : `${live.model} · ${live.temperatureC} °C · ${live.fan}`;
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div>
       <PageHeader
         title="Core"
         sub={
@@ -166,6 +167,7 @@ export function CoreView() {
         action={
           <div className="flex gap-2">
             <Button onClick={checkForUpdates} disabled={checking || restarting || connection.phase !== "connected"} aria-busy={checking}>
+              <IconRefresh size={15} className={checking ? "opacity-60" : ""} />
               {checking ? "Checking…" : "Check for updates"}
             </Button>
             {connection.phase === "connected" && (
@@ -224,18 +226,18 @@ export function CoreView() {
               <div>
                 <dt className="text-ash">{live.connected ? "Machine" : "Model"}</dt>
                 <dd className="mt-0.5 font-medium" data-testid="core-model">
-                  {live.model}
+                  {live.model === "…" ? <Skeleton className="h-[17px] w-24" rounded="sm" /> : live.model}
                 </dd>
                 {live.cpu && <dd className="mt-0.5 text-[12px] text-ash">{live.cpu}</dd>}
               </div>
               <div>
                 <dt className="text-ash">Memory</dt>
-                <dd className="mt-0.5 font-medium">{memoryLabel(live)}</dd>
+                <dd className="tnum mt-0.5 font-medium">{memoryLabel(live)}</dd>
                 <Meter value={restarting ? live.memory.total * 0.06 : live.memory.used} max={live.memory.total} className="mt-2" />
               </div>
               <div>
                 <dt className="text-ash">Storage</dt>
-                <dd className="mt-0.5 font-medium">{storageLabel(live)}</dd>
+                <dd className="tnum mt-0.5 font-medium">{storageLabel(live)}</dd>
                 <Meter value={live.storage.usedBytes} max={live.storage.totalBytes} className="mt-2" />
               </div>
               <div>

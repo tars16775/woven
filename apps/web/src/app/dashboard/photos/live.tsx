@@ -166,7 +166,7 @@ export function LivePhotos() {
 
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div>
       <PageHeader
         title="Photos"
         sub={stats ? `${stats.total.toLocaleString()} photos · ${stats.newThisWeek} new this week · ${stats.withPlace} with a place · indexed on the box, faces off` : "Reading the box…"}
