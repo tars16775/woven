@@ -15,7 +15,9 @@ import { ThemeStyle, useDocumentTheme, useTheme } from "./theme";
 import { useGateOpen } from "./state";
 import { SearchBox } from "./search-box";
 import { NoCore } from "./no-core";
-import { useT } from "@/lib/i18n";
+import { Avatar } from "./ui";
+import { roomIcon, type RoomHref } from "./icons";
+import { useT, type MessageKey } from "@/lib/i18n";
 import type { LedgerRow } from "@woven/schema";
 
 /** Bytes that left through the Gate since midnight, from the receipts on hand. */
@@ -33,31 +35,65 @@ function bytesCrossedToday(rows: LedgerRow[]): number {
 }
 const formatBytes = (n: number) => (n < 1e3 ? `${n} bytes` : n < 1e6 ? `${(n / 1e3).toFixed(1)} KB` : `${(n / 1e6).toFixed(1)} MB`);
 
-const items = [
-  { href: "/dashboard", key: "nav.overview" },
-  { href: "/dashboard/ask", key: "nav.ask" },
-  { href: "/dashboard/files", key: "nav.files" },
-  { href: "/dashboard/photos", key: "nav.photos" },
-  { href: "/dashboard/home", key: "nav.home" },
-  { href: "/dashboard/cameras", key: "nav.cameras" },
-  { href: "/dashboard/tv", key: "nav.tv" },
-  { href: "/dashboard/network", key: "nav.network" },
-  { href: "/dashboard/agents", key: "nav.agents" },
-  { href: "/dashboard/activity", key: "nav.activity" },
-  { href: "/dashboard/privacy", key: "nav.privacy" },
-  { href: "/dashboard/core", key: "nav.core" },
-  { href: "/dashboard/settings", key: "nav.settings" },
-] as const;
+/**
+ * The rooms, grouped the way a person thinks about their house rather than
+ * the way the software is layered. Thirteen flat entries were a list to read;
+ * five short groups are a place to look.
+ */
+type Room = { href: RoomHref; key: MessageKey };
+type Group = { key?: MessageKey; rooms: Room[] };
+
+const groups: Group[] = [
+  {
+    rooms: [
+      { href: "/dashboard", key: "nav.overview" },
+      { href: "/dashboard/ask", key: "nav.ask" },
+    ],
+  },
+  {
+    key: "nav.group.yours",
+    rooms: [
+      { href: "/dashboard/files", key: "nav.files" },
+      { href: "/dashboard/photos", key: "nav.photos" },
+      { href: "/dashboard/tv", key: "nav.tv" },
+    ],
+  },
+  {
+    key: "nav.group.house",
+    rooms: [
+      { href: "/dashboard/home", key: "nav.home" },
+      { href: "/dashboard/cameras", key: "nav.cameras" },
+      { href: "/dashboard/network", key: "nav.network" },
+    ],
+  },
+  {
+    key: "nav.group.record",
+    rooms: [
+      { href: "/dashboard/activity", key: "nav.activity" },
+      { href: "/dashboard/privacy", key: "nav.privacy" },
+      { href: "/dashboard/agents", key: "nav.agents" },
+    ],
+  },
+  {
+    key: "nav.group.box",
+    rooms: [
+      { href: "/dashboard/core", key: "nav.core" },
+      { href: "/dashboard/settings", key: "nav.settings" },
+    ],
+  },
+];
 
 /**
- * The app shell: a quiet sidebar, a status line that always says where the
- * box stands, and the page. Everything the household owns is one click away.
+ * The app shell: a quiet sidebar grouped by what things are, a status line
+ * that always says where the box stands, and the page. Everything the
+ * household owns is one click away, and nothing on screen is invented.
  */
 export function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const session = useSession();
   const [open, setOpen] = useState(false);
+  const [account, setAccount] = useState(false);
   const { resolved } = useTheme();
   const gateOpen = useGateOpen();
   const connection = useCore();
@@ -119,75 +155,108 @@ export function Shell({ children }: { children: ReactNode }) {
     );
   }
 
+  const connected = connection.phase === "connected";
+  const searching = connection.phase === "searching";
+
   const nav = (
-    <nav aria-label={t("nav.label")} className="flex flex-col gap-0.5">
-      {items.map((it) => {
-        const active = it.href === "/dashboard" ? path === it.href : path.startsWith(it.href);
-        return (
-          <Link
-            key={it.href}
-            href={it.href}
-            onClick={() => setOpen(false)}
-            aria-current={active ? "page" : undefined}
-            className={`rounded-[8px] px-3 py-2 text-[14px] transition-colors ${
-              active ? "bg-ink text-bone" : "text-ink/80 hover:bg-ink/6 hover:text-ink"
-            }`}
-          >
-            {t(it.key)}
-          </Link>
-        );
-      })}
+    <nav aria-label={t("nav.label")} className="flex flex-col gap-5">
+      {groups.map((g, gi) => (
+        <div key={g.key ?? `g${gi}`}>
+          {g.key && <div className="mb-1.5 px-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ash">{t(g.key)}</div>}
+          <div className="flex flex-col gap-0.5">
+            {g.rooms.map((room) => {
+              const active = room.href === "/dashboard" ? path === room.href : path.startsWith(room.href);
+              const Glyph = roomIcon[room.href];
+              return (
+                <Link
+                  key={room.href}
+                  href={room.href}
+                  onClick={() => setOpen(false)}
+                  aria-current={active ? "page" : undefined}
+                  className={`tap flex items-center gap-2.5 rounded-[8px] px-3 py-[7px] text-[14px] ${
+                    active ? "bg-ink font-medium text-bone" : "text-ink/80 hover:bg-ink/6 hover:text-ink"
+                  }`}
+                >
+                  <Glyph size={18} className={active ? "opacity-90" : "opacity-55"} />
+                  {t(room.key)}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </nav>
   );
 
+  /* The one line that says where the box stands. Never a guess: with nothing
+     connected it says so, and the numbers beside it disappear rather than
+     hold their last value. */
   const connectionChip =
-    connection.phase === "off" ? null : connection.phase === "connected" ? (
-      <Link href="/dashboard/core" data-testid="core-connection" className="rounded-full bg-local-bg px-2.5 py-1 font-medium text-local">
+    connection.phase === "off" ? null : connected ? (
+      <Link href="/dashboard/core" data-testid="core-connection" className="tap rounded-full bg-local-bg px-2.5 py-1 font-medium text-local hover:brightness-95">
         {t("shell.core", { host: live.host ?? "" })}
       </Link>
-    ) : connection.phase === "searching" ? (
+    ) : searching ? (
       <span data-testid="core-connection" className="rounded-full bg-chassis px-2.5 py-1 font-medium text-ink/70">
         {t("shell.looking")}
       </span>
     ) : (
-      <Link href="/dashboard/core#connect" data-testid="core-connection" className="rounded-full bg-ask-bg px-2.5 py-1 font-medium text-ask">
+      <Link href="/dashboard/core#connect" data-testid="core-connection" className="tap rounded-full bg-ask-bg px-2.5 py-1 font-medium text-ask hover:brightness-95">
         {t("shell.noCore")}
       </Link>
     );
 
-  const connected = connection.phase === "connected";
-  // What crossed today, summed from the receipts the shell already holds.
   const crossedToday = connected ? bytesCrossedToday(connection.rows) : 0;
   const gateChip = !connected ? null : gateOpen ? (
-    <span className="rounded-full bg-local-bg px-2.5 py-1 font-medium text-local" data-testid="gate-chip">
+    <span className="tnum rounded-full bg-local-bg px-2.5 py-1 font-medium text-local" data-testid="gate-chip">
       {crossedToday === 0 ? t("shell.gateNothing") : t("shell.gateBytes", { bytes: formatBytes(crossedToday) })}
     </span>
   ) : (
     <span className="rounded-full bg-ask-bg px-2.5 py-1 font-medium text-ask">{t("shell.gateClosed")}</span>
   );
 
+  const houseState = connected ? t("shell.ready") : searching ? t("shell.looking") : t("shell.noCore");
+
   return (
     <ToastProvider>
       <div data-theme={resolved} data-dash-theme={resolved} className="flex min-h-svh bg-bone text-ink">
         <ThemeStyle />
+
         {/* Sidebar */}
-        <aside className="sticky top-0 hidden h-svh w-[232px] shrink-0 flex-col border-r border-ink/8 px-4 py-5 lg:flex">
+        <aside className="sticky top-0 hidden h-svh w-[var(--rail)] shrink-0 flex-col border-r border-ink/8 px-4 py-5 lg:flex">
           <Link href="/" className="px-3" aria-label="Woven home">
             <Wordmark className="h-[18px]" />
           </Link>
+
           <div className="mt-6 px-3">
-            <div className="text-[13px] font-medium">{session.household}</div>
-            <div className="mt-0.5 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ash">
-              <span className="orb" style={{ ["--orb" as string]: "6px" }} />
-              {connected ? t("shell.ready") : connection.phase === "searching" ? t("shell.looking") : t("shell.noCore")}
+            <div className="truncate text-[13px] font-medium">{session.household}</div>
+            <div className="mt-1 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ash">
+              <span className={connected ? "orb" : "block h-[6px] w-[6px] rounded-full bg-ash-2"} style={connected ? { ["--orb" as string]: "6px" } : undefined} />
+              {houseState}
             </div>
           </div>
-          <div className="mt-6">{nav}</div>
-          <div className="mt-auto px-3 text-[11px] leading-relaxed text-ash">
-            <div>{live.connected ? live.model : "No Core"}</div>
-            <div>{live.version}</div>
-            <div>
-              Inside · <Clock />
+
+          <div className="mt-6 min-h-0 flex-1 overflow-y-auto">{nav}</div>
+
+          <div className="mt-4 shrink-0 border-t border-ink/8 pt-4">
+            <button
+              type="button"
+              onClick={() => setAccount(true)}
+              className="tap -mx-1 flex w-[calc(100%+8px)] items-center gap-2.5 rounded-[8px] px-2 py-1.5 text-left hover:bg-ink/6"
+              aria-haspopup="dialog"
+            >
+              <Avatar name={session.name} size={28} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-medium">{session.name}</span>
+                <span className="block truncate text-[11px] capitalize text-ash">{session.role ?? "member"}</span>
+              </span>
+            </button>
+            <div className="mt-3 px-2 font-mono text-[10px] uppercase leading-relaxed tracking-[0.1em] text-ash">
+              <div className="truncate">{live.connected ? live.model : "No Core"}</div>
+              <div>{live.version}</div>
+              <div>
+                Inside · <Clock />
+              </div>
             </div>
           </div>
         </aside>
@@ -203,12 +272,13 @@ export function Shell({ children }: { children: ReactNode }) {
               </Link>
             </div>
           )}
-          <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-ink/8 bg-bone/80 px-4 backdrop-blur-md lg:px-8">
+
+          <header className="sticky top-0 z-30 flex h-[var(--topbar)] items-center justify-between gap-3 border-b border-ink/8 bg-bone/80 px-4 backdrop-blur-md lg:px-8">
             <div className="flex items-center gap-3 lg:hidden">
               <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="rounded-[8px] px-2.5 py-1.5 text-[14px] font-medium hover:bg-ink/6"
+                className="tap rounded-[8px] px-2.5 py-1.5 text-[14px] font-medium hover:bg-ink/6"
                 aria-haspopup="dialog"
                 aria-expanded={open}
               >
@@ -216,51 +286,61 @@ export function Shell({ children }: { children: ReactNode }) {
               </button>
               <Wordmark className="h-[16px]" />
             </div>
-            <div className="hidden items-center gap-2 text-[13px] text-ash lg:flex">
+
+            <div className="hidden min-w-0 items-center gap-2 text-[13px] text-ash lg:flex">
               {connectionChip}
-              {connectionChip && <span>·</span>}
+              {connectionChip && gateChip && <span aria-hidden>·</span>}
               {gateChip}
-              {gateChip && <span>·</span>}
-              <span data-testid="core-memory">{memoryLabel(live)}</span>
-              <span>·</span>
-              <span data-testid="core-storage">{storageLabel(live)}</span>
-              {live.temperatureC !== null && (
+              {connected && (
                 <>
-                  <span>·</span>
-                  <span>{temperatureLabel(live)}</span>
+                  <span aria-hidden>·</span>
+                  <span className="tnum" data-testid="core-memory">
+                    {memoryLabel(live)}
+                  </span>
+                  <span aria-hidden>·</span>
+                  <span className="tnum" data-testid="core-storage">
+                    {storageLabel(live)}
+                  </span>
+                  {live.temperatureC !== null && (
+                    <>
+                      <span aria-hidden>·</span>
+                      <span className="tnum">{temperatureLabel(live)}</span>
+                    </>
+                  )}
                 </>
               )}
             </div>
-            <div className="flex items-center gap-3">
+
+            <div className="flex items-center gap-2">
               {connected && <SearchBox />}
-              <Link
-                href="/dashboard/ask"
-                className="hidden rounded-[8px] bg-white px-3 py-1.5 text-[13px] text-ash ring-1 ring-ink/8 hover:text-ink md:block"
-              >
+              <Link href="/dashboard/ask" className="tap hidden rounded-[8px] bg-white px-3 py-1.5 text-[13px] text-ash ring-1 ring-ink/8 hover:text-ink md:block">
                 {t("shell.ask")}
               </Link>
-              <button type="button" onClick={leave} className="hidden text-[13px] font-medium text-ash hover:text-ink sm:block">
+              <button
+                type="button"
+                onClick={() => setAccount(true)}
+                aria-haspopup="dialog"
+                aria-label={t("shell.account")}
+                className="tap rounded-full ring-offset-2 ring-offset-bone hover:opacity-85 lg:hidden"
+              >
+                <Avatar name={session.name} size={32} />
+              </button>
+              <button type="button" onClick={leave} className="tap hidden text-[13px] font-medium text-ash hover:text-ink lg:block">
                 {t("shell.signOut")}
               </button>
-              <span
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-[13px] font-medium text-bone"
-                aria-label={session.name}
-              >
-                {session.name.slice(0, 1).toUpperCase()}
-              </span>
             </div>
           </header>
 
           {/* Mobile navigation drawer */}
           <Dialog open={open} onClose={() => setOpen(false)} variant="drawer" title={session.household} kicker={live.connected ? live.model : "No Core"}>
             <div className="mt-1 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ash">
-              <span className="orb" style={{ ["--orb" as string]: "6px" }} />
-              {!connected ? "Not answering" : gateOpen ? "Ready · inside" : "Gate closed"}
+              <span className={connected ? "orb" : "block h-[6px] w-[6px] rounded-full bg-ash-2"} style={connected ? { ["--orb" as string]: "6px" } : undefined} />
+              {!connected ? houseState : gateOpen ? t("shell.ready") : "Gate closed"}
             </div>
             <div className="mt-5 flex-1 overflow-y-auto">{nav}</div>
             <div className="mt-4 flex items-center justify-between border-t border-ink/8 pt-4">
               <button type="button" onClick={leave} className="text-[14px] font-medium text-ash hover:text-ink">
-                Sign out
+                {t("shell.signOut")}
               </button>
               <button type="button" onClick={() => setOpen(false)} className="text-[14px] font-medium text-ash hover:text-ink">
                 Close
@@ -268,10 +348,41 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           </Dialog>
 
+          {/* Who is signed in, and the two things they might want to do about it. */}
+          <Dialog open={account} onClose={() => setAccount(false)} title={session.name} kicker={t("shell.account")}>
+            <dl className="mt-4 grid gap-2.5 text-[14px] sm:grid-cols-[110px_1fr]">
+              <dt className="text-ash">{t("shell.household")}</dt>
+              <dd className="truncate">{session.household}</dd>
+              <dt className="text-ash">Role</dt>
+              <dd className="capitalize">{session.role ?? "member"}</dd>
+              {session.email && (
+                <>
+                  <dt className="text-ash">Email</dt>
+                  <dd className="truncate">{session.email}</dd>
+                </>
+              )}
+              <dt className="text-ash">Signed in with</dt>
+              <dd className="capitalize">{session.method === "remote" ? "the relay, from away" : session.method}</dd>
+            </dl>
+            <p className="mt-4 text-[13px] leading-relaxed text-ash">
+              The session lives on your Core, not here. Signing out ends it there too, on this device only.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Link href="/dashboard/settings" onClick={() => setAccount(false)} className="btn btn-secondary min-w-0! w-auto! px-4 text-[13px]!">
+                Settings
+              </Link>
+              <button type="button" onClick={leave} className="btn btn-primary min-w-0! w-auto! px-4 text-[13px]!">
+                {t("shell.signOut")}
+              </button>
+            </div>
+          </Dialog>
+
           <main id="main" className="flex-1 px-4 py-6 lg:px-8 lg:py-8">
             {/* Every screen below is drawn from a Core. When none is answering there is
                 nothing to draw, so the page says so rather than inventing a household. */}
-            {connected || path.startsWith("/dashboard/core") ? children : <NoCore />}
+            <div className="mx-auto w-full max-w-[var(--page-max)]">
+              {connected || path.startsWith("/dashboard/core") ? children : <NoCore />}
+            </div>
           </main>
         </div>
       </div>
