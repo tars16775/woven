@@ -89,7 +89,7 @@ export function SettingsView() {
 
   return (
     <div className="mx-auto max-w-[1100px]">
-      <PageHeader title="Settings" sub={live ? session.household : `${household.name} · ${household.city}`} />
+      <PageHeader title="Settings" sub={live ? session.household : session?.household ? `${session.household} · preview` : `${household.name} · ${household.city}`} />
 
       <PasskeysCard />
 

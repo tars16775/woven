@@ -206,6 +206,21 @@ export function LoginForm() {
         Use the passkey on this device, or the six-digit code showing on the front of your Core.
       </p>
 
+      {!connected && (
+        <div role="status" className="mt-6 rounded-[12px] bg-ask-bg p-4 text-[13px] text-ask ring-1 ring-amber/30" data-testid="login-preview">
+          <div className="font-medium">No Core is answering, so this is the preview house.</div>
+          <p className="mt-1">
+            Signing in here makes a session in this browser and nothing else: no passkey is created,
+            no house exists, and the people, files and numbers you will see are made up. To reach a
+            real house,{" "}
+            <Link href="/mac" className="font-medium underline decoration-amber decoration-2 underline-offset-4">
+              run a Core on your Mac
+            </Link>
+            .
+          </p>
+        </div>
+      )}
+
       {connected && houseReady === false && (
         <div role="status" className="mt-6 rounded-[12px] bg-white p-4 text-[13px] ring-1 ring-ink/5" data-testid="no-house-yet">
           <div className="font-medium">Your Core is here, but it has no house yet.</div>

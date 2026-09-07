@@ -37,6 +37,7 @@ export function OverviewView() {
 }
 
 function PreviewOverview() {
+  const session = useSession();
   const [summary, setSummary] = useState(false);
   const say = useToast();
   const scheduled = useScheduledBackups();
@@ -61,7 +62,7 @@ function PreviewOverview() {
   return (
     <div className="mx-auto max-w-[1100px]">
       <h1 className="font-display text-[34px] font-medium leading-none tracking-[-0.02em] md:text-[40px]">
-        {greeting()}, {people[0].name}
+        {greeting()}, {session?.name?.split(" ")[0] ?? people[0].name}
       </h1>
       <p className="mt-2 text-[14px] text-ash">
         {machine.connected ? `Everything is running at home · ${machine.model} · up ${machine.uptime}` : "Everything is running at home · Woven Core+"}
