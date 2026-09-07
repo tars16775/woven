@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Button, Card, PageHeader, Pill } from "@/components/dashboard/ui";
+import { Button, ButtonLink, Card, Empty, PageHeader, Pill } from "@/components/dashboard/ui";
+import { IconChevron, IconPlay, IconTv, IconX } from "@/components/dashboard/icons";
 import { useToast } from "@/components/dashboard/toast";
 import { explainAction } from "@/lib/core/actions";
 import { bytes, media as api, photos as photosApi, type MediaItem, type Photo } from "@/lib/core/files";
@@ -61,6 +62,20 @@ export function LiveTV() {
     }
   };
 
+  /* A slideshow that never advances is a still image with extra steps. It
+     moves on its own every eight seconds, and stops the moment anything else
+     is played or the person steps through it by hand. */
+  const sliding = slideshow !== null;
+  useEffect(() => {
+    if (!sliding || photos.length === 0) return;
+    const id = window.setInterval(() => setSlideshow((i) => (i === null ? null : (i + 1) % photos.length)), 8000);
+    return () => window.clearInterval(id);
+  }, [sliding, photos.length]);
+
+  const stepSlide = (delta: number) => {
+    setSlideshow((i) => (i === null || photos.length === 0 ? i : (i + delta + photos.length) % photos.length));
+  };
+
   const play = (item: MediaItem) => {
     setSlideshow(null);
     setNow(item);
@@ -68,7 +83,7 @@ export function LiveTV() {
   };
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div>
       <PageHeader
         title="TV"
         sub={`${videos.length} videos · ${music.length} tracks · ${photos.length} recent photos · from the box, over the house's own wire`}
@@ -93,7 +108,25 @@ export function LiveTV() {
               </div>
             )
           ) : slideshow !== null && photos[slideshow] ? (
-            <CoreImage src={photosApi.previewUrl(photos[slideshow].id)} alt={photos[slideshow].name} className="h-full w-full object-contain" />
+            <>
+              <CoreImage src={photosApi.previewUrl(photos[slideshow].id)} alt={photos[slideshow].name} className="h-full w-full object-contain" />
+              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 bg-gradient-to-t from-black/70 to-transparent px-4 pb-3 pt-10">
+                <span className="tnum truncate font-mono text-[11px] uppercase tracking-[0.14em] text-bone/80">
+                  {slideshow + 1} / {photos.length} · {photos[slideshow].name}
+                </span>
+                <span className="flex shrink-0 items-center gap-1">
+                  <button type="button" onClick={() => stepSlide(-1)} aria-label="Previous photo" className="tap rounded-[8px] p-2 text-bone/80 hover:bg-white/15 hover:text-bone">
+                    <IconChevron dir="left" size={18} />
+                  </button>
+                  <button type="button" onClick={() => stepSlide(1)} aria-label="Next photo" className="tap rounded-[8px] p-2 text-bone/80 hover:bg-white/15 hover:text-bone">
+                    <IconChevron size={18} />
+                  </button>
+                  <button type="button" onClick={() => setSlideshow(null)} aria-label="Stop the slideshow" className="tap rounded-[8px] p-2 text-bone/80 hover:bg-white/15 hover:text-bone">
+                    <IconX size={18} />
+                  </button>
+                </span>
+              </div>
+            </>
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
               <span className="orb" style={{ ["--orb" as string]: "14px" }} />
@@ -114,6 +147,21 @@ export function LiveTV() {
         )}
       </div>
 
+      {videos.length === 0 && music.length === 0 && photos.length === 0 ? (
+        <div className="mt-6">
+          <Empty
+            icon={<IconTv size={28} />}
+            title="Nothing to play yet"
+            body="Videos, music and photos on your drive appear here, and play on whatever this browser is plugged into. Formats this screen cannot handle are converted by the box as they stream, so nothing has to be prepared in advance."
+            action={
+              <ButtonLink kind="primary" href="/dashboard/files" className="px-4 py-2">
+                Put something in
+              </ButtonLink>
+            }
+          />
+        </div>
+      ) : (
+      <>
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Card title="Videos" action={videos.length === 0 ? undefined : <Pill>{videos.length}</Pill>}>
           {videos.length === 0 ? (
@@ -122,8 +170,9 @@ export function LiveTV() {
             <ul className="divide-y divide-ink/6" data-testid="videos">
               {videos.map((v) => (
                 <li key={v.fileId} className="flex items-center justify-between gap-3 py-2.5 text-[14px] first:pt-0 last:pb-0">
-                  <button type="button" onClick={() => play(v)} className="min-w-0 truncate text-left font-medium hover:underline">
-                    {v.name}
+                  <button type="button" onClick={() => play(v)} className="tap flex min-w-0 items-center gap-2 text-left font-medium hover:underline">
+                    <IconPlay size={15} className="shrink-0 text-ash" />
+                    <span className="truncate">{v.name}</span>
                   </button>
                   <span className="shrink-0 text-[12px] text-ash">
                     {clock(v.durationS)} · {bytes(v.size)} {!v.playable && <Pill tone="warn">via the box</Pill>}
@@ -140,8 +189,9 @@ export function LiveTV() {
             <ul className="divide-y divide-ink/6" data-testid="music">
               {music.map((m) => (
                 <li key={m.fileId} className="flex items-center justify-between gap-3 py-2.5 text-[14px] first:pt-0 last:pb-0">
-                  <button type="button" onClick={() => play(m)} className="min-w-0 truncate text-left font-medium hover:underline">
-                    {m.name}
+                  <button type="button" onClick={() => play(m)} className="tap flex min-w-0 items-center gap-2 text-left font-medium hover:underline">
+                    <IconPlay size={15} className="shrink-0 text-ash" />
+                    <span className="truncate">{m.name}</span>
                   </button>
                   <span className="shrink-0 text-[12px] text-ash">{clock(m.durationS)}</span>
                 </li>
@@ -166,7 +216,9 @@ export function LiveTV() {
           </ul>
         )}
       </Card>
-      <p className="mt-4 text-[12px] text-ash">{tools.ffmpeg ? "The box transcodes formats this screen cannot play." : "Install ffmpeg on the box to play formats this screen cannot."}</p>
+      </>
+      )}
+      <p className="mt-4 text-[12px] text-ash">{tools.ffmpeg ? "The box converts formats this screen cannot play, as it streams." : "Install ffmpeg on the box to play formats this screen cannot."}</p>
     </div>
   );
 }
