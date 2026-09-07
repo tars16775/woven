@@ -113,6 +113,11 @@ export function LoginForm() {
       return;
     }
     setBusy(true);
+    if ((await whenSettled()).phase !== "connected") {
+      setBusy(false);
+      setError("No Core is answering, so there is nothing to recover into.");
+      return;
+    }
     try {
       arrive(await identity.recover(clean, code), "recovery");
     } catch (err) {
