@@ -26,7 +26,7 @@ export function PasskeysCard() {
   const [people, setPeople] = useState<Person[]>([]);
   const [rescue, setRescue] = useState<{ person: Person; code: string; expiresAt: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const live = core.phase === "connected" && session && !session.simulated;
+  const live = core.phase === "connected" && !!session;
 
   const refresh = async () => {
     try {

@@ -145,19 +145,13 @@ async function applyLiveState(page: Page) {
 }
 
 /**
- * Sign in and land on /dashboard. Without a Core this is the simulated
- * passkey flow. With LIVE_CORE the login page talks to the real core, so we
- * use the seeded owner's recovery code (a passkey needs a virtual
- * authenticator; see live-identity.spec.ts).
+ * Sign in and land on /dashboard. Only a Core can issue a session, so this
+ * needs LIVE_CORE: it reuses the seeded owner's state saved by live-setup.ts
+ * (a passkey needs a virtual authenticator; see live-identity.spec.ts).
  */
-export async function signInWithPasskey(page: Page, email = demo.email) {
-  if (LIVE) {
-    await applyLiveState(page);
-    await page.goto("/dashboard");
-  } else {
-    await openLogin(page);
-    await page.getByLabel("Email").fill(email);
-    await page.getByRole("button", { name: "Continue with passkey" }).click();
-  }
+export async function signInWithPasskey(page: Page) {
+  if (!LIVE) throw new Error("signInWithPasskey needs LIVE_CORE=1: a session only exists if a Core issued it");
+  await applyLiveState(page);
+  await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/dashboard(\/|$)/);
 }

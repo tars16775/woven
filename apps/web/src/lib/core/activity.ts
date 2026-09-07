@@ -1,5 +1,5 @@
 import type { LedgerRow } from "@woven/schema";
-import type { ActivityItem, Where } from "@/lib/dashboard/data";
+import type { ActivityItem, Where } from "@/lib/dashboard/types";
 import { timeOf } from "./format";
 
 const titles: Record<string, string> = {

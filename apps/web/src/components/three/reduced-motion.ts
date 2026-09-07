@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+
+const QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribe(onChange: () => void) {
+  const mq = window.matchMedia(QUERY);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
 
 /**
  * Whether this person asked for less movement, in a form that is safe to
@@ -13,13 +21,7 @@ import { useEffect, useState } from "react";
  * server's; the real answer arrives a tick later and the component settles.
  */
 export function useReducedMotionAfterMount(): boolean {
-  const [reduce, setReduce] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduce(mq.matches);
-    const onChange = () => setReduce(mq.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-  return reduce;
+  // The server snapshot is also what React uses for the hydrating render, so
+  // the first client paint matches the server's exactly.
+  return useSyncExternalStore(subscribe, () => window.matchMedia(QUERY).matches, () => false);
 }

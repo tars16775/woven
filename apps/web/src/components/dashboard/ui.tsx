@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import type { Where } from "@/lib/dashboard/data";
+import type { Where } from "@/lib/dashboard/types";
 
 export function PageHeader({
   title,

@@ -1,10 +1,10 @@
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import { settle } from "./helpers";
+import { LIVE, settle, signInWithPasskey } from "./helpers";
 
 /**
  * Accessibility (gap 28): axe runs against the public pages, the login page
- * and the dashboard preview. Anything serious or critical fails the build;
+ * and, with a Core, the dashboard. Anything serious or critical fails the build;
  * moderate findings are listed so they do not hide.
  */
 // Playwright loads specs as CommonJS; the package is resolved from the app folder it runs in.
@@ -35,18 +35,9 @@ for (const path of pages) {
   });
 }
 
-test("the dashboard preview has no serious accessibility violations", async ({ page }) => {
-  await page.goto("/login", { waitUntil: "domcontentloaded" });
-  await settle(page);
-  // The preview sign-in: a code on the screen is simulated when no Core is present.
-  const tab = page.getByRole("tab", { name: /Code on the screen|Code am Bildschirm/ });
-  if (await tab.isVisible()) await tab.click();
-  const input = page.getByRole("textbox").first();
-  await input.fill("alex@example.com");
-  const button = page.getByRole("button", { name: /continue|sign in|weiter|anmelden/i }).first();
-  await button.click();
-  await page.waitForURL(/\/dashboard/, { timeout: 15_000 }).catch(() => undefined);
-  if (!/\/dashboard/.test(page.url())) test.skip(true, "the preview sign-in did not reach the dashboard on this build");
+test("the dashboard has no serious accessibility violations", async ({ page }) => {
+  test.skip(!LIVE, "the dashboard needs a Core to render; run with LIVE_CORE=1");
+  await signInWithPasskey(page);
   for (const path of ["/dashboard", "/dashboard/files", "/dashboard/settings", "/dashboard/privacy"]) {
     await page.goto(path, { waitUntil: "domcontentloaded" });
     await settle(page);

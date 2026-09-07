@@ -11,7 +11,7 @@ const uptime = (s: number) => (s < 3600 ? `${Math.floor(s / 60)} min` : s < 8640
 /**
  * The numbers this Core can vouch for (gap 30), computed on the box the
  * moment the card asks. Nothing here is projected or carried over from the
- * preview: an empty household shows zeros.
+ * nothing invented: an empty household shows zeros.
  */
 export function PilotCard() {
   const [n, setN] = useState<PilotNumbers | null>(null);

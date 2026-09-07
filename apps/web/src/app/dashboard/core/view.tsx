@@ -6,8 +6,6 @@ import { CoreDevice } from "@/components/core-device";
 import { Button, Card, Meter, PageHeader, Pill } from "@/components/dashboard/ui";
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
-import { useGateOpen } from "@/components/dashboard/state";
-import { core, household } from "@/lib/dashboard/data";
 import { ConnectCore } from "@/components/dashboard/connect-core";
 import { BackupsCard } from "@/components/dashboard/backups-card";
 import { bytes, system, updates } from "@/lib/core/files";
@@ -20,24 +18,14 @@ import { PilotCard } from "@/components/dashboard/pilot-card";
 import { PowerCard } from "@/components/dashboard/power-card";
 import type { Integrity } from "@/lib/core/client";
 
-const upgradeSteps = [
-  ["Back up", "Tonight's backup covers everything on the drives. Nothing to do; the household state lives on the chassis, not the module."],
-  ["Order the module", "Compute Module B1 ships in the same sled format. Your order is tied to this chassis so it arrives pre-trusted."],
-  ["Power down from here", "Restart is not enough; the Power down step on this page parks the drives and releases the module."],
-  ["Swap the sled", "Slide the A1 out from the back, click the B1 in. No tools, no cables."],
-  ["Power on", "The chassis attests the new module, restores pairings and permissions, and is ready in about four minutes."],
-];
-
 type Phase = "ready" | "restarting";
 
 export function CoreView() {
   const say = useToast();
-  const gateOpen = useGateOpen();
   const [phase, setPhase] = useState<Phase>("ready");
   const [restarted, setRestarted] = useState(false);
   const [checking, setChecking] = useState(false);
   const [confirmRestart, setConfirmRestart] = useState(false);
-  const [upgrade, setUpgrade] = useState(false);
   const [integrity, setIntegrity] = useState<Integrity | "checking" | "failed" | null>(null);
   const timers = useRef<number[]>([]);
   const connection = useCore();
@@ -92,9 +80,9 @@ export function CoreView() {
   };
 
   const checkForUpdates = () => {
-    if (checking) return;
+    if (checking || connection.phase !== "connected") return;
     setChecking(true);
-    if (connection.phase === "connected") {
+    {
       updates
         .check()
         .then((u) => {
@@ -104,18 +92,14 @@ export function CoreView() {
         })
         .catch((err: unknown) => say(explainAction(err)))
         .finally(() => setChecking(false));
-      return;
     }
-    later(1100, () => {
-      setChecking(false);
-      say(`${core.version} is the latest on the ${core.update.channel} channel. Checked just now.`);
-    });
   };
 
   const restart = async () => {
     setConfirmRestart(false);
+    if (connection.phase !== "connected") return;
     setPhase("restarting");
-    if (connection.phase === "connected") {
+    {
       // The core exits with the restart code; its supervisor starts it again; we wait for health.
       try {
         await system.restart();
@@ -143,13 +127,7 @@ export function CoreView() {
         }
       };
       later(1500, () => void poll());
-      return;
     }
-    later(3000, () => {
-      setPhase("ready");
-      setRestarted(true);
-      say("The Core is back. Cameras, home and Tandem resumed.");
-    });
   };
 
   const verifyLedger = async () => {
@@ -171,13 +149,6 @@ export function CoreView() {
       ? `${live.model} · ${live.fan}`
       : `${live.model} · ${live.temperatureC} °C · ${live.fan}`;
 
-  const netRows = [
-    { label: core.network.inside.label, value: core.network.inside.value },
-    { label: core.network.outside.label, value: core.network.outside.value, second: core.network.outside.second },
-    { label: core.network.gate.label, value: gateOpen ? core.network.gate.value : core.network.gate.closed },
-    { label: core.network.remote.label, value: core.network.remote.value },
-  ];
-
   return (
     <div className="mx-auto max-w-[1100px]">
       <PageHeader
@@ -187,13 +158,13 @@ export function CoreView() {
             <span className="text-ask">Restarting · back in a moment</span>
           ) : (
             <>
-              <span data-testid="core-version">{live.version}</span> · <span data-testid="core-uptime">up {uptime}</span>{connection.phase !== "connected" && ` · ${core.update.channel} channel`}
+              <span data-testid="core-version">{live.version}</span> · <span data-testid="core-uptime">up {uptime}</span>
             </>
           )
         }
         action={
           <div className="flex gap-2">
-            <Button onClick={checkForUpdates} disabled={checking || restarting} aria-busy={checking}>
+            <Button onClick={checkForUpdates} disabled={checking || restarting || connection.phase !== "connected"} aria-busy={checking}>
               {checking ? "Checking…" : "Check for updates"}
             </Button>
             {connection.phase === "connected" && (
@@ -201,7 +172,7 @@ export function CoreView() {
                 {diagnosing ? "Writing…" : "Diagnostics"}
               </Button>
             )}
-            <Button onClick={() => setConfirmRestart(true)} disabled={restarting}>
+            <Button onClick={() => setConfirmRestart(true)} disabled={restarting || connection.phase !== "connected"}>
               {restarting ? "Restarting…" : "Restart"}
             </Button>
           </div>
@@ -230,7 +201,12 @@ export function CoreView() {
       <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
         <Card dark className="flex items-center justify-center py-8">
           <div className={restarting ? "opacity-60 transition-opacity" : "transition-opacity"}>
-            <CoreDevice label={household.screenLabel} state={restarting ? "Restarting." : "Ready."} status={status} size="min(360px, 34vw, 58vw)" />
+            <CoreDevice
+              label={live.connected ? live.model : "No Core"}
+              state={restarting ? "Restarting." : live.connected ? "Ready." : "Not answering."}
+              status={status}
+              size="min(360px, 34vw, 58vw)"
+            />
           </div>
         </Card>
 
@@ -298,27 +274,7 @@ export function CoreView() {
             </Card>
           )}
 
-          {connection.phase === "connected" ? (
-            <PilotCard />
-          ) : (
-          <Card title="Compute module">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="text-[15px] font-medium">{core.module.name}</div>
-                <div className="mt-0.5 text-[13px] text-ash">
-                  {core.module.soc} · {core.module.memory}
-                </div>
-                <div className="mt-1 font-mono text-[11px] uppercase tracking-[0.12em] text-ash">Installed {core.module.installed} · attested</div>
-              </div>
-              <Button kind="soft" onClick={() => setUpgrade(true)}>
-                Prepare an upgrade
-              </Button>
-            </div>
-            <p className="mt-3 text-[13px] text-ash">
-              Household data, device pairings, permissions and automations live on the chassis. Swapping the module does not touch them.
-            </p>
-          </Card>
-          )}
+          {connection.phase === "connected" && <PilotCard />}
         </div>
       </div>
 
@@ -339,43 +295,10 @@ export function CoreView() {
           {connection.phase === "connected" ? (
             <p className="text-[13px] text-ash">This machine&apos;s own drive. Bays, sleds and SMART per drive arrive with the box.</p>
           ) : (
-          <ul className="divide-y divide-ink/6">
-            {core.drives.map((d) => (
-              <li key={d.bay} className="py-2.5 first:pt-0 last:pb-0">
-                <div className="flex items-center justify-between text-[14px]">
-                  <span className="font-medium">{d.bay}</span>
-                  <span className="text-ash">{d.size}</span>
-                </div>
-                {d.size !== "Empty" ? (
-                  <>
-                    <Meter value={d.used} max={2} className="mt-2" />
-                    <div className="mt-1 text-[12px] text-ash">
-                      Health {d.health} · {d.used} TB used
-                    </div>
-                  </>
-                ) : (
-                  <div className="mt-1 text-[12px] text-ash">Tool-less sled. Add up to 8 TB.</div>
-                )}
-              </li>
-            ))}
-          </ul>
+            <p className="text-[13px] text-ash">No Core is answering, so there is nothing to read.</p>
           )}
         </Card>
 
-        {connection.phase !== "connected" && (
-        <Card title="Radios">
-          <ul className="divide-y divide-ink/6">
-            {core.radios.map((r) => (
-              <li key={r.name} className="flex items-center justify-between py-2.5 text-[14px] first:pt-0 last:pb-0">
-                <span className="font-medium">{r.name}</span>
-                <span className="text-[13px] text-ash">{r.state}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-        )}
-
-        {connection.phase !== "connected" && (
         <Card
           title="Network"
           action={
@@ -384,19 +307,10 @@ export function CoreView() {
             </Link>
           }
         >
-          <ul className="divide-y divide-ink/6 text-[14px]">
-            {netRows.map((r) => (
-              <li key={r.label} className="flex items-start justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
-                <span className="font-medium">{r.label}</span>
-                <span className="text-right text-[13px] text-ash">
-                  <span className="block">{r.value}</span>
-                  {r.second && <span className="block">{r.second}</span>}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <p className="text-[13px] text-ash">
+            The Inside, the Outside and every Gate crossing, read from this Core. The second network arrives with the box.
+          </p>
         </Card>
-        )}
       </div>
 
       {connection.phase === "connected" && (
@@ -416,18 +330,7 @@ export function CoreView() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-wrap items-center justify-between gap-4 text-[14px]">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-medium">{core.version}</span>
-                <Pill tone="good">Up to date</Pill>
-              </div>
-              <div className="mt-1 text-[13px] text-ash">
-                Installed {core.update.lastInstalled} · slot {core.update.slot} · signed, rolls back on its own
-              </div>
-            </div>
-            <div className="text-[13px] text-ash">Security support until at least 2031</div>
-          </div>
+          <p className="text-[14px] text-ash">Connect a Core to see the release it is running.</p>
         )}
       </Card>
 
@@ -445,24 +348,6 @@ export function CoreView() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={upgrade} onClose={() => setUpgrade(false)} kicker={`${core.module.name} · installed ${core.module.installed}`} title="Upgrading the compute module" size="md">
-        <ol className="mt-4 space-y-3">
-          {upgradeSteps.map(([k, v], i) => (
-            <li key={k} className="grid grid-cols-[28px_1fr] gap-3 text-[14px]">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-bone font-mono text-[12px] text-ash">{i + 1}</span>
-              <div>
-                <div className="font-medium">{k}</div>
-                <div className="mt-0.5 text-[13px] text-ash">{v}</div>
-              </div>
-            </li>
-          ))}
-        </ol>
-        <DialogActions>
-          <Button kind="primary" className="flex-1 py-2.5" onClick={() => setUpgrade(false)}>
-            Got it
-          </Button>
-        </DialogActions>
-      </Dialog>
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { coreFetch } from "./transport";
 /**
  * Actions, the home and the Gate against the connected Core (phases 12 to
  * 15). Every call carries the session cookie. Nothing here runs without a
- * Core; the preview pages keep their own local state.
+ * Core.
  */
 export async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
   if (!coreClient()) throw new NoCoreError();

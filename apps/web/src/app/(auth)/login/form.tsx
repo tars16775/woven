@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useT } from "@/lib/i18n";
-import { displayNameFromEmail, householdFor, signIn, useSession } from "@/lib/auth";
+import { signIn, useSession } from "@/lib/auth";
 import { explain, identity, sessionRecord } from "@/lib/core/identity";
 import { startCore, useCore } from "@/lib/core/store";
 
@@ -70,19 +70,6 @@ export function LoginForm() {
     router.replace(next);
   };
 
-  // Preview: the session is built from what the person typed and saved on
-  // this device only. Nothing is sent anywhere.
-  const finish = (method: "passkey" | "code", who: { name: string; email: string }) => {
-    signIn({
-      household: householdFor(who.name),
-      name: who.name,
-      email: who.email,
-      method,
-      simulated: true,
-    });
-    router.replace(next);
-  };
-
   const passkey = async (e: FormEvent) => {
     e.preventDefault();
     if (busy) return;
@@ -93,22 +80,19 @@ export function LoginForm() {
       emailRef.current?.focus();
       return;
     }
-    setBusy(true);
-    if (connected) {
-      // The Core sends a challenge; this device signs it; the Core answers with a session cookie.
-      try {
-        arrive(await identity.loginWithPasskey(clean), "passkey");
-      } catch (err) {
-        setError(explain(err));
-      } finally {
-        setBusy(false);
-      }
+    if (!connected) {
+      setError("No Core is answering, so there is no house to sign in to.");
       return;
     }
-    // Preview without a Core: the wait stands in for the device prompt.
-    await new Promise((r) => setTimeout(r, 700));
-    setBusy(false);
-    finish("passkey", { name: displayNameFromEmail(clean), email: clean });
+    setBusy(true);
+    // The Core sends a challenge; this device signs it; the Core answers with a session cookie.
+    try {
+      arrive(await identity.loginWithPasskey(clean), "passkey");
+    } catch (err) {
+      setError(explain(err));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const recover = async (e: FormEvent) => {
@@ -149,24 +133,21 @@ export function LoginForm() {
       inputs.current[missing]?.focus();
       return;
     }
-    setBusy(true);
-    if (connected) {
-      // The box matches the digits against the code on its screen and answers with a session.
-      try {
-        const view = await identity.loginWithCode(name.trim(), d.join(""));
-        signIn(sessionRecord(view, "code"));
-        router.replace(next);
-      } catch (err) {
-        setCodeError(explain(err));
-      } finally {
-        setBusy(false);
-      }
+    if (!connected) {
+      setCodeError("No Core is answering, so there is no code to check.");
       return;
     }
-    // Preview without a Core: any six digits pass.
-    await new Promise((r) => setTimeout(r, 600));
-    setBusy(false);
-    finish("code", { name: name.trim(), email: "" });
+    setBusy(true);
+    // The box matches the digits against the code on its screen and answers with a session.
+    try {
+      const view = await identity.loginWithCode(name.trim(), d.join(""));
+      signIn(sessionRecord(view, "code"));
+      router.replace(next);
+    } catch (err) {
+      setCodeError(explain(err));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const onCodeSubmit = (e: FormEvent) => {
@@ -207,14 +188,15 @@ export function LoginForm() {
       </p>
 
       {!connected && (
-        <div role="status" className="mt-6 rounded-[12px] bg-ask-bg p-4 text-[13px] text-ask ring-1 ring-amber/30" data-testid="login-preview">
-          <div className="font-medium">No Core is answering, so this is the preview house.</div>
+        <div role="status" className="mt-6 rounded-[12px] bg-ask-bg p-4 text-[13px] text-ask ring-1 ring-amber/30" data-testid="login-no-core">
+          <div className="font-medium">
+            {core.phase === "searching" ? "Looking for your Core…" : "No Core is answering."}
+          </div>
           <p className="mt-1">
-            Signing in here makes a session in this browser and nothing else: no passkey is created,
-            no house exists, and the people, files and numbers you will see are made up. To reach a
-            real house,{" "}
+            Sign-in happens on your own Core: it holds the passkeys and issues the session. There is no account here and no house to sign in to without
+            one.{" "}
             <Link href="/mac" className="font-medium underline decoration-amber decoration-2 underline-offset-4">
-              run a Core on your Mac
+              Run a Core on your Mac
             </Link>
             .
           </p>
@@ -234,7 +216,7 @@ export function LoginForm() {
       )}
 
       <div className="mt-8 flex rounded-[10px] bg-white p-1 ring-1 ring-ink/8" role="tablist" aria-label="Sign-in method">
-        {(connected ? (["passkey", "code", "recovery"] as Mode[]) : (["passkey", "code"] as Mode[])).map((m) => (
+        {(["passkey", "code", "recovery"] as Mode[]).map((m) => (
           <button
             key={m}
             type="button"
@@ -287,11 +269,11 @@ export function LoginForm() {
               {error}
             </p>
           )}
-          <button type="submit" disabled={busy} aria-busy={busy || undefined} className="btn btn-primary mt-5 w-full disabled:opacity-60">
+          <button type="submit" disabled={busy || !connected} aria-busy={busy || undefined} className="btn btn-primary mt-5 w-full disabled:opacity-60">
             {busy ? "Waiting for your device…" : "Continue with passkey"}
           </button>
           <p className="mt-3 text-center text-[12px] text-ash">
-            {connected ? `Face, fingerprint or device PIN, checked by your Core at ${core.phase === "connected" ? new URL(core.url).hostname : "home"}.` : "Face, fingerprint or device PIN. No password exists to leak."}
+            {connected ? `Face, fingerprint or device PIN, checked by your Core at ${core.phase === "connected" ? new URL(core.url).hostname : "home"}.` : "Your Core checks the passkey. Nothing here can."}
           </p>
         </form>
       ) : mode === "recovery" ? (
@@ -334,7 +316,7 @@ export function LoginForm() {
               {error}
             </p>
           )}
-          <button type="submit" disabled={busy} aria-busy={busy || undefined} className="btn btn-primary mt-5 w-full disabled:opacity-60">
+          <button type="submit" disabled={busy || !connected} aria-busy={busy || undefined} className="btn btn-primary mt-5 w-full disabled:opacity-60">
             {busy ? t("login.checking") : t("login.recoveryButton")}
           </button>
           <p className="mt-3 text-center text-[12px] text-ash">One of the codes you wrote down, or a rescue code another adult in the house just gave you. Each works once; add a passkey on this device right after.</p>
@@ -420,7 +402,7 @@ export function LoginForm() {
           )}
           <button
             type="submit"
-            disabled={busy}
+            disabled={busy || !connected}
             aria-busy={busy || undefined}
             className={`btn mt-5 w-full disabled:opacity-60 ${complete ? "btn-primary" : "btn-secondary"}`}
           >

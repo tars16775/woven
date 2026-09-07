@@ -6,7 +6,7 @@
  * what answered, and lets a person type an address when nothing does.
  *
  * NEXT_PUBLIC_WOVEN_LIVE: "on" (default) probes; "off" never touches the
- * network and the dashboard stays a preview. The marketing deploy uses off.
+ * network and the dashboard says no Core is answering. The marketing deploy uses off.
  */
 
 export const LIVE = process.env.NEXT_PUBLIC_WOVEN_LIVE !== "off";

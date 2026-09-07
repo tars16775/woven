@@ -63,9 +63,9 @@ The code on the box's screen lives at http://127.0.0.1:4002/v1/screen on the Mac
 
 Photo search runs on the box: the Photos page offers "Turn on photo search", which downloads a small CLIP model (about 160 MB) through the Gate once the owner approves the crossing. The Gate's default allow list (`WOVEN_GATE_ALLOW=huggingface.co,*.hf.co`) exists for that download and nothing else.
 
-Identity runs on the Core: `/signup` creates the household and the owner's first passkey (recovery codes are shown once), `/login` signs in with a passkey or a recovery code, and the session is an httpOnly cookie on the Core. Without a Core the pages fall back to the simulated preview.
+Identity runs on the Core: `/signup` creates the household and the owner's first passkey (recovery codes are shown once), `/login` signs in with a passkey or a recovery code, and the session is an httpOnly cookie on the Core. There is no account anywhere else, so with no Core answering both pages say so and neither can proceed.
 
-The dashboard looks for a Core at `https://woven.local:4000`, then this machine (`http://localhost:4002`, the core's loopback listener). Until one answers it shows preview data and a "Connect to your Core" card on the Core page. Build the marketing deploy with `NEXT_PUBLIC_WOVEN_LIVE=off` so it never looks.
+The dashboard looks for a Core at `https://woven.local:4000`, then this machine (`http://localhost:4002`, the core's loopback listener). There is no sample household behind it: until one answers, every screen is replaced by "No Core is answering", which offers to look again, to reach the Core through the relay if this browser is paired, or to connect by address. Build the marketing deploy with `NEXT_PUBLIC_WOVEN_LIVE=off` so it never looks. `apps/web/scripts/check-live.mjs` fails the lint if any file reaches for a mock household again.
 
 ```bash
 ```

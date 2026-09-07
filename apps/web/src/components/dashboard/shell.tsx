@@ -6,8 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { signIn, signOut, useSession } from "@/lib/auth";
 import { Wordmark } from "@/components/wordmark";
 import { Clock } from "@/components/clock";
-import { household, core } from "@/lib/dashboard/data";
-import { retryCore, startCore, useCore } from "@/lib/core/store";
+import { startCore, useCore } from "@/lib/core/store";
 import { identity, sessionRecord } from "@/lib/core/identity";
 import { memoryLabel, storageLabel, temperatureLabel, useLiveCore } from "@/lib/core/live";
 import { Dialog } from "./dialog";
@@ -15,6 +14,7 @@ import { ToastProvider } from "./toast";
 import { ThemeStyle, useDocumentTheme, useTheme } from "./theme";
 import { useGateOpen } from "./state";
 import { SearchBox } from "./search-box";
+import { NoCore } from "./no-core";
 import { useT } from "@/lib/i18n";
 import type { LedgerRow } from "@woven/schema";
 
@@ -75,14 +75,14 @@ export function Shell({ children }: { children: ReactNode }) {
   }, [session, router, path]);
 
   const leave = () => {
-    if (connection.phase === "connected" && session && !session.simulated) void identity.logout();
+    if (connection.phase === "connected" && session) void identity.logout();
     signOut();
     router.replace("/login");
   };
 
   // Away from home the tunnel's token is the session: reflect it locally so the shell knows who is here.
   useEffect(() => {
-    if (connection.phase !== "connected" || !connection.remote || (session && !session.simulated)) return;
+    if (connection.phase !== "connected" || !connection.remote || session) return;
     let alive = true;
     identity
       .session()
@@ -97,7 +97,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   // A Core-issued session is only as real as the cookie on the Core: check it once we are connected.
   useEffect(() => {
-    if (connection.phase !== "connected" || !session || session.simulated) return;
+    if (connection.phase !== "connected" || !session) return;
     let alive = true;
     identity
       .session()
@@ -151,14 +151,14 @@ export function Shell({ children }: { children: ReactNode }) {
       </span>
     ) : (
       <Link href="/dashboard/core#connect" data-testid="core-connection" className="rounded-full bg-ask-bg px-2.5 py-1 font-medium text-ask">
-        {t("shell.preview")}
+        {t("shell.noCore")}
       </Link>
     );
 
-  const isLive = connection.phase === "connected" && !session.simulated;
-  // What crossed today, summed from the receipts the shell already holds; the preview's number otherwise.
-  const crossedToday = isLive ? bytesCrossedToday(connection.rows) : core.bytesCrossedToday;
-  const gateChip = gateOpen ? (
+  const connected = connection.phase === "connected";
+  // What crossed today, summed from the receipts the shell already holds.
+  const crossedToday = connected ? bytesCrossedToday(connection.rows) : 0;
+  const gateChip = !connected ? null : gateOpen ? (
     <span className="rounded-full bg-local-bg px-2.5 py-1 font-medium text-local" data-testid="gate-chip">
       {crossedToday === 0 ? t("shell.gateNothing") : t("shell.gateBytes", { bytes: formatBytes(crossedToday) })}
     </span>
@@ -179,12 +179,12 @@ export function Shell({ children }: { children: ReactNode }) {
             <div className="text-[13px] font-medium">{session.household}</div>
             <div className="mt-0.5 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ash">
               <span className="orb" style={{ ["--orb" as string]: "6px" }} />
-              {t("shell.ready")}
+              {connected ? t("shell.ready") : connection.phase === "searching" ? t("shell.looking") : t("shell.noCore")}
             </div>
           </div>
           <div className="mt-6">{nav}</div>
           <div className="mt-auto px-3 text-[11px] leading-relaxed text-ash">
-            <div>{live.connected ? live.model : household.screenLabel}</div>
+            <div>{live.connected ? live.model : "No Core"}</div>
             <div>{live.version}</div>
             <div>
               Inside · <Clock />
@@ -194,25 +194,12 @@ export function Shell({ children }: { children: ReactNode }) {
 
         {/* Main */}
         <div className="flex min-w-0 flex-1 flex-col">
-          {isLive && connection.phase === "connected" && connection.status?.power?.power === "off" && (
+          {connected && connection.status?.power?.power === "off" && (
             <div className="flex items-center justify-center gap-2 bg-ink px-4 py-1.5 text-center text-[12px] text-bone" data-testid="power-banner" role="status">
               <span className="font-medium">The Core is switched off.</span>
               <span className="text-ash-2">Nothing runs, nothing leaves, nothing answers.</span>
               <Link href="/dashboard/core" className="font-medium underline underline-offset-2">
                 Switch it on
-              </Link>
-            </div>
-          )}
-          {!isLive && (
-            <div className="flex items-center justify-center gap-2 bg-ask-bg px-4 py-1.5 text-center text-[12px] text-ask" data-testid="preview-badge" role="status">
-              <span className="font-medium">{t("preview.title")}</span>
-              <span>{t("preview.body")}</span>
-              <Link href="/mac" className="font-medium underline underline-offset-2">
-                {t("preview.mac")}
-              </Link>
-              <span>{t("preview.or")}</span>
-              <Link href="/dashboard/core#connect" className="font-medium underline underline-offset-2">
-                {t("preview.connect")}
               </Link>
             </div>
           )}
@@ -233,7 +220,7 @@ export function Shell({ children }: { children: ReactNode }) {
               {connectionChip}
               {connectionChip && <span>·</span>}
               {gateChip}
-              <span>·</span>
+              {gateChip && <span>·</span>}
               <span data-testid="core-memory">{memoryLabel(live)}</span>
               <span>·</span>
               <span data-testid="core-storage">{storageLabel(live)}</span>
@@ -245,7 +232,7 @@ export function Shell({ children }: { children: ReactNode }) {
               )}
             </div>
             <div className="flex items-center gap-3">
-              {isLive && <SearchBox />}
+              {connected && <SearchBox />}
               <Link
                 href="/dashboard/ask"
                 className="hidden rounded-[8px] bg-white px-3 py-1.5 text-[13px] text-ash ring-1 ring-ink/8 hover:text-ink md:block"
@@ -265,10 +252,10 @@ export function Shell({ children }: { children: ReactNode }) {
           </header>
 
           {/* Mobile navigation drawer */}
-          <Dialog open={open} onClose={() => setOpen(false)} variant="drawer" title={session.household} kicker="Woven Core+">
+          <Dialog open={open} onClose={() => setOpen(false)} variant="drawer" title={session.household} kicker={live.connected ? live.model : "No Core"}>
             <div className="mt-1 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ash">
               <span className="orb" style={{ ["--orb" as string]: "6px" }} />
-              {gateOpen ? "Ready · inside" : "Gate closed"}
+              {!connected ? "Not answering" : gateOpen ? "Ready · inside" : "Gate closed"}
             </div>
             <div className="mt-5 flex-1 overflow-y-auto">{nav}</div>
             <div className="mt-4 flex items-center justify-between border-t border-ink/8 pt-4">
@@ -282,30 +269,9 @@ export function Shell({ children }: { children: ReactNode }) {
           </Dialog>
 
           <main id="main" className="flex-1 px-4 py-6 lg:px-8 lg:py-8">
-            {/* A real household never sees the preview house: while its Core is being found again, the page waits. */}
-            {session.personId && !session.simulated && connection.phase !== "connected" && !path.startsWith("/dashboard/core") ? (
-              <div className="mx-auto max-w-[560px] rounded-[14px] bg-white p-6 text-center ring-1 ring-ink/5" data-testid="reconnecting" role="status">
-                <span className="orb" style={{ ["--orb" as string]: "12px" }} />
-                <div className="mt-5 font-display text-[22px] font-medium tracking-[-0.01em]">{connection.phase === "unreachable" ? "Your Core is not answering" : "Finding your Core…"}</div>
-                <p className="mt-2 text-[14px] text-ash">
-                  {connection.phase === "unreachable"
-                    ? "Nothing here is shown from memory or made up: this page waits for the box. Is the Mac awake and on the home network?"
-                    : "Looking on the home network, then through the relay if this browser is paired."}
-                </p>
-                {connection.phase === "unreachable" && (
-                  <div className="mt-4 flex justify-center gap-2">
-                    <button type="button" onClick={retryCore} className="btn btn-primary min-w-0 h-9 px-4 text-[13px]">
-                      Try again
-                    </button>
-                    <Link href="/dashboard/core" className="btn btn-secondary min-w-0 h-9 px-4 text-[13px]">
-                      Core page
-                    </Link>
-                  </div>
-                )}
-              </div>
-            ) : (
-              children
-            )}
+            {/* Every screen below is drawn from a Core. When none is answering there is
+                nothing to draw, so the page says so rather than inventing a household. */}
+            {connected || path.startsWith("/dashboard/core") ? children : <NoCore />}
           </main>
         </div>
       </div>

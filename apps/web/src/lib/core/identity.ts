@@ -191,7 +191,6 @@ export function sessionRecord(view: SessionView, method: "passkey" | "code" | "r
     method,
     personId: view.person.id,
     role: view.person.role,
-    simulated: false as const,
   };
 }
 

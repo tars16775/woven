@@ -40,11 +40,11 @@ export function ConnectCore() {
   };
 
   return (
-    <Card dark className="mb-4" title="Connect to your Core" action={searching ? <Pill tone="warn">Looking…</Pill> : <Pill tone="dark">Preview data</Pill>} id="connect">
+    <Card dark className="mb-4" title="Connect to your Core" action={searching ? <Pill tone="warn">Looking…</Pill> : <Pill tone="dark">Not answering</Pill>} id="connect">
       <p className="text-[14px] text-ash-2">
         {searching
           ? "Looking for your Core on this network. Most homes answer within a second or two."
-          : "This dashboard is showing preview data. When your Core is reachable, every screen switches to the real thing."}
+          : "Nothing answered, so there is nothing to show. Every screen in here is drawn from your Core and waits for it."}
       </p>
       <ol className="mt-4 grid gap-3 text-[14px] sm:grid-cols-3">
         {[

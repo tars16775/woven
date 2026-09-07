@@ -32,10 +32,9 @@ type Facts = {
 };
 
 /**
- * The Overview against the household's own Core. Every figure is the
- * box's, computed when the page asks; nothing is carried over from the
- * preview. A new house also gets a short list of what is worth setting up,
- * each item checked against what the Core actually has.
+ * The Overview against the household's own Core. Every figure is the box's,
+ * computed when the page asks. A new house also gets a short list of what is
+ * worth setting up, each item checked against what the Core actually has.
  */
 export function LiveOverview() {
   const session = useSession();

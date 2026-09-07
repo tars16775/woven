@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { CoreClient, CoreError } from "@/lib/core/client";
 import { toActivity } from "@/lib/core/activity";
 import { defaultCandidates, discover, normalize, probe } from "@/lib/core/discovery";
-import { deriveLive, storageLabel } from "@/lib/core/live";
+import { deriveLive, memoryLabel, storageLabel } from "@/lib/core/live";
 import { disk, gb, uptime } from "@/lib/core/format";
 
 const json = (body: unknown, status = 200) =>
@@ -76,7 +76,7 @@ describe("client", () => {
 });
 
 describe("live values", () => {
-  it("shows the machine's real numbers when connected and the preview otherwise", () => {
+  it("shows the machine's real numbers when connected and nothing at all otherwise", () => {
     const live = deriveLive({ phase: "connected", url: "http://localhost:4002", version: "0.1.0", status: status as never, config: null, gate: null, rows: [], since: 0 });
     expect(live.connected).toBe(true);
     expect(live.host).toBe("localhost");
@@ -90,9 +90,14 @@ describe("live values", () => {
     expect(live.temperatureC).toBeNull();
     expect(live.uptime).toBe("3 h");
 
-    const preview = deriveLive({ phase: "unreachable", tried: [], reason: "no answer" });
-    expect(preview.connected).toBe(false);
-    expect(preview.version).toMatch(/Woven OS/);
+    // Nothing answered: no sample machine, no borrowed numbers.
+    const none = deriveLive({ phase: "unreachable", tried: [], reason: "no answer" });
+    expect(none.connected).toBe(false);
+    expect(none.model).toBe("No Core");
+    expect(none.memory).toEqual({ used: 0, total: 0, unit: "GB" });
+    expect(memoryLabel(none)).toBe("—");
+    expect(storageLabel(none)).toBe("—");
+    expect(none.temperatureC).toBeNull();
   });
 
   it("formats units the way the operating system does", () => {

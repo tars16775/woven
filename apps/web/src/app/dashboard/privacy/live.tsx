@@ -19,7 +19,7 @@ function typeLabel(type: string): string {
 /**
  * The Privacy page against the household's own Core (gap 15). Every number
  * here is the ledger's: what stayed inside, what crossed, what each crossing
- * sent. No projections, no preview figures.
+ * sent. No projections and nothing invented.
  */
 export function LivePrivacy() {
   const connection = useCore();

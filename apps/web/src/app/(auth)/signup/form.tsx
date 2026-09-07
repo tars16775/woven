@@ -81,32 +81,29 @@ export function SignupForm() {
     }
     setErrors({});
     setFailure(null);
-    setBusy(true);
-    if (connected) {
-      // The Core creates the house; this device makes the owner's first passkey; the codes are shown once.
-      try {
-        const { session, recoveryCodes: codes } = await identity.setup({ household: house.trim(), owner: { name: name.trim(), email: clean } });
-        signIn(sessionRecord(session, "passkey"));
-        setRecoveryCodes(codes);
-        setStep(3);
-      } catch (err) {
-        setFailure(explain(err));
-      } finally {
-        setBusy(false);
-      }
+    if (!connected) {
+      setFailure("No Core is answering. A household is created on your own Core, not here.");
       return;
     }
-    // Preview without a Core: the session is simulated on this device and nothing is sent.
-    await new Promise((r) => setTimeout(r, 800));
-    signIn({ household: house.trim(), name: name.trim(), email: clean, method: "passkey", simulated: true });
-    router.replace("/dashboard");
+    setBusy(true);
+    // The Core creates the house; this device makes the owner's first passkey; the codes are shown once.
+    try {
+      const { session, recoveryCodes: codes } = await identity.setup({ household: house.trim(), owner: { name: name.trim(), email: clean } });
+      signIn(sessionRecord(session, "passkey"));
+      setRecoveryCodes(codes);
+      setStep(3);
+    } catch (err) {
+      setFailure(explain(err));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const errorId = (k: FieldKey) => `${uid}-${k}-error`;
 
   return (
     <div>
-      <p className="text-[13px] font-medium text-ash">Set up · step {step} of {connected ? 3 : 2}</p>
+      <p className="text-[13px] font-medium text-ash">Set up · step {step} of 3</p>
       <h1 className="mt-2 font-display text-[34px] font-medium leading-[1.05] tracking-[-0.02em]">
         {step === 1 ? "Name the house." : step === 2 ? "Make your key." : "Write these down."}
       </h1>
@@ -236,8 +233,7 @@ export function SignupForm() {
             </ol>
             {!connected && (
               <p className="mt-3 border-t border-ink/8 pt-3 text-[12px] text-ash">
-                In this preview, steps 1 and 2 are simulated on this device. Your key is not made yet;
-                a session is saved in this browser and nothing is sent anywhere.
+                None of this can happen yet: no Core is answering. Run one on your Mac and this page will find it.
               </p>
             )}
           </div>
@@ -246,7 +242,7 @@ export function SignupForm() {
               {failure}
             </p>
           )}
-          <button type="submit" disabled={busy || Boolean(connected && existing)} aria-busy={busy || undefined} className="btn btn-primary w-full disabled:opacity-60">
+          <button type="submit" disabled={busy || !connected || Boolean(existing)} aria-busy={busy || undefined} className="btn btn-primary w-full disabled:opacity-60">
             {busy ? "Making your key…" : "Create passkey and finish"}
           </button>
           <button

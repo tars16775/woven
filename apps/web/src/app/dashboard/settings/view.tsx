@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Button, Card, Field, PageHeader, Pill, inputClass } from "@/components/dashboard/ui";
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
@@ -12,74 +12,32 @@ import { DataRightsCard } from "@/components/dashboard/data-rights-card";
 import { BackupTokensCard } from "@/components/dashboard/backup-tokens-card";
 import { RemoteCard } from "@/components/dashboard/remote-card";
 import { NotificationsCard } from "@/components/dashboard/notifications-card";
-import { useCore } from "@/lib/core/store";
 import { useSession } from "@/lib/auth";
 import { explain, identity } from "@/lib/core/identity";
 import type { Person as CorePerson } from "@woven/schema";
-import { household, people as initialPeople, type Person } from "@/lib/dashboard/data";
 
-type Integration = { name: string; detail: string; tone: "good" | "warn" };
+type Open = null | "transfer" | "reset";
 
-const initialIntegrations: Integration[] = [
-  { name: "Home Assistant", detail: "Running inside the box", tone: "good" },
-  { name: "Google Calendar", detail: "Read only · Alex, Maya", tone: "good" },
-  { name: "iCloud Photos", detail: "Import once, then inside", tone: "good" },
-  { name: "Crossings", detail: "Anthropic · OpenAI, by task, through the Gate", tone: "warn" },
-];
-
-type Member = Person & { pending?: boolean };
-type Open = null | "invite" | "transfer" | "reset";
-
+/** Settings for the household this browser is signed in to. Every card reads its own Core. */
 export function SettingsView() {
   const say = useToast();
-  const core = useCore();
   const session = useSession();
-  const live = core.phase === "connected" && !!session && !session.simulated;
   const [transferTo, setTransferTo] = useState<CorePerson[] | null>(null);
   const [transferPick, setTransferPick] = useState("");
-  const [people, setPeople] = useState<Member[]>(initialPeople);
-  const [integrations, setIntegrations] = useState(initialIntegrations);
-  const [revoking, setRevoking] = useState<Integration | null>(null);
   const [open, setOpen] = useState<Open>(null);
-  const [inviteName, setInviteName] = useState("");
-  const [inviteRole, setInviteRole] = useState<Person["role"]>("adult");
 
   const close = () => setOpen(null);
 
-  const invite = (e: FormEvent) => {
-    e.preventDefault();
-    const name = inviteName.trim();
-    if (!name) return;
-    const id = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
-    setPeople((p) => [...p, { id, name, role: inviteRole, initial: name.slice(0, 1).toUpperCase(), devices: 0, lastBackup: "Never", pending: true }]);
-    setInviteName("");
-    setInviteRole("adult");
-    close();
-    say(`${name} is invited. They finish joining on the box's screen.`);
-  };
-
-  const revoke = () => {
-    if (!revoking) return;
-    setIntegrations((is) => is.filter((i) => i.name !== revoking.name));
-    say(`${revoking.name} revoked. Its credentials stopped working now.`);
-    setRevoking(null);
-  };
-
   const transfer = async () => {
-    if (live) {
-      if (!transferPick || !session?.email) return;
-      try {
-        const r = await identity.transferOwnership(transferPick, session.email);
-        close();
-        say(r.status === "succeeded" ? "Ownership transferred. You are now an adult member; sign in again to refresh your role." : `${r.decision.reason}`);
-        setTransferTo(null);
-      } catch (err) {
-        say(explain(err));
-      }
-      return;
+    if (!transferPick || !session?.email) return;
+    try {
+      const r = await identity.transferOwnership(transferPick, session.email);
+      close();
+      say(r.status === "succeeded" ? "Ownership transferred. You are now an adult member; sign in again to refresh your role." : r.decision.reason);
+      setTransferTo(null);
+    } catch (err) {
+      say(explain(err));
     }
-    close();
-    say("Transfer started. The new owner confirms with a passkey on the box's screen.");
   };
 
   const reset = () => {
@@ -89,81 +47,27 @@ export function SettingsView() {
 
   return (
     <div className="mx-auto max-w-[1100px]">
-      <PageHeader title="Settings" sub={live ? session.household : session?.household ? `${session.household} · preview` : `${household.name} · ${household.city}`} />
+      <PageHeader title="Settings" sub={session?.household ?? ""} />
 
       <PasskeysCard />
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        {live && (
-          <>
-            <HouseholdCard
-              onTransfer={(people) => {
-                setTransferTo(people.filter((p) => p.role === "adult"));
-                setTransferPick(people.find((p) => p.role === "adult")?.id ?? "");
-                setOpen("transfer");
-              }}
-            />
-            <DataRightsCard />
-            <BackupTokensCard />
-            <RemoteCard />
-            <NotificationsCard />
-          </>
-        )}
-        {!live && (
-        <Card
-          title="Household"
-          action={
-            <Button kind="soft" onClick={() => setOpen("invite")}>
-              Invite
-            </Button>
-          }
-        >
-          <ul className="divide-y divide-ink/6">
-            {people.map((p) => (
-              <li key={p.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                <div className="flex items-center gap-3">
-                  <span className={`flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-medium ${p.pending ? "bg-chassis text-ash" : "bg-ink text-bone"}`}>
-                    {p.initial}
-                  </span>
-                  <div>
-                    <div className="text-[14px] font-medium">{p.name}</div>
-                    <div className="text-[12px] text-ash">{p.pending ? "Invited · waiting for a passkey" : `Passkey · ${p.devices} devices`}</div>
-                  </div>
-                </div>
-                {p.pending ? <Pill tone="warn">Pending</Pill> : <Pill tone={p.role === "owner" ? "dark" : "neutral"}>{p.role}</Pill>}
-              </li>
-            ))}
-            <li className="flex items-center justify-between gap-4 py-3 last:pb-0">
-              <div className="text-[14px] text-ash">Guest access</div>
-              <span className="text-[12px] text-ash">None active · expires automatically</span>
-            </li>
-          </ul>
-        </Card>
-        )}
+        <HouseholdCard
+          onTransfer={(people) => {
+            setTransferTo(people.filter((p) => p.role === "adult"));
+            setTransferPick(people.find((p) => p.role === "adult")?.id ?? "");
+            setOpen("transfer");
+          }}
+        />
+        <DataRightsCard />
+        <BackupTokensCard />
+        <RemoteCard />
+        <NotificationsCard />
 
         <Card title="Integrations">
-          {live ? (
-            <p className="text-[14px] text-ash">Nothing is connected. This Core talks to nothing outside the house except what you approve at the Gate, crossing by crossing.</p>
-          ) : integrations.length > 0 ? (
-            <ul className="divide-y divide-ink/6">
-              {integrations.map((i) => (
-                <li key={i.name} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                  <div>
-                    <div className="text-[14px] font-medium">{i.name}</div>
-                    <div className="text-[12px] text-ash">{i.detail}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Pill tone={i.tone}>{i.tone === "good" ? "Connected" : "By approval"}</Pill>
-                    <Button kind="quiet" onClick={() => setRevoking(i)} aria-label={`Revoke ${i.name}`}>
-                      Revoke
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-[14px] text-ash">Nothing connected. The box runs on its own.</p>
-          )}
+          <p className="text-[14px] text-ash">
+            Nothing is connected. This Core talks to nothing outside the house except what you approve at the Gate, crossing by crossing.
+          </p>
         </Card>
 
         <Card title="Appearance">
@@ -179,20 +83,12 @@ export function SettingsView() {
 
         <Card title="Assistant">
           <ul className="divide-y divide-ink/6 text-[14px]">
-            {(live
-              ? [
-                  ["What answers", "Rules over the box's own data · no language model on this Core yet"],
-                  ["Where it runs", "Inside · nothing crosses the Gate for a question"],
-                  ["Memory", "Per person · view, edit, delete in Privacy"],
-                  ["Spend limit", "$50 per order before approval is asked · from the policy engine"],
-                ]
-              : [
-                  ["Wake word", "“Tandem” · processed on the box"],
-                  ["Where it runs", "Inside first · crosses the Gate only when you approve"],
-                  ["Memory", "Per person · view, edit, delete in Privacy"],
-                  ["Spend limit for agents", "$50 per order · approved merchants"],
-                ]
-            ).map(([k, v]) => (
+            {[
+              ["What answers", "Rules over the box's own data · no language model on this Core yet"],
+              ["Where it runs", "Inside · nothing crosses the Gate for a question"],
+              ["Memory", "Per person · view, edit, delete in Privacy"],
+              ["Spend limit", "$50 per order before approval is asked · from the policy engine"],
+            ].map(([k, v]) => (
               <li key={k} className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
                 <span className="font-medium">{k}</span>
                 <span className="text-right text-[13px] text-ash">{v}</span>
@@ -227,77 +123,38 @@ export function SettingsView() {
         </Card>
       </div>
 
-      <Dialog open={open === "invite"} onClose={close} kicker="Household" title="Invite someone">
-        <form onSubmit={invite} className="mt-4 space-y-4">
-          <Field label="Name" hint="They pick a passkey on the box's screen. No email needed.">
-            <input className={inputClass} value={inviteName} onChange={(e) => setInviteName(e.target.value)} placeholder="Priya" data-autofocus required />
-          </Field>
-          <Field label="Role">
-            <select className={inputClass} value={inviteRole} onChange={(e) => setInviteRole(e.target.value as Person["role"])}>
-              <option value="adult">Adult · sees shared folders, controls the home</option>
-              <option value="child">Child · own space, no locks or purchases</option>
-              <option value="guest">Guest · Wi-Fi and the TV, expires in 7 days</option>
-            </select>
-          </Field>
-          <DialogActions>
-            <Button kind="primary" type="submit" className="flex-1 py-2.5" disabled={!inviteName.trim()}>
-              Send invite
-            </Button>
-            <Button kind="soft" className="flex-1 py-2.5" onClick={close}>
-              Cancel
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-
-      <Dialog open={revoking !== null} onClose={() => setRevoking(null)} kicker="Reversible · reconnect any time" title={`Revoke ${revoking?.name ?? ""}?`}>
-        <p className="mt-2 text-[14px] text-ash">
-          Its credentials stop working now and nothing new is read or sent. What it already brought inside stays yours.
-        </p>
-        <DialogActions>
-          <Button kind="primary" className="flex-1 py-2.5" onClick={revoke} data-autofocus>
-            Revoke
-          </Button>
-          <Button kind="soft" className="flex-1 py-2.5" onClick={() => setRevoking(null)}>
-            Keep
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       <Dialog open={open === "transfer"} onClose={close} kicker="Class H · strong auth" title="Transfer ownership?" tone="ask">
         <p className="mt-2 text-[14px] text-ash">
-          {live
-            ? "You confirm with your passkey on this device. You become an adult member and your recovery codes stop working. Everyone's files stay where they are."
-            : "The new owner confirms with their passkey on the box's screen. You become an adult member and lose the recovery key. Everyone's files stay where they are."}
+          You confirm with your passkey on this device. You become an adult member and your recovery codes stop working. Everyone&apos;s files stay where they
+          are.
         </p>
-        {live && (
-          <Field label="New owner">
-            {transferTo && transferTo.length > 0 ? (
-              <select className={inputClass} value={transferPick} onChange={(e) => setTransferPick(e.target.value)}>
-                {transferTo.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <p className="text-[13px] text-ash">Invite another adult first; ownership can only pass to an adult.</p>
-            )}
-          </Field>
-        )}
+        <Field label="New owner">
+          {transferTo && transferTo.length > 0 ? (
+            <select className={inputClass} value={transferPick} onChange={(e) => setTransferPick(e.target.value)}>
+              {transferTo.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p className="text-[13px] text-ash">Invite another adult first; ownership can only pass to an adult.</p>
+          )}
+        </Field>
         <DialogActions>
           <Button kind="soft" className="flex-1 py-2.5" onClick={close} data-autofocus>
             Cancel
           </Button>
-          <Button kind="danger" className="flex-1 py-2.5" onClick={transfer} disabled={live && !transferPick}>
-            {live ? "Confirm with passkey" : "Start transfer"}
+          <Button kind="danger" className="flex-1 py-2.5" onClick={transfer} disabled={!transferPick}>
+            Confirm with passkey
           </Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={open === "reset"} onClose={close} kicker="Class H · on the box only" title="Factory reset" tone="ask">
         <p className="mt-2 text-[14px] text-ash">
-          A reset wipes every file, photo, memory and key on the box. It cannot be started from here: hold the button on the back of the box for ten seconds and confirm on its screen.
+          A reset wipes every file, photo, memory and key on the box. It cannot be started from here: hold the button on the back of the box for ten seconds
+          and confirm on its screen.
         </p>
         <DialogActions>
           <Button kind="soft" className="flex-1 py-2.5" onClick={close} data-autofocus>

@@ -2,7 +2,7 @@
 
 import { Fragment, useMemo, useState } from "react";
 import { Card, Meter, PageHeader, Pill, WherePill, whereRan } from "@/components/dashboard/ui";
-import { activity as preview, core, type Where } from "@/lib/dashboard/data";
+import type { Where } from "@/lib/dashboard/types";
 import { receiptLines, toActivity, type LiveActivityItem } from "@/lib/core/activity";
 import { useCore } from "@/lib/core/store";
 
@@ -18,11 +18,10 @@ export function ActivityLedger() {
   const [filter, setFilter] = useState<"all" | Where>("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const connection = useCore();
-  const isLive = connection.phase === "connected";
 
-  // Real ledger rows when a Core is connected; the preview household otherwise.
+  // The ledger, and nothing else: these are the household's own receipts.
   const activity: LiveActivityItem[] = useMemo(
-    () => (connection.phase === "connected" ? connection.rows.map((r) => toActivity(r)) : preview.map((a) => ({ ...a, seq: 0, hash: "" }))),
+    () => (connection.phase === "connected" ? connection.rows.map((r) => toActivity(r)) : []),
     [connection],
   );
   const rows = useMemo(() => activity.filter((a) => filter === "all" || a.where === filter), [activity, filter]);
@@ -36,7 +35,11 @@ export function ActivityLedger() {
       <PageHeader
         title="Where your data went"
         sub="Every consequential action, who asked, where it ran, and what left."
-        action={isLive ? <Pill tone="good"><span data-testid="activity-live">Live from the ledger</span></Pill> : undefined}
+        action={
+          <Pill tone="good">
+            <span data-testid="activity-live">Live from the ledger</span>
+          </Pill>
+        }
       />
 
       <Card dark>
@@ -44,9 +47,9 @@ export function ActivityLedger() {
           <div>
             <div className="font-display text-[30px] font-medium leading-none tracking-[-0.02em]">{share}% stayed in this box</div>
             <div className="mt-2 text-[14px] text-ash-2">
-              {isLive
-                ? `${crossings} crossings in the last ${activity.length} receipts · each one written before anything left`
-                : `${crossings} crossings in two days, each approved · ${core.insideShare7d}% inside over seven days`}
+              {activity.length === 0
+                ? "No receipts yet. Every consequential action writes one, and they appear here as they happen."
+                : `${crossings} crossings in the last ${activity.length} receipts · each one written before anything left`}
             </div>
           </div>
           <div className="w-full md:w-[300px]">
@@ -121,6 +124,12 @@ export function ActivityLedger() {
           </section>
         );
       })}
+
+      {activity.length === 0 && (
+        <p className="mt-6 text-[14px] text-ash" data-testid="ledger-empty">
+          Nothing has happened on this Core yet.
+        </p>
+      )}
 
       <p className="mt-6 text-[12px] text-ash">
         Tap any item for details · voice, home and camera data never cross the Gate.

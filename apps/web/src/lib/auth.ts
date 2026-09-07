@@ -3,12 +3,10 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * Client-side session for the dashboard until the identity service exists.
- * The shape is the contract: a household, a person, and how they signed in.
- *
- * Until a Core exists to talk to, sign-in is simulated on this device: the
- * session is written to localStorage from what the person typed and nothing
- * leaves the browser. `simulated` marks such sessions so the UI can say so.
+ * The dashboard's local reflection of a session a Core issued. The cookie on
+ * the Core is the real thing; this only tells the shell who is here and which
+ * house they reached. Nothing here is ever invented: without a Core there is
+ * no session at all.
  */
 export type Session = {
   household: string;
@@ -16,9 +14,7 @@ export type Session = {
   email: string;
   method: "passkey" | "code" | "email" | "recovery" | "remote";
   at: number;
-  /** True when the session was made by the preview, not by a Core. */
-  simulated?: boolean;
-  /** Set when a Core issued the session. The cookie on the Core is the real thing; this is its reflection. */
+  /** The person the Core signed in. */
   personId?: string;
   role?: "owner" | "adult" | "child" | "guest";
 };

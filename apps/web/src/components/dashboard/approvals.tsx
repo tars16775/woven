@@ -19,7 +19,7 @@ export function Approvals({ compact = false }: { compact?: boolean }) {
   const say = useToast();
   const [pending, setPending] = useState<ActionRecord[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
-  const live = core.phase === "connected" && session && !session.simulated;
+  const live = core.phase === "connected" && !!session;
   const head = core.phase === "connected" ? (core.rows[0]?.seq ?? 0) : 0;
 
   useEffect(() => {

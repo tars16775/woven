@@ -72,7 +72,7 @@ export class RemoteTunnel {
         ws.close();
         reject(new Error("the relay did not answer"));
       }, timeoutMs);
-      ws.onmessage = (ev) => {
+      ws.onmessage = () => {
         // The first message is the relay's ready; everything after is a sealed frame.
         clearTimeout(timer);
         ws.onmessage = (e) => void this.onFrame(String(e.data));

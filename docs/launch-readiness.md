@@ -53,7 +53,7 @@ its own Dockerfile in this repository and deployed with `railway up --service <n
 
 | Service | Address | Notes |
 | --- | --- | --- |
-| `site` | https://site-production-c740.up.railway.app | The public site. `NEXT_PUBLIC_WOVEN_LIVE=off`, so its dashboard is the labelled preview and never looks for a Core. |
+| `site` | https://site-production-c740.up.railway.app | The public site. `NEXT_PUBLIC_WOVEN_LIVE=off`, so its dashboard never looks for a Core and says so plainly. |
 | `site-api` | https://site-api-production-e2be.up.railway.app | Reservations, applications, contact and pings, on a volume at `/data`. `ADMIN_TOKEN` is in the service's variables. |
 | `relay` | https://relay-production-2ee3.up.railway.app | Carries encrypted frames between a Core and its dashboards. Holds nothing. |
 
@@ -67,7 +67,7 @@ when the plan does not include them. Until then the site answers on its Railway 
 2. **Deployments.** A Railway token for the public site (`apps/web/Dockerfile`), the relay (`apps/relay`) and the site API (`apps/site-api`, with a volume at `/data`). None is deployed; the site still serves from wherever it was last put.
 3. **A relay address in the installer's default config**, once the relay is up, so remote access can be switched on without editing a file.
 4. **Email.** A Resend key on the site API, or reservations and applications are stored but never confirmed by mail.
-5. **A language model on the box.** Ask is rules today and says so. The site's Tandem copy is ahead of the software; it is labelled preview on every screen that is not real.
+5. **A language model on the box.** Ask is rules today and says so. The site's Tandem copy is ahead of the software; `/status` lists every claim against what is built.
 6. **An external penetration test** of the Core, the relay and the tunnel before strangers point browsers at it.
 7. **Hardware.** Cameras, radios, the screen and the Outside processor are the box's. On a Mac the pages say what is missing rather than pretending.
 8. **Public repository or hosted installer.** While the repository is private, `curl | bash` needs a signed-in `gh`. The Mac page leads with the source path for that reason.

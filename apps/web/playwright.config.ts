@@ -62,7 +62,9 @@ export default defineConfig({
             cwd: "../core",
             url: "http://localhost:4000/v1/health",
             reuseExistingServer: !isCI,
-            timeout: 120_000,
+            // The Core boots under tsx, which reads its whole module graph from
+            // disk; on an external volume that alone takes over a minute.
+            timeout: 300_000,
             stdout: "ignore" as const,
             stderr: "pipe" as const,
             env: {
