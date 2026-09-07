@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { signIn } from "@/lib/auth";
 import { explain, identity, sessionRecord } from "@/lib/core/identity";
-import { startCore, useCore } from "@/lib/core/store";
+import { startCore, useCore, whenSettled } from "@/lib/core/store";
 
 type FieldKey = "house" | "name" | "email";
 
@@ -81,11 +81,13 @@ export function SignupForm() {
     }
     setErrors({});
     setFailure(null);
-    if (!connected) {
+    setBusy(true);
+    // The person can be quicker than the network; wait for the search to answer.
+    if ((await whenSettled()).phase !== "connected") {
+      setBusy(false);
       setFailure("No Core is answering. A household is created on your own Core, not here.");
       return;
     }
-    setBusy(true);
     // The Core creates the house; this device makes the owner's first passkey; the codes are shown once.
     try {
       const { session, recoveryCodes: codes } = await identity.setup({ household: house.trim(), owner: { name: name.trim(), email: clean } });
@@ -242,7 +244,7 @@ export function SignupForm() {
               {failure}
             </p>
           )}
-          <button type="submit" disabled={busy || !connected || Boolean(existing)} aria-busy={busy || undefined} className="btn btn-primary w-full disabled:opacity-60">
+          <button type="submit" disabled={busy || core.phase === "unreachable" || core.phase === "off" || Boolean(existing)} aria-busy={busy || undefined} className="btn btn-primary w-full disabled:opacity-60">
             {busy ? "Making your key…" : "Create passkey and finish"}
           </button>
           <button

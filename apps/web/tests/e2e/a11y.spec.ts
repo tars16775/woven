@@ -42,7 +42,7 @@ test("the dashboard has no serious accessibility violations", async ({ page }) =
     await page.goto(path, { waitUntil: "domcontentloaded" });
     await settle(page);
     const serious = (await audit(page)).filter((v) => v.impact === "serious" || v.impact === "critical");
-    expect(serious.map((v) => `${path} ${v.id}: ${v.help}`)).toEqual([]);
+    expect(serious.map((v) => `${path} ${v.id}: ${v.help} at ${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join("; ")}`)).toEqual([]);
   }
 });
 

@@ -6,7 +6,7 @@ import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent 
 import { useT } from "@/lib/i18n";
 import { signIn, useSession } from "@/lib/auth";
 import { explain, identity, sessionRecord } from "@/lib/core/identity";
-import { startCore, useCore } from "@/lib/core/store";
+import { startCore, useCore, whenSettled } from "@/lib/core/store";
 
 type Mode = "passkey" | "code" | "recovery";
 
@@ -31,6 +31,7 @@ export function LoginForm() {
 
   const core = useCore();
   const connected = core.phase === "connected";
+  const unreachable = core.phase === "unreachable" || core.phase === "off";
   const [houseReady, setHouseReady] = useState<boolean | null>(null);
   const [mode, setMode] = useState<Mode>("passkey");
   const [email, setEmail] = useState("");
@@ -80,11 +81,13 @@ export function LoginForm() {
       emailRef.current?.focus();
       return;
     }
-    if (!connected) {
+    setBusy(true);
+    // Someone can type faster than the network answers; wait for the search first.
+    if ((await whenSettled()).phase !== "connected") {
+      setBusy(false);
       setError("No Core is answering, so there is no house to sign in to.");
       return;
     }
-    setBusy(true);
     // The Core sends a challenge; this device signs it; the Core answers with a session cookie.
     try {
       arrive(await identity.loginWithPasskey(clean), "passkey");
@@ -133,11 +136,12 @@ export function LoginForm() {
       inputs.current[missing]?.focus();
       return;
     }
-    if (!connected) {
+    setBusy(true);
+    if ((await whenSettled()).phase !== "connected") {
+      setBusy(false);
       setCodeError("No Core is answering, so there is no code to check.");
       return;
     }
-    setBusy(true);
     // The box matches the digits against the code on its screen and answers with a session.
     try {
       const view = await identity.loginWithCode(name.trim(), d.join(""));
@@ -269,7 +273,7 @@ export function LoginForm() {
               {error}
             </p>
           )}
-          <button type="submit" disabled={busy || !connected} aria-busy={busy || undefined} className="btn btn-primary mt-5 w-full disabled:opacity-60">
+          <button type="submit" disabled={busy || unreachable} aria-busy={busy || undefined} className="btn btn-primary mt-5 w-full disabled:opacity-60">
             {busy ? "Waiting for your device…" : "Continue with passkey"}
           </button>
           <p className="mt-3 text-center text-[12px] text-ash">
@@ -316,7 +320,7 @@ export function LoginForm() {
               {error}
             </p>
           )}
-          <button type="submit" disabled={busy || !connected} aria-busy={busy || undefined} className="btn btn-primary mt-5 w-full disabled:opacity-60">
+          <button type="submit" disabled={busy || unreachable} aria-busy={busy || undefined} className="btn btn-primary mt-5 w-full disabled:opacity-60">
             {busy ? t("login.checking") : t("login.recoveryButton")}
           </button>
           <p className="mt-3 text-center text-[12px] text-ash">One of the codes you wrote down, or a rescue code another adult in the house just gave you. Each works once; add a passkey on this device right after.</p>
@@ -402,7 +406,7 @@ export function LoginForm() {
           )}
           <button
             type="submit"
-            disabled={busy || !connected}
+            disabled={busy || unreachable}
             aria-busy={busy || undefined}
             className={`btn mt-5 w-full disabled:opacity-60 ${complete ? "btn-primary" : "btn-secondary"}`}
           >

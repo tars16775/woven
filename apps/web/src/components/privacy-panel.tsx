@@ -70,7 +70,7 @@ export function PrivacyPanel() {
               ? "bg-local-bg text-local"
               : rule === "ask"
                 ? "bg-ask-bg text-ask"
-                : "bg-chassis text-ash";
+                : "bg-chassis text-ink/70";
           return (
             <li
               key={c.id}

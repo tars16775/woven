@@ -53,6 +53,28 @@ export function coreState(): CoreState {
   return state;
 }
 
+/**
+ * Resolve once the search has an answer either way. Sign-in needs this: a
+ * person can fill the form faster than the network answers, and refusing them
+ * because the probe had not finished yet would be a lie about what is there.
+ */
+export function whenSettled(timeoutMs = 15_000): Promise<CoreState> {
+  if (state.phase !== "searching") return Promise.resolve(state);
+  return new Promise((resolve) => {
+    const done = () => {
+      if (state.phase === "searching") return;
+      clearTimeout(timer);
+      listeners.delete(done);
+      resolve(state);
+    };
+    const timer = setTimeout(() => {
+      listeners.delete(done);
+      resolve(state);
+    }, timeoutMs);
+    listeners.add(done);
+  });
+}
+
 /** Re-read status and the Gate now (after an action that changed them). */
 export async function refreshCore(): Promise<void> {
   if (!client || state.phase !== "connected") return;

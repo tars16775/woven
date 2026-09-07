@@ -142,7 +142,7 @@ export function HouseholdCard({ onTransfer }: { onTransfer?: (people: Person[]) 
           return (
             <li key={p.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
               <div className="flex items-center gap-3">
-                <span className={`flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-medium ${pending ? "bg-chassis text-ash" : "bg-ink text-bone"}`}>{p.name.slice(0, 1).toUpperCase()}</span>
+                <span className={`flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-medium ${pending ? "bg-chassis text-ink/70" : "bg-ink text-bone"}`}>{p.name.slice(0, 1).toUpperCase()}</span>
                 <div>
                   <div className="text-[14px] font-medium">
                     {p.name}

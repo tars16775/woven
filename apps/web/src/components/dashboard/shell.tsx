@@ -146,7 +146,7 @@ export function Shell({ children }: { children: ReactNode }) {
         {t("shell.core", { host: live.host ?? "" })}
       </Link>
     ) : connection.phase === "searching" ? (
-      <span data-testid="core-connection" className="rounded-full bg-chassis px-2.5 py-1 font-medium text-ash">
+      <span data-testid="core-connection" className="rounded-full bg-chassis px-2.5 py-1 font-medium text-ink/70">
         {t("shell.looking")}
       </span>
     ) : (
