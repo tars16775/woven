@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, PageHeader, Pill } from "@/components/dashboard/ui";
+import { Button, ButtonLink, Card, Empty, PageHeader, Pill, Skeleton, Switch } from "@/components/dashboard/ui";
+import { IconHome } from "@/components/dashboard/icons";
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { Approvals } from "@/components/dashboard/approvals";
@@ -101,10 +102,14 @@ export function LiveHomeControls() {
 
   if (!state) {
     return (
-      <div className="mx-auto max-w-[1100px]">
+      <div>
         <PageHeader title="Home" sub="Reading the house…" />
-
         <RoomNote id="room:home" />
+        <div className="grid gap-4 md:grid-cols-2">
+          {Array.from({ length: 2 }, (_, i) => (
+            <Skeleton key={i} className="h-40 w-full" rounded="lg" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -113,7 +118,7 @@ export function LiveHomeControls() {
   const occupied = state.rooms.filter((r) => r.occupied).length;
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div>
       <PageHeader
         title="Home"
         sub={
@@ -131,11 +136,28 @@ export function LiveHomeControls() {
         }
       />
 
+      <RoomNote id="room:home" />
+
       <Approvals />
 
+      {state.devices.length === 0 ? (
+        <Empty
+          icon={<IconHome size={28} />}
+          title="No devices paired yet"
+          body="Lights, plugs, thermostats and locks on the Inside network are paired here. A light or a plug acts immediately; a lock asks first. Either way the box reads the device's own state afterwards and records what actually happened, not what it intended."
+          action={
+            <ButtonLink kind="soft" href="/dashboard/network" className="px-4 py-2">
+              See what is on the network
+            </ButtonLink>
+          }
+        />
+      ) : (
       <div className="grid gap-4 md:grid-cols-2">
         {state.rooms.map((room) => (
           <Card key={room.id} title={room.name} action={<Pill tone={room.occupied ? "good" : "neutral"}>{room.occupied ? "Occupied" : "Empty"}</Pill>}>
+            {state.devices.filter((d) => d.roomId === room.id).length === 0 && (
+              <p className="text-[13px] text-ash">Nothing paired in here yet.</p>
+            )}
             <ul className="divide-y divide-ink/6">
               {state.devices
                 .filter((d) => d.roomId === room.id)
@@ -159,18 +181,13 @@ export function LiveHomeControls() {
                       <div className="flex shrink-0 items-center gap-3">
                         {reading && <span className="text-[13px] text-ash">{reading}</span>}
                         {controllable && (
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={isOn}
-                            aria-label={`${d.name} ${d.kind === "lock" ? (isOn ? "unlocked" : "locked") : isOn ? "on" : "off"}`}
-                            disabled={!d.reachable || busy !== null}
-                            aria-busy={busy === d.id}
-                            onClick={() => toggle(d)}
-                            className={`relative block h-6 w-11 rounded-full transition-colors disabled:opacity-40 ${isOn ? "bg-amber" : "bg-chassis-2"}`}
-                          >
-                            <span className={`absolute top-[3px] block h-[18px] w-[18px] rounded-full bg-white transition-transform ${isOn ? "translate-x-[23px]" : "translate-x-[3px]"}`} />
-                          </button>
+                          <Switch
+                            checked={isOn}
+                            onChange={() => toggle(d)}
+                            busy={busy === d.id}
+                            disabled={!d.reachable || (busy !== null && busy !== d.id)}
+                            label={`${d.name} ${d.kind === "lock" ? (isOn ? "unlocked" : "locked") : isOn ? "on" : "off"}`}
+                          />
                         )}
                       </div>
                     </li>
@@ -180,6 +197,8 @@ export function LiveHomeControls() {
           </Card>
         ))}
       </div>
+
+      )}
 
       <RoutinesCard devices={state.devices} onRan={() => void refresh()} />
 
