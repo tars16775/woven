@@ -166,7 +166,7 @@ export function LiveOverview() {
             </div>
           </div>
         </div>
-        <dl className="grid grid-cols-3 gap-6 text-right md:gap-10">
+        <dl className="grid grid-cols-3 gap-4 text-left md:gap-10 md:text-right">
           <div>
             <dd className="font-display text-[20px] font-medium">
               <Figure value={memoryLabel(machine)} ready={statusIn} />
@@ -188,7 +188,7 @@ export function LiveOverview() {
         </dl>
       </section>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-testid="overview-stats">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4" data-testid="overview-stats">
         <Stat
           label="Files"
           value={facts.numbers ? bytes(facts.numbers.files.bytes) : <Skeleton className="h-[26px] w-24" rounded="sm" />}
@@ -256,9 +256,9 @@ export function LiveOverview() {
           ) : (
             <ul className="divide-y divide-ink/6">
               {today.map((a) => (
-                <li key={a.id} className="grid grid-cols-[44px_1fr_auto] items-baseline gap-3 py-2.5 text-[13px] first:pt-0 last:pb-0">
-                  <span className="tnum font-mono text-[11px] text-ash">{a.time}</span>
-                  <span className="min-w-0">
+                <li key={a.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5 text-[13px] first:pt-0 last:pb-0">
+                  <span className="tnum w-[42px] shrink-0 font-mono text-[11px] text-ash">{a.time}</span>
+                  <span className="min-w-0 flex-1 basis-[60%]">
                     <span className="font-medium">{a.title}</span> <span className="text-ash">{a.detail}</span>
                   </span>
                   <WherePill where={a.where} />

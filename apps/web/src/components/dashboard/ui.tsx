@@ -130,7 +130,7 @@ export function Stat({
       {sub && <div className="mt-1.5 text-[12px] text-ash">{sub}</div>}
     </>
   );
-  const cls = "block rounded-[14px] bg-white px-5 py-4 shadow-[var(--shadow-card)] ring-1 ring-ink/5";
+  const cls = "block rounded-[14px] bg-white px-4 py-3.5 shadow-[var(--shadow-card)] ring-1 ring-ink/5 sm:px-5 sm:py-4";
   return href ? (
     <Link href={href} className={`${cls} tap hover:ring-ink/15`}>
       {body}
@@ -366,7 +366,14 @@ export function Switch({
   );
 }
 
-/** Tabs that are really a filter: one row of pills, one selected. */
+/**
+ * One row of pills, one chosen.
+ *
+ * A radiogroup rather than a tablist: `role="tab"` promises a `tabpanel`
+ * that these do not have, and a screen reader announcing "tab 2 of 4" then
+ * finding no panel is worse than no role at all. This is a choice among
+ * options, which is what a radiogroup is for.
+ */
 export function Segmented<T extends string>({
   options,
   value,
@@ -381,15 +388,15 @@ export function Segmented<T extends string>({
   className?: string;
 }) {
   return (
-    <div role="tablist" aria-label={label} className={`flex flex-wrap gap-2 ${className}`}>
+    <div role="radiogroup" aria-label={label} className={`flex flex-wrap gap-2 ${className}`}>
       {options.map((o) => {
         const on = o.id === value;
         return (
           <button
             key={o.id}
             type="button"
-            role="tab"
-            aria-selected={on}
+            role="radio"
+            aria-checked={on}
             onClick={() => onChange(o.id)}
             className={`tap rounded-full px-3.5 py-1.5 text-[13px] font-medium ${
               on ? "bg-ink text-bone" : "bg-white text-ink/80 ring-1 ring-ink/8 hover:ring-ink/20"
