@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, Pill } from "@/components/dashboard/ui";
+import { Button, Card, Pill, SkeletonRows } from "@/components/dashboard/ui";
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { explain, identity, type DeviceToken } from "@/lib/core/identity";
@@ -78,7 +78,7 @@ export function BackupTokensCard() {
     <Card title="Backup devices">
       <p className="text-[13px] text-ash">Other Macs back up folders to this Core with the woven-backup command and a token made here. Each token is one machine; revoke it and that machine stops.</p>
       {tokens === null ? (
-        <p className="mt-3 text-[13px] text-ash">Loading…</p>
+        <SkeletonRows count={2} />
       ) : tokens.length === 0 ? (
         <p className="mt-3 text-[14px] text-ash" data-testid="no-tokens">
           No backup devices yet.

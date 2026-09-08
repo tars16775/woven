@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, Pill } from "@/components/dashboard/ui";
+import { Button, Card, Pill, SkeletonRows } from "@/components/dashboard/ui";
 import { Dialog, DialogActions } from "@/components/dashboard/dialog";
 import { useToast } from "@/components/dashboard/toast";
 import { deviceLabel, explain, identity, type Passkey } from "@/lib/core/identity";
@@ -119,7 +119,7 @@ export function PasskeysCard() {
       }
     >
       {keys === null ? (
-        <p className="text-[13px] text-ash">Loading…</p>
+        <SkeletonRows count={2} />
       ) : keys.length === 0 ? (
         <p className="text-[14px]" data-testid="no-passkeys">
           <span className="font-medium">No passkey yet.</span> <span className="text-ash">You signed in with a {session.method === "recovery" ? "recovery code" : "code"}; add a passkey so this device can open the house on its own.</span>
