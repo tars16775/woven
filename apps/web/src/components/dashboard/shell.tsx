@@ -18,6 +18,7 @@ import { NoCore } from "./no-core";
 import { TourBar } from "./tour";
 import { DemoBanner } from "./demo-banner";
 import { Avatar } from "./ui";
+import { usePendingCount } from "./approvals";
 import { roomIcon, type RoomHref } from "./icons";
 import { useT, type MessageKey } from "@/lib/i18n";
 import type { LedgerRow } from "@woven/schema";
@@ -101,6 +102,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const connection = useCore();
   const live = useLiveCore();
   const { t } = useT();
+  const waiting = usePendingCount();
   useDocumentTheme(resolved);
 
   // Look for the household's Core once the shell is on screen.
@@ -316,6 +318,18 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* A decision waiting is visible from every room, not only from
+                  the one that happens to list them. */}
+              {waiting > 0 && (
+                <Link
+                  href="/dashboard"
+                  data-testid="waiting-chip"
+                  className="tap flex items-center gap-1.5 rounded-full bg-ask-bg px-2.5 py-1 text-[12px] font-medium text-ask hover:brightness-95"
+                >
+                  <span className="orb" style={{ ["--orb" as string]: "6px" }} />
+                  {waiting} waiting
+                </Link>
+              )}
               {connected && <SearchBox />}
               <Link href="/dashboard/ask" className="tap hidden rounded-[8px] bg-white px-3 py-1.5 text-[13px] text-ash ring-1 ring-ink/8 hover:text-ink md:block">
                 {t("shell.ask")}
