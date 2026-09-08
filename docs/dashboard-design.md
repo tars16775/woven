@@ -92,3 +92,37 @@ Design first, in order. Each phase lands as its own commit.
 | 5 | motion | three arrivals, one focus ring, nothing loops |
 | 6-8 | arrival | welcome, walkthrough, room notes; guide state per person |
 | 9 | demo | a real Core with `WOVEN_DEMO=on`, labelled on every screen |
+| 10 | Overview | decisions before reports; unknown figures hold their space |
+| 11 | Ask | a live log, starters the rules can answer |
+| 12 | Files | five row buttons became one download and one menu |
+| 13 | Photos | a lightbox that walks; one tile component |
+| 14 | Cameras | designed in full before the hardware; schema and client are the spec |
+| 15 | TV | the slideshow advances, stops and says where it is |
+| 16 | Home | the switch waits for the device rather than claiming |
+| 17-19 | Network, Agents, Activity | the Gate gets its weight; filters that match nothing say so |
+| 20-22 | Privacy, Core, Settings | "nothing crossed" reads as a result; guidance can be replayed |
+| 23 | search | one field: rooms first, then the index. ⌘K, arrows, Enter |
+| 24 | approvals | amber ground, asked-at time, a chip visible from every room |
+| 25-27 | empty, loading, broken | skeletons shaped like the content; an error that says your data is fine |
+| 28-29 | mobile, access | two-up statistics, wrapping receipts, radiogroup not tablist |
+| 30 | QA | both schemes captured, contrast re-checked, this document closed |
+
+## What the backend now has to build
+
+The design is finished ahead of the software in exactly one place, deliberately.
+
+`packages/schema` defines `CamerasState`, `CameraView` and `CameraEvent`, and
+`apps/web/src/lib/core/cameras.ts` is the client the Core will implement:
+
+| Route | Does |
+| --- | --- |
+| `GET /v1/cameras` | everything the room reads, in one answer |
+| `POST /v1/cameras/pause` | stop or resume every camera at once |
+| `POST /v1/cameras/:id/detection` | detection on or off, without stopping the stream |
+| `POST /v1/cameras/:id/retention` | days of clips this camera keeps |
+| `GET /v1/cameras/:id/snapshot` | a still from the live stream |
+| `GET /v1/cameras/events/:id/clip` | the clip for one event |
+
+Until they exist, a 404 is read as `capture: "absent"` and the room renders
+its honest state, so the dashboard is correct against today's Core and
+correct against tomorrow's box without a second code path.
