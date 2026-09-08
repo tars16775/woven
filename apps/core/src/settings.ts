@@ -8,6 +8,12 @@ export type Settings = {
   power?: "on" | "off";
   powerSince?: string | null;
   powerBy?: string | null;
+  /**
+   * Every camera stopped at once. One switch for the household rather than
+   * one per camera: "are the cameras off?" is a question with a single
+   * answer, and it has to survive a restart or it is not an answer.
+   */
+  camerasPaused?: boolean;
 };
 
 /**
@@ -29,7 +35,7 @@ export class SettingsStore {
       // first start
     }
     // A choice made in the dashboard (even "none") outlives whatever the environment says.
-    this.current = { snapshotMirror: "snapshotMirror" in saved ? (saved.snapshotMirror ?? null) : (seed.snapshotMirror ?? null), power: saved.power ?? "on", powerSince: saved.powerSince ?? null, powerBy: saved.powerBy ?? null };
+    this.current = { snapshotMirror: "snapshotMirror" in saved ? (saved.snapshotMirror ?? null) : (seed.snapshotMirror ?? null), power: saved.power ?? "on", powerSince: saved.powerSince ?? null, powerBy: saved.powerBy ?? null, camerasPaused: saved.camerasPaused ?? false };
     if (!("snapshotMirror" in saved)) this.save();
   }
 

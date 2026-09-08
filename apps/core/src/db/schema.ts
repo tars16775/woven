@@ -377,3 +377,56 @@ export const memories = sqliteTable(
   (t) => [index("memories_person_idx").on(t.personId)],
 );
 
+
+/**
+ * Cameras (dashboard design phase 14, backend).
+ *
+ * A camera is a thing on the Inside network that the household paired, and
+ * nothing about it reaches a vendor cloud: the address is a LAN address, the
+ * clips are objects in this Core's own store, and detection runs here. The
+ * table exists on every Core, including ones with no capture hardware, so the
+ * schema does not fork by machine; what forks is whether anything can ever be
+ * added to it, which `hardware.capabilities.capture` decides.
+ */
+export const cameras = sqliteTable(
+  "cameras",
+  {
+    id: text("id").primaryKey(),
+    householdId: text("household_id").notNull().references(() => households.id),
+    name: text("name").notNull(),
+    /** Where it is, in the household's own words. */
+    place: text("place"),
+    /** How the box reaches it. Never a vendor cloud. */
+    transport: text("transport", { enum: ["rtsp", "onvif", "usb", "builtin"] }).notNull(),
+    /** The LAN address or device path. Never leaves the box. */
+    address: text("address").notNull(),
+    /** Paused is the household's switch; lost is the camera not answering. */
+    state: text("state", { enum: ["live", "paused", "lost"] }).notNull().default("live"),
+    detection: integer("detection", { mode: "boolean" }).notNull().default(true),
+    retentionDays: integer("retention_days").notNull().default(14),
+    lastEventAt: text("last_event_at"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [index("cameras_household_idx").on(t.householdId)],
+);
+
+/**
+ * One detection. There is no identity here and never will be: the kinds are
+ * shapes the box recognised, not people it named.
+ */
+export const cameraEvents = sqliteTable(
+  "camera_events",
+  {
+    id: text("id").primaryKey(),
+    householdId: text("household_id").notNull().references(() => households.id),
+    cameraId: text("camera_id").notNull().references(() => cameras.id),
+    at: text("at").notNull(),
+    kind: text("kind", { enum: ["person", "vehicle", "animal", "package", "motion"] }).notNull(),
+    /** Seconds of clip written, or null when detection fired without keeping one. */
+    clipSeconds: real("clip_seconds"),
+    /** The object in this Core's own store, or null. */
+    clipObjectSha: text("clip_object_sha"),
+  },
+  (t) => [index("camera_events_household_idx").on(t.householdId, t.at), index("camera_events_camera_idx").on(t.cameraId)],
+);

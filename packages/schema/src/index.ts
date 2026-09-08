@@ -168,6 +168,10 @@ export const EventType = z.enum([
   "core.started",
   "core.integrity_checked",
   "core.power",
+  /* Pausing every camera is a household act with consequences; it leaves a
+     receipt so nobody has to take anyone's word for when they went off. */
+  "cameras.paused",
+  "cameras.resumed",
 ]);
 export type EventType = z.infer<typeof EventType>;
 

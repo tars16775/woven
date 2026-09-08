@@ -21,6 +21,10 @@ export function genericHardware(paths: StoragePaths, kind: HardwareKind = "linux
   return {
     paths,
 
+    // A generic Linux machine is a Core, not the box: no capture, no radios,
+    // no front screen. The box implementation overrides all three.
+    capabilities: { capture: false, radios: false, screen: false },
+
     async identity() {
       if (identity) return identity;
       let seed = os.hostname();

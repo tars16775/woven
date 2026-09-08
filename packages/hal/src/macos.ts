@@ -57,6 +57,12 @@ export function macosHardware(paths: StoragePaths): Hardware {
   return {
     paths,
 
+    // A Mac has a webcam, but not one Woven may claim: capture here means
+    // cameras the household pairs to the box, and the radios to find them.
+    // Neither exists on this machine, and the dashboard says so rather than
+    // showing an empty grid.
+    capabilities: { capture: false, radios: false, screen: false },
+
     async identity() {
       if (identity) return identity;
       const [cpu, model, id] = await Promise.all([

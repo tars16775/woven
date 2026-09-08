@@ -75,10 +75,10 @@ test("the Home page runs real actions with receipts, and the Gate can be closed"
   await expect(page.getByTestId("neighbours")).toBeVisible();
   await page.getByRole("button", { name: "Close the Gate" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Close the Gate" }).click();
-  await expect(page.getByRole("heading", { name: "The Gate" }).locator("..")).toContainText("Closed · nothing crosses", { timeout: 15_000 });
+  await expect(page.getByTestId("gate")).toContainText("Closed · nothing crosses", { timeout: 15_000 });
   await expect(page.getByTestId("core-connection")).toBeVisible();
   await page.getByRole("button", { name: "Open the Gate" }).click();
-  await expect(page.getByRole("heading", { name: "The Gate" }).locator("..")).toContainText("Open · asks first", { timeout: 15_000 });
+  await expect(page.getByTestId("gate")).toContainText("Open · asks first", { timeout: 15_000 });
 });
 
 const PNG_1x1 = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
@@ -96,7 +96,7 @@ test("Files uploads to the box in chunks, lists, serves and deletes; an image sh
   await expect(listing).toContainText("dot.png");
 
   // The bytes come back from the box, with the session cookie.
-  const href = await listing.getByRole("link", { name: "hello.txt" }).getAttribute("href");
+  const href = await listing.getByRole("link", { name: "hello.txt", exact: true }).getAttribute("href");
   const body = await page.evaluate(async (url) => (await fetch(url, { credentials: "include" })).text(), href!);
   expect(body).toBe("hello from the dashboard");
 

@@ -31,7 +31,26 @@ export interface Hardware {
   network(): Promise<NetworkObservation>;
   /** The volume the data root lives on: space and, where the platform tells, SMART health. */
   storage(): Promise<StorageHealth>;
+  /**
+   * What this machine can do that is not software. The Core asks before
+   * offering a feature, so a room can say "this box has no capture" as a
+   * fact rather than showing an empty grid that reads as a fault.
+   */
+  capabilities: HardwareCapabilities;
   paths: StoragePaths;
+}
+
+export interface HardwareCapabilities {
+  /**
+   * Video capture: a camera wired to this machine, or radios that can pair
+   * one on the Inside network. A Mac has neither. The box has both, and this
+   * is the only place that decides.
+   */
+  capture: boolean;
+  /** Radios for pairing home devices directly, rather than through an adapter. */
+  radios: boolean;
+  /** A screen on the front of the machine, for the pairing code. */
+  screen: boolean;
 }
 
 export interface HardwareOptions {

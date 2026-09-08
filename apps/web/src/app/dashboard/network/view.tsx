@@ -61,6 +61,7 @@ export function NetworkView() {
 
         <section
           aria-labelledby="gate-title"
+          data-testid="gate"
           className={`tap rounded-[14px] border p-5 ${gateOpen ? "border-amber/50 bg-amber/8" : "border-ink/15 bg-chassis/40"}`}
         >
           <div className="flex items-center justify-between gap-3">

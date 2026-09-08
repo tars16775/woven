@@ -23,12 +23,22 @@ const titles: Record<string, string> = {
   "memory.deleted": "Memory forgotten",
   "core.started": "Core started",
   "core.integrity_checked": "Ledger verified",
+  "cameras.paused": "Cameras paused",
+  "cameras.resumed": "Cameras resumed",
 };
 
 const whereOf: Record<LedgerRow["where"], Where> = { inside: "local", gate: "cloud", device: "device", policy: "policy" };
 
 const kindOf = (type: string): ActivityItem["kind"] =>
-  type.startsWith("gate.") ? "gate" : type.startsWith("action.") ? "home" : type.startsWith("memory.") ? "tandem" : type.startsWith("update.") || type.startsWith("core.") ? "core" : "core";
+  type.startsWith("gate.")
+    ? "gate"
+    : type.startsWith("cameras.")
+      ? "cameras"
+      : type.startsWith("action.")
+        ? "home"
+        : type.startsWith("memory.")
+          ? "tandem"
+          : "core";
 
 function detailOf(row: LedgerRow): string {
   const p = row.payload;
