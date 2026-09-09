@@ -63,17 +63,54 @@ when the plan does not include them. Until then the site answers on its Railway 
 
 ## What stands between this and a public launch
 
-1. **A release key.** `node packaging/keygen.mjs`, commit the public key, set `WOVEN_RELEASE_KEY`. Until then no release can be published and the hosted installer cannot verify anything.
-2. **Deployments.** A Railway token for the public site (`apps/web/Dockerfile`), the relay (`apps/relay`) and the site API (`apps/site-api`, with a volume at `/data`). None is deployed; the site still serves from wherever it was last put.
-3. **A relay address in the installer's default config**, once the relay is up, so remote access can be switched on without editing a file.
-4. **Email.** A Resend key on the site API, or reservations and applications are stored but never confirmed by mail.
-5. **A language model on the box.** Ask is rules today and says so. The site's Tandem copy is ahead of the software; `/status` lists every claim against what is built.
-6. **An external penetration test** of the Core, the relay and the tunnel before strangers point browsers at it.
-7. **Hardware.** Cameras, radios, the screen and the Outside processor are the box's. On a Mac the pages say what is missing rather than pretending.
-8. **Public repository or hosted installer.** While the repository is private, `curl | bash` needs a signed-in `gh`. The Mac page leads with the source path for that reason.
-9. **The reservation and application forms reach nobody** until the site API is deployed and the
-   site build is given its address. Both now say so on screen rather than promising a place is
-   held.
+Rewritten 2026-09-08, after the first real release was built and the install
+path was rehearsed end to end for the first time.
+
+**Done since the last revision.** Custom domains are available on the account
+and all four are registered against their Railway services; `docs/dns/` holds
+the zone, with CNAME targets taken from Railway's API. The install, update and
+rollback path now has a test (`packaging/rehearse.sh`, 23 checks) and it
+immediately found a bug that would have broken every install: `drizzle-orm`
+imports `better-sqlite3` by name, which resolves inside the workspace but not
+in a release installed with npm, so the packaged Core died on its first import.
+Fixed by aliasing that name to the encrypted fork, which also means a release
+now carries exactly one native SQLite module.
+
+**Left, and only the first is code.**
+
+1. **Point the site at the real API**, once DNS resolves:
+   `NEXT_PUBLIC_SITE_API=https://api.woventechnology.com` and redeploy `site`.
+   Next reads it at build time, so a variable change alone does nothing. It is
+   deliberately still on the Railway address, which works today.
+2. **Import the DNS.** `docs/dns/woventechnology.com.zone` into Cloudflare, every
+   record DNS-only. See `docs/dns/README.md` for why the clouds stay grey.
+3. **A release key.** `node packaging/keygen.mjs`, commit the public half, set
+   `WOVEN_RELEASE_KEY`. The machinery around it is proven; the key is not made.
+4. **Email.** A Resend key on the site API, or reservations and applications are
+   stored and never acknowledged. `RESEND_API_KEY` is unset today.
+5. **An external penetration test** of the Core, the relay and the tunnel before
+   strangers point browsers at something holding their files.
+6. **Public repository or hosted installer.** While the repository is private,
+   `curl | bash` needs a signed-in `gh`. The Mac page leads with the source path
+   for that reason.
+7. **A language model on the box.** Ask is rules today and says so. `/status`
+   lists every claim against what is built.
+8. **Hardware.** Cameras, radios, the screen and the Outside processor are the
+   box's. The camera room is designed and its Core routes exist; a Mac reports
+   `capture: "absent"` from the hardware layer and the page says so.
+
+## What has never been tried
+
+Worth keeping separate from the list above, because these are unknowns rather
+than tasks.
+
+- **A second machine.** The rehearsal simulates a clean home on this Mac. It
+  does not simulate a different Mac, a different macOS, or an Intel one.
+- **A long soak.** The login service has never run for days. Nightly snapshots,
+  log rotation and the relay reconnecting after a laptop sleeps are all
+  untested over time.
+- **A real library.** Restore drills pass on scratch data, not on a household's
+  hundreds of gigabytes.
 
 ## How to run everything
 
