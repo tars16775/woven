@@ -22,7 +22,13 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SANDBOX="${WOVEN_REHEARSAL_DIR:-$(mktemp -d "${TMPDIR:-/tmp}/woven-rehearse.XXXXXX")}"
+# The sandbox unpacks a private Node runtime and two releases, so it wants a
+# few hundred megabytes. Default it beside the checkout rather than into the
+# startup disk's temp, which on a Mac with a small boot volume is exactly the
+# wrong place to put something this size.
+SANDBOX_BASE="${WOVEN_REHEARSAL_BASE:-$(cd "$(dirname "$0")/../.." && pwd)/tmp}"
+mkdir -p "$SANDBOX_BASE" 2>/dev/null || SANDBOX_BASE="${TMPDIR:-/tmp}"
+SANDBOX="${WOVEN_REHEARSAL_DIR:-$(mktemp -d "$SANDBOX_BASE/woven-rehearse.XXXXXX")}"
 KEEP="${WOVEN_REHEARSAL_KEEP:-}"
 PASS=0
 FAIL=0
@@ -82,17 +88,25 @@ check "a tarball exists" "[ -s '$SANDBOX/woven-macos.tar.gz' ]"
 
 WOVEN_RELEASE_KEY="$(cat "$SANDBOX/key.pem")" node "$ROOT/packaging/sign.mjs" "$SANDBOX/woven-macos.tar.gz" >/dev/null
 check "it is signed" "[ -s '$SANDBOX/woven-macos.tar.gz.sig' ]"
-check "the signature verifies" "node '$ROOT/packaging/verify.mjs' '$SANDBOX/woven-macos.tar.gz' '$SANDBOX/key.pub'"
+verify_exit() {
+  # 0 verified, 1 refused, 2 called wrongly. The third is a bug in this script
+  # and must never be mistaken for the second.
+  node "$ROOT/packaging/verify.mjs" "$1" "$1.sig" "$SANDBOX/key.pub" >/dev/null 2>&1
+  echo $?
+}
+rc=$(verify_exit "$SANDBOX/woven-macos.tar.gz")
+if [ "$rc" = "0" ]; then ok "a good signature verifies"; else no "a good signature was refused (exit $rc)"; fi
 
 # The whole point of signing: a changed byte must be caught.
 cp "$SANDBOX/woven-macos.tar.gz" "$SANDBOX/tampered.tar.gz"
 cp "$SANDBOX/woven-macos.tar.gz.sig" "$SANDBOX/tampered.tar.gz.sig"
 printf 'x' >>"$SANDBOX/tampered.tar.gz"
-if node "$ROOT/packaging/verify.mjs" "$SANDBOX/tampered.tar.gz" "$SANDBOX/key.pub" >/dev/null 2>&1; then
-  no "a tampered release was ACCEPTED"
-else
-  ok "a tampered release is refused"
-fi
+rc=$(verify_exit "$SANDBOX/tampered.tar.gz")
+case "$rc" in
+  0) no "a tampered release was ACCEPTED" ;;
+  1) ok "a tampered release is refused" ;;
+  *) no "the tamper check did not run (exit $rc)" ;;
+esac
 
 # A signature from a different key must also be caught.
 node -e '
@@ -103,11 +117,12 @@ node -e '
 ' "$SANDBOX/other.pem"
 cp "$SANDBOX/woven-macos.tar.gz" "$SANDBOX/wrongkey.tar.gz"
 WOVEN_RELEASE_KEY="$(cat "$SANDBOX/other.pem")" node "$ROOT/packaging/sign.mjs" "$SANDBOX/wrongkey.tar.gz" >/dev/null
-if node "$ROOT/packaging/verify.mjs" "$SANDBOX/wrongkey.tar.gz" "$SANDBOX/key.pub" >/dev/null 2>&1; then
-  no "a release signed by another key was ACCEPTED"
-else
-  ok "a release signed by another key is refused"
-fi
+rc=$(verify_exit "$SANDBOX/wrongkey.tar.gz")
+case "$rc" in
+  0) no "a release signed by another key was ACCEPTED" ;;
+  1) ok "a release signed by another key is refused" ;;
+  *) no "the wrong-key check did not run (exit $rc)" ;;
+esac
 
 # ------------------------------------------------------------ the install ---
 say "3. Installing into an empty home"
@@ -144,7 +159,7 @@ export PATH="$WOVEN_HOME/node/bin:$PATH"
 (
   cd "$WOVEN_HOME/current"
   WOVEN_DATA="$WOVEN_DATA" WOVEN_TLS=off WOVEN_MDNS=off WOVEN_PORT=$PORT WOVEN_HOST=127.0.0.1 \
-    WOVEN_LOCAL_PORT=0 WOVEN_TRUST_PORT=0 WOVEN_GATE=off WOVEN_KEY=file NODE_ENV=production LOG_LEVEL=warn \
+    WOVEN_LOCAL_PORT=0 WOVEN_TRUST_PORT=$((PORT + 1)) WOVEN_GATE=off WOVEN_KEY=file NODE_ENV=production LOG_LEVEL=warn \
     "$WOVEN_HOME/node/bin/node" dist/server.js >"$SANDBOX/core.log" 2>&1 &
   echo $! >"$SANDBOX/core.pid"
 )

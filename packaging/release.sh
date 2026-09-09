@@ -24,6 +24,22 @@ node -e '
   const core = require(process.argv[1]);
   const deps = Object.fromEntries(Object.entries(core.dependencies).filter(([k]) => !k.startsWith("@woven/")));
   const root = require(process.argv[4]);
+
+  // drizzle-orm/better-sqlite3 imports "better-sqlite3" by name at module load,
+  // even though the Core opens the database itself with the encrypted fork and
+  // only hands drizzle the finished instance. In the workspace that name
+  // resolves because pnpm has the plain package in its store as a peer; a
+  // release installed with npm has no such luck, and the Core dies on its first
+  // import with ERR_MODULE_NOT_FOUND.
+  //
+  // Aliasing it to the fork fixes the import and is the right answer anyway:
+  // the release then carries exactly one native SQLite module, and it is the
+  // one that can open an encrypted database. Shipping both would put an
+  // unencrypted engine on the volume for no reason.
+  const ciphers = deps["better-sqlite3-multiple-ciphers"];
+  if (!ciphers) throw new Error("the Core no longer depends on better-sqlite3-multiple-ciphers; revisit the alias below");
+  deps["better-sqlite3"] = `npm:better-sqlite3-multiple-ciphers@${ciphers}`;
+
   const pkg = { name: "woven", version: process.argv[2], private: true, type: "module", description: "The Woven Core, packaged for a Mac.", engines: { node: ">=22.12" }, dependencies: deps, overrides: root.pnpm?.overrides ?? {} };
   require("fs").writeFileSync(process.argv[3], JSON.stringify(pkg, null, 2) + "\n");
 ' "$ROOT/apps/core/package.json" "$VERSION" "$OUT/package.json" "$ROOT/package.json"
