@@ -4,69 +4,45 @@ The zone is already on Cloudflare (`ridge.ns.cloudflare.com`, `ziggy.ns.cloudfla
 and is empty. `woventechnology.com.zone` in this folder is the whole record set,
 ready to import.
 
-## Do this in order
+## State: the domains are added, the records are not
 
-The order matters. Importing DNS before Railway knows about the domain gives you
-a name that resolves to a server which does not recognise it, and the symptom is
-a certificate error rather than anything that says what is wrong.
+All four custom domains are registered against their Railway services and are
+sitting at `VALIDATING_OWNERSHIP`, waiting for DNS. The CNAME targets in
+`woventechnology.com.zone` came from Railway's own API rather than a guess.
 
-**1. Add each domain in Railway first.** Project `woven`, then for each service:
-Settings > Networking > Custom Domain.
+| Domain | Service | CNAME target |
+| --- | --- | --- |
+| `woventechnology.com` | `site` | `8yqpl9im.up.railway.app` |
+| `www.woventechnology.com` | `site` | `w4um6z2s.up.railway.app` |
+| `api.woventechnology.com` | `site-api` | `yxc9ldh5.up.railway.app` |
+| `relay.woventechnology.com` | `relay` | `pnfom1f8.up.railway.app` |
 
-| Service | Domain to add |
-| --- | --- |
-| `site` | `woventechnology.com` and `www.woventechnology.com` |
-| `site-api` | `api.woventechnology.com` |
-| `relay` | `relay.woventechnology.com` |
+**Import the zone.** Cloudflare > your zone > DNS > Records > Import and
+Export > Import, and pick `woventechnology.com.zone`. Records arrive
+proxied-off, which is correct.
 
-Railway shows a CNAME target for each. **Write those down.** They are usually the
-service's own `*.up.railway.app` hostname, but Railway is the authority and a
-guess fails silently.
+**Leave every cloud grey.** This is not a default to drift away from:
 
-> Custom domains were refused on this account the last time we tried, which is
-> what Railway does when the plan does not include them. If that is still true,
-> stop here: the plan has to change first, and everything below waits.
-
-**2. Put the targets into the zone file.** Replace `__RAILWAY_SITE__`,
-`__RAILWAY_SITE_API__` and `__RAILWAY_RELAY__`.
-
-**3. Import.** Cloudflare > your zone > DNS > Records > Import and Export >
-Import. Records arrive proxied-off, which is correct.
-
-**4. Leave the cloud grey.** Every record here should stay DNS-only:
-
-- Railway issues and renews the certificates. With Cloudflare proxying in front,
-  Railway cannot complete the challenge, and you end up managing two
+- Railway issues and renews the certificates. With Cloudflare proxying in
+  front, Railway cannot complete its challenge, and you end up maintaining two
   certificates for one name.
 - The relay holds a long-lived WebSocket. A proxy in front of it buys nothing
   and can time it out mid-session, which a household experiences as remote
   access dropping for no reason.
 
-Turning the orange cloud on later is a deliberate decision that needs Full
-(strict) SSL and a re-test of the relay, not a default.
+Turning the orange cloud on later is a deliberate decision needing Full
+(strict) SSL and a re-test of the relay.
 
-**5. Point the site build at the real API.** The site reads
-`NEXT_PUBLIC_SITE_API` at build time, so it has to be redeployed, not just
-reconfigured:
-
-```bash
-railway variables --service site --set NEXT_PUBLIC_SITE_API=https://api.woventechnology.com
-railway up --service site
-```
-
-**6. Narrow the API's origins** to the real domain once the site answers there:
+**Then check.** Certificates usually issue within a few minutes of the CNAME
+resolving.
 
 ```bash
-railway variables --service site-api --set SITE_ORIGINS=https://woventechnology.com,https://www.woventechnology.com
-```
-
-**7. Check it end to end.**
-
-```bash
-curl -sS -o /dev/null -w '%{http_code} %{url_effective}\n' -L https://woventechnology.com
+dig +short woventechnology.com api.woventechnology.com relay.woventechnology.com
+curl -sS -o /dev/null -w '%{http_code}\n' -L https://woventechnology.com
 curl -sS https://api.woventechnology.com/health
-# A reservation from the live site should return sent, not local.
 ```
+
+A reservation submitted from the live site should report `sent`, not `local`.
 
 ## What the records are for
 
