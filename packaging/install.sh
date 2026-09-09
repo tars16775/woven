@@ -127,7 +127,13 @@ WOVEN_LOCAL_PORT="${WOVEN_LOCAL_PORT:-4002}"
 WOVEN_GATE_PORT="${WOVEN_GATE_PORT:-4010}"
 WOVEN_ORIGINS="https://${WOVEN_NAME:-woven.local}:${WOVEN_PORT:-4000},http://localhost:${WOVEN_LOCAL_PORT:-4002},https://localhost:${WOVEN_PORT:-4000}"
 WOVEN_SNAPSHOT_MIRROR=""
-# Remote access: the relay address (wss://...). Empty keeps the Core reachable at home only.
+# Remote access. Empty keeps this Core reachable at home only, which is the
+# default because an outbound tunnel is a decision, not a convenience.
+# To reach your house from away, put the relay address on the line below and
+# run: woven restart. Woven's relay is
+#   wss://relay-production-2ee3.up.railway.app
+# It carries sealed frames it cannot read and keeps nothing; any relay that
+# speaks the same protocol works, including one you run yourself.
 WOVEN_RELAY=""
 # Opt-in nightly health ping to woventechnology.com (version and uptime only, through the Gate, with a receipt).
 WOVEN_HEALTH_PING="off"

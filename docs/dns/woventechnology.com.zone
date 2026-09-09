@@ -1,0 +1,50 @@
+; Woven DNS, for import into Cloudflare
+; ---------------------------------------------------------------------------
+; Cloudflare: your zone > DNS > Records > Import and Export > Import.
+; Everything arrives DNS-only (grey cloud), which is what we want: see
+; docs/dns/README.md for why, and for the two values you must confirm first.
+;
+; The TTL of 300 is deliberate while things are moving. Raise it to 3600 once
+; the addresses have not changed for a week.
+;
+; BEFORE IMPORTING, replace the two __RAILWAY_*__ placeholders with the CNAME
+; targets Railway shows after you add each custom domain. They are usually the
+; service's own *.up.railway.app hostname, but Railway is the authority and a
+; guess here fails silently as a certificate error.
+
+$ORIGIN woventechnology.com.
+$TTL 300
+
+; --- the site ---------------------------------------------------------------
+; Cloudflare flattens a CNAME at the apex, so the bare domain can point at
+; Railway without an A record whose address we would then have to chase.
+@                       300  IN  CNAME  __RAILWAY_SITE__
+www                     300  IN  CNAME  __RAILWAY_SITE__
+
+; --- the public API ---------------------------------------------------------
+; Reservations, applications and contact. Holds no household data.
+api                     300  IN  CNAME  __RAILWAY_SITE_API__
+
+; --- the relay --------------------------------------------------------------
+; Carries sealed frames between a Core and its dashboards and keeps nothing.
+; It must stay DNS-only: the connection is a long-lived WebSocket, and a proxy
+; in front of it buys nothing and can time it out.
+relay                   300  IN  CNAME  __RAILWAY_RELAY__
+
+; --- mail -------------------------------------------------------------------
+; No mail is accepted at this domain, and saying so stops the backscatter that
+; an unconfigured domain attracts.
+@                       300  IN  MX     0 .
+
+; Nothing is authorised to send as this domain yet. When Resend is set up,
+; replace this record with the one Resend gives you and add its DKIM record;
+; until then a hard fail is the honest and the safer answer.
+@                       300  IN  TXT    "v=spf1 -all"
+
+; Reject anything that fails, and hear about it. Change the address to one you
+; actually read, or drop the rua tag.
+_dmarc                  300  IN  TXT    "v=DMARC1; p=reject; rua=mailto:dmarc@woventechnology.com; aspf=s; adkim=s"
+
+; --- nothing else -----------------------------------------------------------
+; No wildcard. A wildcard would answer for every name anyone invents, which is
+; how a subdomain nobody meant to publish ends up serving something.

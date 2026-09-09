@@ -3,7 +3,14 @@
 set -euo pipefail
 WOVEN_HOME="${WOVEN_HOME:-$HOME/.woven}"
 LABEL="${WOVEN_LABEL:-com.woven.core}"
-PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+# Where install.sh put the service file. With WOVEN_NO_LAUNCHD it writes the
+# plist inside WOVEN_HOME and touches nothing outside it, and this command has
+# to look in the same place or start, rollback and uninstall quietly miss it.
+if [ -n "${WOVEN_NO_LAUNCHD:-}" ] || { [ ! -f "$HOME/Library/LaunchAgents/$LABEL.plist" ] && [ -f "${WOVEN_HOME:-$HOME/.woven}/$LABEL.plist" ]; }; then
+  PLIST="${WOVEN_HOME:-$HOME/.woven}/$LABEL.plist"
+else
+  PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+fi
 CONFIG="$WOVEN_HOME/config.env"
 APP="$WOVEN_HOME/current"
 LOG="$WOVEN_HOME/logs/core.log"
@@ -82,7 +89,7 @@ case "${1:-}" in
     cur=$(readlink "$WOVEN_HOME/current" 2>/dev/null || true)
     ln -sfn "$prev" "$WOVEN_HOME/current"
     [ -n "$cur" ] && ln -sfn "$cur" "$WOVEN_HOME/previous"
-    launchctl kickstart -k "gui/$(id -u)/$LABEL" 2>/dev/null || "$0" start
+    launchctl kickstart -k "gui/$(id -u)/$LABEL" 2>/dev/null || "$0" start 2>/dev/null || true
     echo "Rolled back to $(cat "$APP/VERSION"). Your data is untouched."
     ;;
   uninstall)
