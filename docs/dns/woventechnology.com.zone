@@ -6,7 +6,17 @@
 ;
 ; The four domains are already registered against their Railway services and
 ; are waiting on these records; the CNAME targets below came from Railway's
-; API, not from a guess.
+; API, not from a guess. The mail records came from Resend's API for this
+; domain, not from their generic documentation.
+;
+; ONE RECORD MAY NOT IMPORT: the apex CNAME.
+; A zone is not allowed to hold a CNAME beside other data, and the apex here
+; also carries MX and TXT. Cloudflare permits this because it flattens the
+; apex CNAME into A records before publishing, so the zone the world sees has
+; no conflict — but their import parser reads BIND format and may reject the
+; line on principle. If the import reports an error or the bare domain is
+; missing afterwards, add it by hand: Add record > CNAME > name `@` >
+; target `8yqpl9im.up.railway.app` > proxy OFF. Everything else imports as is.
 ;
 ; TTL 300 while things are moving. Raise it to 3600 once the addresses have
 ; not changed for a week.
@@ -40,19 +50,40 @@ _railway-verify.api     300  IN  TXT    "railway-verify=2872d44aa0a8d33ae798b65d
 _railway-verify.relay   300  IN  TXT    "railway-verify=df92e3f8d1ecbcc41a96ee7c70b5e72495ba9dc687bb430e5b143e5b72cb1033"
 
 ; --- mail -------------------------------------------------------------------
-; No mail is accepted at this domain, and saying so stops the backscatter an
-; unconfigured domain attracts.
+; No mail is *accepted* at this domain. A null MX says so outright, which stops
+; the backscatter an unconfigured domain attracts. Sending is unaffected: it
+; happens through the `send` subdomain below.
 @                       300  IN  MX     0 .
 
-; Nothing is authorised to send as this domain yet. When Resend is set up,
-; replace this with the record Resend gives you and add its DKIM record beside
-; it; until then a hard fail is honest and safer than a permissive record
-; nobody revisits.
+; Resend sends with its own return path at send.woventechnology.com, so these
+; two records are what SPF is actually checked against. Both came from Resend's
+; API for this domain, not from their generic documentation.
+send                    300  IN  MX     10 feedback-smtp.us-east-1.amazonses.com.
+send                    300  IN  TXT    "v=spf1 include:amazonses.com ~all"
+
+; The apex keeps its hard fail. Nothing legitimately sends with the bare domain
+; as the envelope sender — Resend uses `send` above — so anything that claims to
+; is forged. If Resend ever reports an SPF failure, this record is the first
+; thing to look at, but it should not need touching.
 @                       300  IN  TXT    "v=spf1 -all"
 
-; Reject anything that fails, and hear about it. Change the address to one you
-; read, or drop the rua tag.
-_dmarc                  300  IN  TXT    "v=DMARC1; p=reject; rua=mailto:dmarc@woventechnology.com; aspf=s; adkim=s"
+; DKIM. Resend signs as d=woventechnology.com, so this is what makes DMARC pass
+; under strict alignment. One long value on one line; if your editor wraps it,
+; the record is broken.
+resend._domainkey       300  IN  TXT    "p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgxuSSqWXYYRw9CgyPKJPwhJ+SwPKcQNN4Exhatjo1aEClTybX3b4VPD9mlJ5WFpevRy2X04h/uIVSMH4NBFsNuPEtvpPQw0888WbWInEa36py1BC7IJNEDNz2ApCm5VGRZml/q7zFIDktKffdZU1Rg13n4gWrVJgoAD90Yr22oQIDAQAB"
+
+; Reject anything that fails both checks.
+;
+; aspf is relaxed, not strict: the envelope sender is send.woventechnology.com
+; while the From header is woventechnology.com, and strict alignment would call
+; that a mismatch. DKIM stays strict because Resend signs as the apex exactly.
+;
+; There is no rua. Reports would be sent to a mailbox at a domain whose MX says
+; it accepts no mail, and pointing them at an address elsewhere needs a record
+; on that other domain authorising it. A rua nobody can read is worse than none,
+; because it looks like the reports are being watched. Add one when there is a
+; mailbox to read it in.
+_dmarc                  300  IN  TXT    "v=DMARC1; p=reject; aspf=r; adkim=s"
 
 ; --- nothing else -----------------------------------------------------------
 ; No wildcard. A wildcard answers for every name anyone invents, which is how a

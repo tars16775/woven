@@ -21,6 +21,13 @@ sitting at `VALIDATING_OWNERSHIP`, waiting for DNS. The CNAME targets in
 Export > Import, and pick `woventechnology.com.zone`. Records arrive
 proxied-off, which is correct.
 
+One record may not survive the import: the apex `CNAME`. A zone may not hold a
+CNAME beside other data, and the apex also carries `MX` and `TXT`. Cloudflare
+itself allows this — it flattens the apex CNAME into A records before
+publishing, so the published zone has no conflict — but the importer reads BIND
+format and may refuse the line. If the bare domain is missing afterwards, add
+it by hand: CNAME, name `@`, target `8yqpl9im.up.railway.app`, proxy off.
+
 **Leave every cloud grey.** This is not a default to drift away from:
 
 - Railway issues and renews the certificates. With Cloudflare proxying in
@@ -51,23 +58,53 @@ A reservation submitted from the live site should report `sent`, not `local`.
 | `@`, `www` | the `site` service | Cloudflare flattens a CNAME at the apex, so there is no A record whose address we would have to chase when Railway moves it |
 | `api` | the `site-api` service | Reservations, applications, contact. Holds no household data |
 | `relay` | the `relay` service | Sealed frames between a Core and its dashboards. Holds nothing |
-| `MX .` | nowhere, deliberately | A null MX says this domain accepts no mail, which stops the backscatter an unconfigured domain attracts |
-| `SPF` | nothing authorised | `v=spf1 -all` until Resend is set up. A hard fail is honest and safer than a permissive record nobody revisits |
-| `DMARC` | reject | Anything failing the above is rejected rather than quarantined |
+| `MX .` (apex) | nowhere, deliberately | A null MX says this domain accepts no mail, which stops the backscatter an unconfigured domain attracts. It does not affect sending |
+| `send` MX + TXT | Resend's return path | Resend bounces and SPF-checks against `send.woventechnology.com`, not the apex. Both values came from Resend's API for this domain |
+| `resend._domainkey` | Resend's DKIM key | Signs as `d=woventechnology.com`, which is what makes DMARC pass under strict alignment |
+| apex `SPF` | nothing authorised | `v=spf1 -all`. Nothing legitimately sends with the bare domain as envelope sender, so anything that claims to is forged |
+| `DMARC` | reject | Anything failing both checks is rejected rather than quarantined. `aspf=r` because the envelope sender is a subdomain; `adkim=s` because DKIM signs the apex exactly |
 
 There is no wildcard, on purpose. A wildcard answers for every name anyone
 invents, which is how a subdomain nobody meant to publish ends up serving
 something.
 
-## When mail is switched on
+## Mail
 
-Resend will give you an SPF value and a DKIM record. Replace the `v=spf1 -all`
-record with theirs and add the DKIM record beside it. Leave DMARC at `p=reject`;
-if legitimate mail starts failing, that is a misconfiguration to fix rather than
-a policy to relax.
+Resend holds `woventechnology.com` and it is **`pending`** — it stays pending
+until the three mail records below resolve, and until it verifies, every send
+fails. The site stores the reservation either way and reports `failed` rather
+than `sent`.
 
-Do not point `MX` at Resend unless you also intend to *receive* mail. Sending
-does not need it.
+| Record | Name | Value |
+| --- | --- | --- |
+| MX (priority 10) | `send` | `feedback-smtp.us-east-1.amazonses.com` |
+| TXT | `send` | `v=spf1 include:amazonses.com ~all` |
+| TXT | `resend._domainkey` | the DKIM public key, in the zone file |
+
+All three are already in `woventechnology.com.zone`. After the import, press
+Verify on the Resend dashboard, or:
+
+```bash
+curl -sS -H "Authorization: Bearer $RESEND_API_KEY" \
+  https://api.resend.com/domains | python3 -m json.tool
+```
+
+The DKIM value is one long unbroken string. If an editor wraps it, the record
+is silently wrong and Resend will keep saying `pending` with no other clue.
+
+`RESEND_API_KEY` is set on the `site-api` service. `MAIL_FROM` is unset and
+defaults to `Woven <hello@woventechnology.com>`, which is the address DKIM
+aligns with — do not change it to another domain without changing DKIM too.
+
+**`NOTIFY_EMAIL` is unset.** A reservation is acknowledged to the person who
+made it, and nobody at Woven is told it happened. Set it to an address you
+actually read.
+
+Leave DMARC at `p=reject`. If legitimate mail starts failing, that is a
+misconfiguration to fix rather than a policy to relax.
+
+Do not point the apex `MX` at Resend unless you also intend to *receive* mail.
+Sending does not need it.
 
 ## The Core does not appear here
 
