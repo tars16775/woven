@@ -1,0 +1,8 @@
+# The Supabase project behind the public site: accounts, reservations,
+# applications, contact notes and opt-in health pings. Nothing of a
+# household's lives here; a Core keeps that inside the house.
+#
+# Schema changes are files in migrations/. Merging to main applies them
+# through Supabase's GitHub integration; nobody edits the live database by
+# hand. See CONTRIBUTING.md.
+project_id = "csrgxunveokcqsddnotp"

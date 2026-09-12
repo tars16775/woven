@@ -19,6 +19,7 @@ apps/core       the Woven Core service (Fastify), runs inside the house on :4000
 packages/schema shared Zod schemas and types for every boundary
 packages/hal    hardware layer: what machine this is, honestly
 packages/policy the deterministic action-risk engine
+supabase/       the public site's database: accounts, reservations, applications. Never household data
 docs/adr        architecture decision records
 docs/backend-plan.md  the 50 phases
 ```

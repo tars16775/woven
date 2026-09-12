@@ -32,3 +32,6 @@ node_modules/
 release/
 apps/web/out-build/
 apps/web/public/install.sh
+
+# Supabase CLI scratch
+supabase/.temp/

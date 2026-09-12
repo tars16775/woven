@@ -41,7 +41,7 @@ async function revealed(page: Page) {
     .catch(() => {});
 }
 
-const pages = ["/", "/core", "/order", "/privacy", "/support", "/mac", "/status", "/login", "/founding-homes"];
+const pages = ["/", "/core", "/order", "/privacy", "/support", "/mac", "/status", "/login", "/account", "/founding-homes"];
 
 for (const path of pages) {
   test(`${path} has no serious accessibility violations`, async ({ page }) => {

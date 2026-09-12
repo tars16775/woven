@@ -111,6 +111,10 @@ export const nav = {
   ],
   right: [
     { label: "Support", href: "/support" },
+    // Two different sign-ins, on purpose. "Account" is a person's relationship
+    // with Woven the company: reservations, orders, support. "Sign in" is their
+    // house, and never leaves it.
+    { label: "Account", href: "/account" },
     { label: "Sign in", href: "/login" },
   ],
 };

@@ -31,6 +31,7 @@ flaky, fix the flake or say so in the PR; do not re-run until it passes.
 | --- | --- | --- |
 | `apps/web` | https://woventechnology.com | every merge to `main` |
 | `apps/site-api` | https://api.woventechnology.com | every merge to `main` |
+| `supabase/migrations` | the Supabase project | every merge to `main`, by Supabase's integration |
 | `apps/relay` | wss://relay.woventechnology.com | every merge to `main` |
 | `apps/core` | a household's own machine | when *they* update, via a signed release |
 | `packages/*` | wherever they are imported | with the app that imports them |
@@ -73,6 +74,28 @@ pnpm --filter ./apps/core db:generate
 CI fails if the schema and the checked-in migrations disagree. Do not write
 migration SQL by hand; the snapshot is what lets the next person's generate
 produce the right diff.
+
+## Changing the site's database
+
+The public site keeps accounts, reservations, applications and contact notes
+in Supabase. Its schema is `supabase/migrations/`, one timestamped SQL file per
+change, and merging to `main` applies them through Supabase's GitHub
+integration. Nobody edits the live database by hand.
+
+To add one:
+
+```bash
+supabase migration new what_it_does      # makes supabase/migrations/<stamp>_what_it_does.sql
+```
+
+Write the SQL, and remember that every table gets row security turned on and
+policies that let a person read only their own rows. The site API writes with
+the service key; signed-in people never insert, update or delete directly.
+
+What must never go in here: anything from inside a house. Files, photos,
+cameras, memory, the passkeys that open them — a Core keeps those in its own
+encrypted database on the household's machine. This is the part of Woven that
+exists before a box does.
 
 ## Style
 

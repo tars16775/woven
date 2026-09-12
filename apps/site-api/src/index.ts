@@ -1,7 +1,7 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { createHash, timingSafeEqual } from "node:crypto";
 import http from "node:http";
-import { join } from "node:path";
+import type { VerifyUser } from "./auth.ts";
+import { FileStore, isKind, type Store } from "./store.ts";
 
 /**
  * The public site's small backend (gap 8): reservations from the
@@ -14,7 +14,12 @@ import { join } from "node:path";
 export type SiteApiOptions = {
   port?: number;
   host?: string;
-  dataDir: string;
+  /** Where records go. Supabase in production; a folder of JSON lines otherwise. */
+  store?: Store;
+  /** Used only when no store is given: the folder for the file store. */
+  dataDir?: string;
+  /** Turns a bearer token into an account id, or null. Without it every request is anonymous. */
+  verifyUser?: VerifyUser;
   adminToken?: string | null;
   resendKey?: string | null;
   from?: string;
@@ -25,12 +30,12 @@ export type SiteApiOptions = {
   origins?: string[];
 };
 
-type Stored = { id: string; kind: string; at: string; body: Record<string, unknown> };
-
 const MAX_BODY = 64 * 1024;
 
 export async function startSiteApi(opts: SiteApiOptions) {
-  await mkdir(opts.dataDir, { recursive: true });
+  if (!opts.store && !opts.dataDir) throw new Error("site-api needs a store, or a dataDir for the file store");
+  const store = opts.store ?? new FileStore(opts.dataDir!);
+  const verifyUser: VerifyUser = opts.verifyUser ?? (async () => null);
   const log = opts.log ?? (() => undefined);
   const fetcher = opts.fetcher ?? fetch;
   const buckets = new Map<string, { n: number; at: number }>();
@@ -45,23 +50,6 @@ export async function startSiteApi(opts: SiteApiOptions) {
     b.n += 1;
     buckets.set(ip, b);
     return b.n > limit;
-  };
-
-  const store = async (kind: string, body: Record<string, unknown>): Promise<Stored> => {
-    const rec: Stored = { id: randomBytes(8).toString("hex"), kind, at: new Date().toISOString(), body };
-    await appendFile(join(opts.dataDir, `${kind}.jsonl`), `${JSON.stringify(rec)}\n`);
-    return rec;
-  };
-
-  const list = async (kind: string): Promise<Stored[]> => {
-    try {
-      return (await readFile(join(opts.dataDir, `${kind}.jsonl`), "utf8"))
-        .split("\n")
-        .filter(Boolean)
-        .map((l) => JSON.parse(l) as Stored);
-    } catch {
-      return [];
-    }
   };
 
   const email = async (to: string, subject: string, text: string): Promise<"sent" | "logged" | "failed"> => {
@@ -108,8 +96,8 @@ export async function startSiteApi(opts: SiteApiOptions) {
       if (req.method === "GET" && url.pathname.startsWith("/admin/")) {
         if (!isAdmin(req)) return json(401, { error: "admin token" });
         const kind = url.pathname.slice("/admin/".length);
-        if (!/^[a-z]+$/.test(kind)) return json(404, { error: "no such list" });
-        return json(200, { items: await list(kind) });
+        if (!isKind(kind)) return json(404, { error: "no such list" });
+        return json(200, { items: await store.list(kind) });
       }
 
       if (req.method !== "POST") return json(404, { error: "not found" });
@@ -128,11 +116,14 @@ export async function startSiteApi(opts: SiteApiOptions) {
         return json(400, { error: "bad json" });
       }
 
+      // Attached to what they send, if they are signed in to a Woven account.
+      const userId = await verifyUser(req.headers.authorization);
+
       switch (url.pathname) {
         case "/reservations": {
           const { code, tier, total, email: to, name } = body;
           if (typeof code !== "string" || typeof tier !== "string" || typeof total !== "number") return json(400, { error: "code, tier and total are required" });
-          const rec = await store("reservations", body);
+          const rec = await store.put("reservations", body, userId);
           let mail: string = "none";
           if (typeof to === "string" && to.includes("@")) mail = await email(to, `Your Woven reservation ${code}`, `Thank you${typeof name === "string" ? `, ${name}` : ""}. Your reservation ${code} for the ${tier} is noted. Nothing is charged until we confirm a build slot with you. Reply to this email with any question.`);
           if (opts.notify) void email(opts.notify, `Reservation ${code}: ${tier}`, JSON.stringify(body, null, 2));
@@ -142,7 +133,7 @@ export async function startSiteApi(opts: SiteApiOptions) {
         case "/applications": {
           const { code, email: to, city } = body;
           if (typeof code !== "string" || typeof to !== "string" || typeof city !== "string") return json(400, { error: "code, email and city are required" });
-          const rec = await store("applications", body);
+          const rec = await store.put("applications", body, userId);
           const mail = await email(to, `Your founding home application ${code}`, `Thank you. We read every application ourselves and reply within two weeks. Your code is ${code}.`);
           if (opts.notify) void email(opts.notify, `Application ${code}: ${city}`, JSON.stringify(body, null, 2));
           log(`application ${code} (${city}) mail=${mail}`);
@@ -151,7 +142,7 @@ export async function startSiteApi(opts: SiteApiOptions) {
         case "/contact": {
           const { email: to, message } = body;
           if (typeof to !== "string" || typeof message !== "string" || !message.trim()) return json(400, { error: "email and message are required" });
-          const rec = await store("contact", body);
+          const rec = await store.put("contact", body, userId);
           if (opts.notify) void email(opts.notify, `Contact from ${to}`, message);
           return json(201, { id: rec.id, at: rec.at });
         }
@@ -159,7 +150,7 @@ export async function startSiteApi(opts: SiteApiOptions) {
           // From Cores that opted in: version, kind, uptime. No identifiers, and none are derived: the address is not kept.
           const { version, kind, upDays } = body;
           if (typeof version !== "string") return json(400, { error: "version is required" });
-          const rec = await store("pings", { version, kind: typeof kind === "string" ? kind : "unknown", upDays: typeof upDays === "number" ? upDays : null });
+          const rec = await store.put("pings", { version, kind: typeof kind === "string" ? kind : "unknown", upDays: typeof upDays === "number" ? upDays : null }, null);
           return json(201, { id: rec.id, at: rec.at });
         }
         default:
