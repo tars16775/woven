@@ -21,12 +21,33 @@ async function audit(page: Page): Promise<Violation[]> {
   return result.violations;
 }
 
+/**
+ * Sections fade in as they scroll into view, and axe measures contrast on
+ * whatever opacity it finds. Auditing mid-fade reports a failure nobody
+ * experiences, so bring every section into view first and wait for the
+ * transitions to end. Looping animations are not transitions and are left
+ * alone; they never finish, and that is not what is being waited for.
+ */
+async function revealed(page: Page) {
+  await page.evaluate(async () => {
+    for (let y = 0; y <= document.documentElement.scrollHeight; y += window.innerHeight) {
+      window.scrollTo(0, y);
+      await new Promise((r) => setTimeout(r, 40));
+    }
+    window.scrollTo(0, 0);
+  });
+  await page
+    .waitForFunction(() => !document.querySelector('[data-reveal="hidden"]') && document.getAnimations().every((a) => !(a instanceof CSSTransition) || a.playState !== "running"), null, { timeout: 5_000 })
+    .catch(() => {});
+}
+
 const pages = ["/", "/core", "/order", "/privacy", "/support", "/mac", "/status", "/login", "/founding-homes"];
 
 for (const path of pages) {
   test(`${path} has no serious accessibility violations`, async ({ page }) => {
     await page.goto(path, { waitUntil: "domcontentloaded" });
     await settle(page);
+    await revealed(page);
     const violations = await audit(page);
     const serious = violations.filter((v) => v.impact === "serious" || v.impact === "critical");
     const moderate = violations.filter((v) => v.impact === "moderate");
@@ -53,8 +74,9 @@ test("honours a request for reduced motion", async ({ browser }) => {
   await settle(page);
   const orb = page.locator(".orb").first();
   if (await orb.count()) {
-    const animation = await orb.evaluate((el) => getComputedStyle(el).animationName);
-    expect(animation).toBe("none");
+    // Not a one-shot evaluate: hydration can replace the node between finding
+    // it and asking, and a detached element answers "" for every property.
+    await expect(orb).toHaveCSS("animation-name", "none");
   }
   await context.close();
 });

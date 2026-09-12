@@ -42,7 +42,11 @@ export async function startGate(opts: { mode: string; port: number; allow: strin
   });
 
   await new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("the Gate did not start in time")), 20_000);
+    // The Gate boots under the same loader from the same disk as the Core. On
+    // the box that is under a second; on an external volume it can pass twenty,
+    // and giving up early there turns a slow disk into a Core that will not
+    // start. A Gate that never answers still fails; it just takes longer to say so.
+    const timer = setTimeout(() => reject(new Error("the Gate did not start in time")), 90_000);
     child.once("message", () => {
       clearTimeout(timer);
       resolve();

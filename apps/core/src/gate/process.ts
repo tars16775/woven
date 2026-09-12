@@ -237,9 +237,15 @@ async function record(entry: Record<string, unknown>) {
 
 await app.listen({ host: "127.0.0.1", port: env.WOVEN_GATE_PORT });
 app.log.info({ port: env.WOVEN_GATE_PORT, allowList, state: state.state }, "Gate ready");
-process.send?.({ ready: true, port: env.WOVEN_GATE_PORT });
-
 const stop = () => void app.close().then(() => process.exit(0));
 process.on("SIGINT", stop);
 process.on("SIGTERM", stop);
 process.on("disconnect", stop);
+
+// With a callback, a send to a parent that has already given up and closed the
+// channel reports here instead of surfacing as an unhandled 'error' event that
+// buries the parent's own message under a stack trace. Nobody to tell means
+// nothing to do but leave.
+process.send?.({ ready: true, port: env.WOVEN_GATE_PORT }, (err) => {
+  if (err) stop();
+});

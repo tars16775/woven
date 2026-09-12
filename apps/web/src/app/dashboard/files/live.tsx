@@ -159,7 +159,7 @@ export function LiveFiles() {
         sub={disk ? `${bytes(disk.usedBytes)} of ${bytes(disk.totalBytes)} used on the box${quotaLine ? ` · ${quotaLine}` : ""} · stored once, however many devices` : "Reading the box…"}
         action={
           <>
-            <input ref={input} type="file" multiple className="sr-only" onChange={upload} data-testid="upload-input" />
+            <input ref={input} type="file" multiple className="sr-only" aria-label="Choose files to upload" onChange={upload} data-testid="upload-input" />
             <Button kind="primary" className="px-5 py-2" onClick={() => input.current?.click()} disabled={progress !== null} data-testid="upload">
               {progress ? `Uploading ${progress.name}…` : "Upload"}
             </Button>
