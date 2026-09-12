@@ -34,7 +34,7 @@ export const cameraRoutes: FastifyPluginAsync = async (raw) => {
   /** Everything the room reads, in one answer. */
   app.get("/cameras", { preHandler: requireSession, schema: { response: { 200: CamerasState } } }, async (req) => {
     const { data, hardware, settings } = app.deps;
-    const householdId = req.session!.household.id;
+    const householdId = req.session!.person.householdId;
     const capture = hardware.capabilities.capture ? "present" : "absent";
     const pausedAll = settings?.get().camerasPaused ?? false;
 
@@ -84,7 +84,7 @@ export const cameraRoutes: FastifyPluginAsync = async (raw) => {
       const p = req.session!.person;
       data.ledger.append({
         type: paused ? "cameras.paused" : "cameras.resumed",
-        householdId: req.session!.household.id,
+        householdId: req.session!.person.householdId,
         actor: { kind: "person", id: p.id },
         where: "inside",
         payload: { by: p.name },
@@ -102,7 +102,7 @@ export const cameraRoutes: FastifyPluginAsync = async (raw) => {
     },
     async (req) => {
       const { data } = app.deps;
-      const householdId = req.session!.household.id;
+      const householdId = req.session!.person.householdId;
       const row = data.database.db
         .select()
         .from(cameras)
@@ -131,7 +131,7 @@ export const cameraRoutes: FastifyPluginAsync = async (raw) => {
     },
     async (req) => {
       const { data } = app.deps;
-      const householdId = req.session!.household.id;
+      const householdId = req.session!.person.householdId;
       const row = data.database.db
         .select()
         .from(cameras)

@@ -38,7 +38,7 @@ const PUBLIC = new Set([
   "GET /v1/events",
 ]);
 /** Streams and pages: bytes, not JSON, so no response schema. */
-const UNTYPED = new Set(["GET /v1/files/:id/content", "GET /v1/photos/:id/thumb", "GET /v1/photos/:id/preview", "GET /v1/media/:id/stream", "GET /v1/media/:id/transcode", "GET /v1/s/:token", "GET /v1/events", "GET /v1/screen", "GET /v1/screen/code", "GET /v1/household/export", "POST /v1/household/export"]);
+const UNTYPED = new Set(["GET /v1/files/:id/content", "GET /v1/photos/:id/thumb", "GET /v1/photos/:id/preview", "GET /v1/media/:id/stream", "GET /v1/media/:id/transcode", "GET /v1/cameras/:id/snapshot", "GET /v1/s/:token", "GET /v1/events", "GET /v1/screen", "GET /v1/screen/code", "GET /v1/household/export", "POST /v1/household/export"]);
 
 const dataRoot = mkdtempSync(`${os.tmpdir()}/woven-contract-`);
 const config = loadConfig({ NODE_ENV: "test", WOVEN_DATA: dataRoot, LOG_LEVEL: "fatal", WOVEN_MDNS: "off", WOVEN_TLS: "off", WOVEN_ORIGINS: "http://localhost:3000", WOVEN_GATE: "off" });

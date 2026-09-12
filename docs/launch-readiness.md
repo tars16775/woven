@@ -53,9 +53,9 @@ its own Dockerfile in this repository and deployed with `railway up --service <n
 
 | Service | Address | Notes |
 | --- | --- | --- |
-| `site` | https://site-production-c740.up.railway.app | The public site. `NEXT_PUBLIC_WOVEN_LIVE=off`, so its dashboard never looks for a Core and says so plainly. |
-| `site-api` | https://site-api-production-e2be.up.railway.app | Reservations, applications, contact and pings, on a volume at `/data`. `ADMIN_TOKEN` is in the service's variables. |
-| `relay` | https://relay-production-2ee3.up.railway.app | Carries encrypted frames between a Core and its dashboards. Holds nothing. |
+| `site` | https://woventechnology.com | The public site. `NEXT_PUBLIC_WOVEN_LIVE=off`, so its dashboard never looks for a Core and says so plainly. |
+| `site-api` | https://api.woventechnology.com | Reservations, applications, contact and pings, on a volume at `/data`. `ADMIN_TOKEN` is in the service's variables. |
+| `relay` | wss://relay.woventechnology.com | Carries encrypted frames between a Core and its dashboards. Holds nothing. |
 
 Custom domains are not attached: Railway refuses the request on this account, which is what it does
 when the plan does not include them. Until then the site answers on its Railway address, and

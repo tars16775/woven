@@ -7,8 +7,9 @@ Everything in your world, woven together.
 ## Status
 
 - Product definition is settled in [docs/product-definition.md](docs/product-definition.md).
-- The website and dashboard frontend lives in `apps/web` (Next.js 16, Tailwind 4, Motion, react-three-fiber). Marketing site, product pages, order configurator, sign-in and sign-up, and the household dashboard are built against a typed mock data layer and a client-side mock session.
-- The backend (identity, policy engine, capability gateway, activity ledger) is the next phase and will replace `apps/web/src/lib/dashboard/data.ts`.
+- The website and dashboard frontend lives in `apps/web` (Next.js 16, Tailwind 4, Motion, react-three-fiber): marketing site, product pages, order configurator, sign-in, and the household dashboard. The dashboard has no sample data anywhere; every screen reads from a real Core or says plainly that none is answering.
+- The Core (`apps/core`) is the backend: identity and passkeys, the policy engine, the capability gateway, the hash-chained ledger, files, photos, cameras, the Gate. It runs on the household's own machine and nowhere else.
+- The public site, its API (`apps/site-api`) and the relay (`apps/relay`) are deployed on Railway from `main`; see [CONTRIBUTING.md](CONTRIBUTING.md) for how a change gets there.
 
 ## Layout
 

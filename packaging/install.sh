@@ -131,7 +131,7 @@ WOVEN_SNAPSHOT_MIRROR=""
 # default because an outbound tunnel is a decision, not a convenience.
 # To reach your house from away, put the relay address on the line below and
 # run: woven restart. Woven's relay is
-#   wss://relay-production-2ee3.up.railway.app
+#   wss://relay.woventechnology.com
 # It carries sealed frames it cannot read and keeps nothing; any relay that
 # speaks the same protocol works, including one you run yourself.
 WOVEN_RELAY=""

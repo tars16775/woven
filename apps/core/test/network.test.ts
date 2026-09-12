@@ -6,6 +6,7 @@ import { NetworkScanner, kindOf } from "../src/network-scan.ts";
 
 const hardware: Hardware = {
   paths: { root: "/tmp/x", db: "", store: "", storeTmp: "", keys: "", snapshots: "", logs: "" },
+  capabilities: { capture: false, radios: false, screen: false },
   identity: () => Promise.reject(new Error("not needed")),
   metrics: () => Promise.reject(new Error("not needed")),
   storage: () => Promise.reject(new Error("not needed")),
