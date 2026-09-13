@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { signIn, signOut, useSession } from "@/lib/auth";
 import { Wordmark } from "@/components/wordmark";
 import { Clock } from "@/components/clock";
-import { startCore, useCore } from "@/lib/core/store";
+import { forgetCore, startCore, useCore } from "@/lib/core/store";
 import { identity, sessionRecord } from "@/lib/core/identity";
 import { memoryLabel, storageLabel, temperatureLabel, useLiveCore } from "@/lib/core/live";
 import { Dialog } from "./dialog";
@@ -116,6 +116,11 @@ export function Shell({ children }: { children: ReactNode }) {
 
   const leave = () => {
     if (connection.phase === "connected" && session) void identity.logout();
+    // A demonstration is somewhere you visit, not somewhere you live. Leaving
+    // it forgets the address too, so the next visit starts at the front door
+    // instead of inside somebody else's house with no way back out. A real
+    // Core stays remembered: signing out of your house does not move you.
+    if (connection.phase === "connected" && connection.status?.demo === true) forgetCore();
     signOut();
     router.replace("/login");
   };
