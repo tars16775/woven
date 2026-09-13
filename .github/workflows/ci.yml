@@ -69,6 +69,24 @@ jobs:
             exit 1
           fi
 
+  supabase:
+    name: supabase (migrations apply)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      # Every migration, in order, against a fresh database with Supabase's own
+      # schemas (auth, storage) present. A migration that fails here would have
+      # failed on the live project the moment it merged; this is where it fails
+      # instead. Only the database container starts, not the whole stack.
+      - name: Apply every migration to a fresh database
+        run: supabase db start
+      - name: Lint the schema
+        run: supabase db lint --level warning
+
   web:
     name: web (lint, typecheck, unit, build, e2e against a real core)
     runs-on: ubuntu-latest

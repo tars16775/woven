@@ -21,9 +21,22 @@ house.
 6. A maintainer merges. **Merging to `main` is deploying.** There is no
    staging step between the merge button and a household's browser.
 
-Branch protection is not available on this repository's plan, so nothing
-mechanically stops a merge with red checks. Do not merge red. If a check is
-flaky, fix the flake or say so in the PR; do not re-run until it passes.
+`main` is protected, and the protection is a machine, not a request:
+
+- Nothing lands on `main` except through a pull request.
+- The pull request cannot merge until the secret scan, the Core suite, the
+  web suite and the migration check are all green.
+- Nobody can force-push to `main` or delete it.
+
+So the way to ship is: push your branch, open the pull request, and press
+**Enable auto-merge**. When CI goes green it merges itself and deploys. That
+is the whole system. If CI is red, fix the branch and push again; the
+pull request updates and tries again.
+
+The repository is public. Secret scanning with push protection is on, so a
+push that contains something that looks like a credential is refused before
+it reaches GitHub. Dependabot opens pull requests for vulnerable dependencies;
+they go through the same checks as anyone's.
 
 ## Where things run
 
@@ -80,8 +93,10 @@ produce the right diff.
 
 The public site keeps accounts, reservations, applications and contact notes
 in Supabase. Its schema is `supabase/migrations/`, one timestamped SQL file per
-change, and merging to `main` applies them through Supabase's GitHub
-integration. Nobody edits the live database by hand.
+change. Every pull request applies all of them, in order, to a fresh database
+in CI, so a migration that would break the live project fails the check
+instead. Merging to `main` applies them to the live project through
+Supabase's GitHub integration. Nobody edits the live database by hand.
 
 To add one:
 
