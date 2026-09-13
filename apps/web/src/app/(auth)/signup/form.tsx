@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { signIn } from "@/lib/auth";
 import { explain, identity, sessionRecord } from "@/lib/core/identity";
 import { startCore, useCore, whenSettled } from "@/lib/core/store";
+import { NoCorePaths } from "../no-core-paths";
 
 type FieldKey = "house" | "name" | "email";
 
@@ -233,12 +234,8 @@ export function SignupForm() {
               <li>2. A key is made here and registered with your Core over the home network.</li>
               <li>3. You land in the dashboard. Nothing about you has left the house.</li>
             </ol>
-            {!connected && (
-              <p className="mt-3 border-t border-ink/8 pt-3 text-[12px] text-ash">
-                None of this can happen yet: no Core is answering. Run one on your Mac and this page will find it.
-              </p>
-            )}
           </div>
+          {!connected && <NoCorePaths />}
           {failure && (
             <p role="alert" className="text-[13px] text-[#a13a2a]">
               {failure}

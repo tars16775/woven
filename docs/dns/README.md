@@ -16,6 +16,7 @@ sitting at `VALIDATING_OWNERSHIP`, waiting for DNS. The CNAME targets in
 | `www.woventechnology.com` | `site` | `w4um6z2s.up.railway.app` |
 | `api.woventechnology.com` | `site-api` | `yxc9ldh5.up.railway.app` |
 | `relay.woventechnology.com` | `relay` | `pnfom1f8.up.railway.app` |
+| `demo.woventechnology.com` | `demo-core` | `1vk8p0e2.up.railway.app` |
 
 **Import the zone.** Cloudflare > your zone > DNS > Records > Import and
 Export > Import, and pick `woventechnology.com.zone`. Records arrive
@@ -58,6 +59,7 @@ A reservation submitted from the live site should report `sent`, not `local`.
 | `@`, `www` | the `site` service | Cloudflare flattens a CNAME at the apex, so there is no A record whose address we would have to chase when Railway moves it |
 | `api` | the `site-api` service | Reservations, applications, contact. Holds no household data |
 | `relay` | the `relay` service | Sealed frames between a Core and its dashboards. Holds nothing |
+| `demo` | the `demo-core` service | The example house: a real Core, wiped nightly, nobody's. A subdomain so the dashboard's session cookie reaches it |
 | `MX .` (apex) | nowhere, deliberately | A null MX says this domain accepts no mail, which stops the backscatter an unconfigured domain attracts. It does not affect sending |
 | `send` MX + TXT | Resend's return path | Resend bounces and SPF-checks against `send.woventechnology.com`, not the apex. Both values came from Resend's API for this domain |
 | `resend._domainkey` | Resend's DKIM key | Signs as `d=woventechnology.com`, which is what makes DMARC pass under strict alignment |

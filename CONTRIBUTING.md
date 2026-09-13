@@ -34,6 +34,7 @@ flaky, fix the flake or say so in the PR; do not re-run until it passes.
 | `supabase/migrations` | the Supabase project | every merge to `main`, by Supabase's integration |
 | `apps/relay` | wss://relay.woventechnology.com | every merge to `main` |
 | `apps/core` | a household's own machine | when *they* update, via a signed release |
+| `apps/core` (as `demo-core`) | https://demo.woventechnology.com | every merge to `main`. The example house: the same Core, `WOVEN_DEMO=on`, wiped and reseeded on every start. Nobody's data, ever |
 | `packages/*` | wherever they are imported | with the app that imports them |
 
 ## Secrets

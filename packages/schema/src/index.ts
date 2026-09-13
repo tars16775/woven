@@ -319,7 +319,10 @@ export const SetupHousehold = z.object({
 export type SetupHousehold = z.infer<typeof SetupHousehold>;
 
 /** "token": a long-lived device token for a backup client or another machine (gap 20). */
-export const AuthMethod = z.enum(["passkey", "code", "recovery", "token"]);
+// "demo" exists only on a Core running with WOVEN_DEMO=on: a visitor gives a
+// name and gets a person in the example house. No key, no code, nothing to
+// lose, and nothing that could be mistaken for signing in to a real one.
+export const AuthMethod = z.enum(["passkey", "code", "recovery", "token", "demo"]);
 export type AuthMethod = z.infer<typeof AuthMethod>;
 
 /** GET /v1/auth/session: who is signed in on this device. */

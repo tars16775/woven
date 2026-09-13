@@ -56,6 +56,12 @@ const Env = z.object({
   WOVEN_HEALTH_PING: z.enum(["on", "off"]).default("off"),
   /** This Core is a demonstration, not somebody's house. Never inferred; an operator sets it. */
   WOVEN_DEMO: z.enum(["on", "off"]).default("off"),
+  /**
+   * Behind a proxy that terminates TLS (a hosted demo on Railway): trust its
+   * forwarded headers for the real address and protocol, and mark cookies
+   * Secure even though this process speaks plain HTTP to the proxy.
+   */
+  WOVEN_PROXY: z.enum(["on", "off"]).default("off"),
   /** Where the household data key lives: the login "keychain" (macOS) or a "file" in the keys folder. Defaults by platform. */
   WOVEN_KEY: z.enum(["keychain", "file"]).optional(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
@@ -88,6 +94,8 @@ export type Config = {
    * fake dashboard.
    */
   demo: boolean;
+  /** Behind a TLS-terminating proxy: trust forwarded headers, mark cookies Secure. */
+  proxy: boolean;
   /** Folder with the static site, or null for API only. */
   siteDir: string | null;
   logLevel: z.infer<typeof Env>["LOG_LEVEL"];
@@ -117,6 +125,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     relay: e.WOVEN_RELAY.trim() ? e.WOVEN_RELAY.trim().replace(/^http/, "ws").replace(/\/+$/, "") : null,
     healthPing: e.WOVEN_HEALTH_PING === "on",
     demo: e.WOVEN_DEMO === "on",
+    proxy: e.WOVEN_PROXY === "on",
     siteDir: e.WOVEN_SITE === "off" ? null : e.WOVEN_SITE === "auto" ? defaultSiteDir() : e.WOVEN_SITE,
     logLevel: e.LOG_LEVEL,
   };

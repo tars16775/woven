@@ -6,6 +6,10 @@ import { PasskeyError } from "../auth/passkeys.ts";
 import { SESSION_COOKIE, sessionCookie } from "../auth/sessions.ts";
 import { screenPage } from "../auth/screen.ts";
 import { limits } from "../auth/limits.ts";
+import { HouseholdError } from "../household.ts";
+import { eq } from "drizzle-orm";
+import { monotonicFactory } from "ulid";
+import { people } from "../db/schema.ts";
 import type { ZodTypeProvider } from "../zod.ts";
 
 const Options = z.object({ key: z.string(), options: z.record(z.string(), z.unknown()) });
@@ -18,14 +22,16 @@ const Passkey = z.object({ id: z.string(), credentialId: z.string(), label: z.st
  * Everything here is LAN-only by where the core listens and CORS-bound to the
  * dashboard origins; the rpID is derived from the calling origin.
  */
+const demoId = monotonicFactory();
+
 export const authRoutes: FastifyPluginAsync = async (raw) => {
   const app = raw.withTypeProvider<ZodTypeProvider>();
   const { services, config } = app.deps;
 
   const deviceLabel = (req: FastifyRequest) => (req.headers["user-agent"] ?? "").toString().slice(0, 120) || null;
-  const secure = () => Boolean(app.deps.tls) || config.env !== "production";
+  const secure = () => Boolean(app.deps.tls) || config.proxy || config.env !== "production";
   /** Issue a session for this device, set the cookie, and make the request carry it so the handler can answer with it. */
-  const setSession = (reply: FastifyReply, person: Person, method: "passkey" | "code" | "recovery", req: FastifyRequest) => {
+  const setSession = (reply: FastifyReply, person: Person, method: "passkey" | "code" | "recovery" | "demo", req: FastifyRequest) => {
     const issued = services.sessions.issue(person, method, deviceLabel(req));
     const c = sessionCookie(issued.token, issued.expiresAt, { secure: secure() });
     void reply.setCookie(c.name, c.value, c.options);
@@ -179,6 +185,28 @@ export const authRoutes: FastifyPluginAsync = async (raw) => {
       return view(req);
     },
   );
+
+  /**
+   * The demonstration house (WOVEN_DEMO=on) and nothing else. A visitor gives a
+   * name and becomes a new adult in the example household, with a session and
+   * no key: nothing to enrol, nothing to lose, and a house that is wiped on the
+   * next start. On every other Core this route answers as if it did not exist,
+   * so a dashboard can never mistake a real house for one it may walk into.
+   */
+  app.post("/auth/demo", { ...limits.demo, schema: { body: z.object({ name: z.string().trim().min(1).max(40) }), response: { 201: SessionView } } }, async (req, reply) => {
+    if (!config.demo) throw new HouseholdError(404, "This Core is not a demonstration.");
+    const h = services.household.household();
+    if (!h) throw new HouseholdError(409, "The demo house has not been set up.");
+    const id = demoId();
+    const now = new Date().toISOString();
+    const person = app.deps.data.database.db.transaction((tx) => {
+      tx.insert(people).values({ id, householdId: h.id, name: req.body.name, email: null, role: "adult", createdAt: now }).run();
+      app.deps.data.ledger.append({ type: "person.created", householdId: h.id, actor: { kind: "core", id: "core" }, where: "inside", target: id, payload: { role: "adult", demo: true } });
+      return Person.parse(tx.select().from(people).where(eq(people.id, id)).get());
+    });
+    setSession(reply, person, "demo", req);
+    return reply.status(201).send(view(req));
+  });
 
   app.get("/auth/session", { preHandler: requireSession, schema: { response: { 200: SessionView } } }, async (req) => view(req));
 

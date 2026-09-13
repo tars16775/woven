@@ -129,6 +129,9 @@ async function main() {
     : null;
   const stopNightly = config.env === "production" || config.env === "development" ? scheduleNightly(data, logger, {
           skip: () => !power.on,
+          // The demo house does not accumulate. After the night's work the
+          // process leaves; the container's start script wipes and reseeds.
+          ...(config.demo ? { after: () => { logger.info("demo house: leaving so the next start is fresh"); setTimeout(() => process.exit(0), 500); } } : {}),
           mirror: () => settings.get().snapshotMirror,
           sweep: async () => (await services.files.sweepUploads()) + services.memory.sweep(),
           report: (facts) => {

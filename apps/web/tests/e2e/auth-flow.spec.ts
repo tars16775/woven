@@ -42,7 +42,7 @@ test("an email without an @ is refused", async ({ page }) => {
 test("with no Core, sign-in says so and does nothing", async ({ page }) => {
   test.skip(LIVE, "this is the case where nothing is answering");
   await openLogin(page);
-  await expect(page.getByTestId("login-no-core")).toBeVisible();
+  await expect(page.getByTestId("no-core-paths")).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue with passkey" })).toBeDisabled();
   const session = await page.evaluate(() => localStorage.getItem("woven:session"));
   expect(session).toBeNull();

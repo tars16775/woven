@@ -7,6 +7,7 @@ import { useT } from "@/lib/i18n";
 import { signIn, useSession } from "@/lib/auth";
 import { explain, identity, sessionRecord } from "@/lib/core/identity";
 import { startCore, useCore, whenSettled } from "@/lib/core/store";
+import { NoCorePaths } from "../no-core-paths";
 
 type Mode = "passkey" | "code" | "recovery";
 
@@ -196,21 +197,7 @@ export function LoginForm() {
         Use the passkey on this device, or the six-digit code showing on the front of your Core.
       </p>
 
-      {!connected && (
-        <div role="status" className="mt-6 rounded-[12px] bg-ask-bg p-4 text-[13px] text-ask ring-1 ring-amber/30" data-testid="login-no-core">
-          <div className="font-medium">
-            {core.phase === "searching" ? "Looking for your Core…" : "No Core is answering."}
-          </div>
-          <p className="mt-1">
-            Sign-in happens on your own Core: it holds the passkeys and issues the session. There is no account here and no house to sign in to without
-            one.{" "}
-            <Link href="/mac" className="font-medium underline decoration-amber decoration-2 underline-offset-4">
-              Run a Core on your Mac
-            </Link>
-            .
-          </p>
-        </div>
-      )}
+      {!connected && <NoCorePaths />}
 
       {connected && houseReady === false && (
         <div role="status" className="mt-6 rounded-[12px] bg-white p-4 text-[13px] ring-1 ring-ink/5" data-testid="no-house-yet">

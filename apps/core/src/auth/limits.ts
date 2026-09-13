@@ -30,4 +30,6 @@ export const limits = {
   share: { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
   invite: { config: { rateLimit: { max: 10, timeWindow: "10 minutes" } } },
   setup: { config: { rateLimit: { max: 3, timeWindow: "10 minutes" } } },
+  /** Walking into the demo house. Generous: a room of people behind one address is the normal case. */
+  demo: { config: { rateLimit: { max: 30, timeWindow: "10 minutes" } } },
 } as const;

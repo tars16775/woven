@@ -65,7 +65,7 @@ export const sessions = sqliteTable(
     /** A second secret the browser holds outside the cookie jar and sends as a header or a signed URL; a stolen cookie alone is not enough. */
     deviceSecret: text("device_secret"),
     deviceLabel: text("device_label"),
-    method: text("method", { enum: ["passkey", "code", "recovery", "token"] }).notNull(),
+    method: text("method", { enum: ["passkey", "code", "recovery", "token", "demo"] }).notNull(),
     createdAt: text("created_at").notNull(),
     expiresAt: text("expires_at").notNull(),
     revokedAt: text("revoked_at"),

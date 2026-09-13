@@ -106,6 +106,13 @@ export const identity = {
   invitations: () => call("/v1/household/invitations", z.object({ invitations: z.array(Invitation) })).then((r) => r.invitations),
   withdrawInvitation: (id: string) => call(`/v1/household/invitations/${id}`, z.object({ withdrawn: z.boolean() }), { method: "DELETE" }),
   /** Whoever opens the link: become that person by registering a passkey on this device. */
+  /**
+   * The demonstration house only. A name is all it asks; the Core answers with
+   * a session for a new person in the example household. Exists on no other
+   * Core, and the route is not there to call on one.
+   */
+  demo: (name: string) => call("/v1/auth/demo", SessionView, post({ name })),
+
   async join(token: string): Promise<{ session: SessionView; household: string }> {
     const accepted = await call("/v1/household/invitations/accept", z.object({ person: z.custom<Person>(), household: z.string(), enrolment: z.string() }), post({ token }));
     const session = await this.registerPasskey({ enrolment: accepted.enrolment, label: deviceLabel() });
@@ -183,7 +190,7 @@ export function explain(err: unknown): string {
 }
 
 /** A local session record from what the Core said. */
-export function sessionRecord(view: SessionView, method: "passkey" | "code" | "recovery" | "remote") {
+export function sessionRecord(view: SessionView, method: "passkey" | "code" | "recovery" | "remote" | "demo") {
   return {
     household: view.household.name,
     name: view.person.name,

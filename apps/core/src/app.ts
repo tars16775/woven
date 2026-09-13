@@ -79,7 +79,7 @@ export async function buildApp(deps: AppDeps) {
     loggerInstance: deps.logger,
     requestIdHeader: "x-request-id",
     genReqId: () => crypto.randomUUID(),
-    trustProxy: false,
+    trustProxy: deps.config.proxy,
     bodyLimit: 1024 * 1024, // 1 MiB; uploads use the store's chunked path, not JSON bodies
   }).withTypeProvider<ZodTypeProvider>();
 

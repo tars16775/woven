@@ -15,6 +15,8 @@ export type MaintenanceOptions = {
   ping?: () => Promise<void>;
   /** True when the night's work should not run (the Core is switched off). */
   skip?: () => boolean;
+  /** After the night's work, whatever it found. The demo Core uses this to leave, so the next start is a fresh house. */
+  after?: () => void;
   /** Local hour (0-23) to run. Default 3 in the morning, when the house is quiet. */
   hour?: number;
   /** How many snapshots to keep. Default 14. */
@@ -86,7 +88,9 @@ export function scheduleNightly(data: Data, logger: Logger, opts: MaintenanceOpt
         arm();
         return;
       }
-      runNightly(data, logger, opts.keep, { mirror: opts.mirror ?? null, ...(opts.sweep ? { sweep: opts.sweep } : {}), ...(opts.report ? { report: opts.report } : {}), ...(opts.ping ? { ping: opts.ping } : {}) }).catch((err: unknown) => logger.error({ err }, "nightly maintenance failed"));
+      runNightly(data, logger, opts.keep, { mirror: opts.mirror ?? null, ...(opts.sweep ? { sweep: opts.sweep } : {}), ...(opts.report ? { report: opts.report } : {}), ...(opts.ping ? { ping: opts.ping } : {}) })
+        .catch((err: unknown) => logger.error({ err }, "nightly maintenance failed"))
+        .finally(() => opts.after?.());
       arm();
     }, msUntilHour(hour, now()));
     timer.unref();

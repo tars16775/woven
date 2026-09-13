@@ -12,7 +12,7 @@ export type Session = {
   household: string;
   name: string;
   email: string;
-  method: "passkey" | "code" | "email" | "recovery" | "remote";
+  method: "passkey" | "code" | "email" | "recovery" | "remote" | "demo";
   at: number;
   /** The person the Core signed in. */
   personId?: string;

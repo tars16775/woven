@@ -40,6 +40,13 @@ api                     300  IN  CNAME  yxc9ldh5.up.railway.app.
 ; in front of it buys nothing and can time it out mid-session.
 relay                   300  IN  CNAME  pnfom1f8.up.railway.app.
 
+; --- the demonstration house ----------------------------------------------
+; A hosted Core running an example household anyone may walk through, wiped
+; and reseeded on every start. It must be a subdomain of the site: the
+; dashboard at woventechnology.com sends the session cookie only to the same
+; site, and Safari sends it nowhere else at all.
+demo                    300  IN  CNAME  1vk8p0e2.up.railway.app.
+
 ; --- proving the domain is ours ---------------------------------------------
 ; Railway's ownership check. It can usually verify from the CNAME alone, but
 ; these cost nothing and remove the second round trip if it cannot. They can be

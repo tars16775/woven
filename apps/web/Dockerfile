@@ -7,9 +7,15 @@ COPY packages ./packages
 COPY apps/web ./apps/web
 COPY packaging ./packaging
 RUN pnpm install --frozen-lockfile --filter "./packages/*" --filter "./apps/web"
+# Next reads NEXT_PUBLIC_* at build time, and Railway hands a Dockerfile build
+# its service variables only as declared build args. Anything not listed here
+# is simply absent from the site, however carefully it was set on the service.
 ARG NEXT_PUBLIC_SITE_URL=https://woventechnology.com
 ARG NEXT_PUBLIC_SITE_API=https://api.woventechnology.com
-ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_SITE_API=$NEXT_PUBLIC_SITE_API NEXT_PUBLIC_WOVEN_LIVE=off NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+ARG NEXT_PUBLIC_WOVEN_DEMO_CORE
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_SITE_API=$NEXT_PUBLIC_SITE_API NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY NEXT_PUBLIC_WOVEN_DEMO_CORE=$NEXT_PUBLIC_WOVEN_DEMO_CORE NEXT_PUBLIC_WOVEN_LIVE=off NEXT_TELEMETRY_DISABLED=1
 RUN cp packaging/install.sh apps/web/public/install.sh
 RUN cd apps/web && pnpm build
 

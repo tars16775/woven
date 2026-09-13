@@ -99,7 +99,9 @@ export function retryCore() {
 
 /** A person typed an address on the Core page. */
 export async function connectTo(input: string): Promise<boolean> {
-  if (!LIVE) return false;
+  // LIVE=off means this build never goes looking on its own. An address a
+  // person typed, or the demo house they asked for, is not looking; it is
+  // being told, and that is allowed on every build.
   const url = normalize(input);
   teardown();
   set({ phase: "searching", tried: [url] });

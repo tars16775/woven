@@ -28,6 +28,8 @@ const PUBLIC = new Set([
   "POST /v1/auth/passkeys/login/verify",
   "POST /v1/auth/code/login",
   "POST /v1/auth/recover",
+  // Only answers on a Core with WOVEN_DEMO=on; everywhere else it is a 404 in the same shape as any other.
+  "POST /v1/auth/demo",
   "POST /v1/auth/logout",
   "GET /v1/screen",
   "GET /v1/screen/code",
