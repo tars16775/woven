@@ -10,7 +10,11 @@ WORKDIR /repo
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY packages ./packages
 COPY apps/core ./apps/core
-RUN pnpm install --frozen-lockfile --filter "./packages/*" --filter "./apps/core"
+# The Core's tests import the relay (a devDependency). Nothing of it ends up in
+# the image, but pnpm resolves the whole manifest against the workspace and
+# refuses to deploy while a package it names is missing.
+COPY apps/relay ./apps/relay
+RUN pnpm install --frozen-lockfile --filter "./packages/*" --filter "./apps/core" --filter "./apps/relay"
 RUN pnpm --filter "./packages/*" build 2>/dev/null || true
 RUN cd apps/core && pnpm build
 # A self-contained copy with real node_modules (no workspace symlinks), which
