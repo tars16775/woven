@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { CoreClient, CoreError, type CoreConfig, type CoreStatus, type GateStatus, type LedgerRow } from "./client";
-import { LIVE, defaultCandidates, discover, normalize, probe, remember } from "./discovery";
+import { LIVE, defaultCandidates, discover, normalize, probe, remember, remembered } from "./discovery";
 import { REMOTE_BASE, RemoteTunnel, loadPairing } from "./remote";
 
 /**
@@ -86,9 +86,32 @@ export async function refreshCore(): Promise<void> {
 
 /** Begin looking, once. Safe to call from every mount. */
 export function startCore() {
-  if (!LIVE || started) return;
+  if (started) return;
   started = true;
+  // A build with LIVE off never goes looking for a Core, and should not: it is
+  // the public site, and there is no house on the internet to find. But an
+  // address somebody chose deliberately — one they typed, or the example house
+  // they walked into — is not looking, it is being told, and it has to survive
+  // opening the next room. Without this a visitor lands in the dashboard and
+  // loses it on their first click.
+  if (!LIVE) {
+    const chosen = remembered();
+    if (chosen) void connectTo(chosen);
+    return;
+  }
   void search(defaultCandidates());
+}
+
+/**
+ * Forget a Core that was chosen deliberately, so the next page load starts at
+ * the front door. Leaving a demonstration uses this; leaving your own house
+ * does not, because your house is still yours when you sign out of it.
+ */
+export function forgetCore() {
+  remember(null);
+  teardown();
+  started = false;
+  set(LIVE ? { phase: "searching", tried: [] } : { phase: "off" });
 }
 
 export function retryCore() {
