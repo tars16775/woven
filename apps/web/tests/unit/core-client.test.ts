@@ -135,3 +135,21 @@ describe("ledger rows on the Activity page", () => {
     expect(check).toMatchObject({ title: "Ledger verified", detail: "40 rows, chain intact", where: "local", actor: "the Core" });
   });
 });
+
+describe("naming a Core", () => {
+  it("assumes the box's port for a bare name, and never touches a full URL", () => {
+    // Somebody naming their box.
+    expect(normalize("woven.local")).toBe("https://woven.local:4000");
+    expect(normalize("192.168.1.5")).toBe("https://192.168.1.5:4000");
+    expect(normalize(" woven.local/ ")).toBe("https://woven.local:4000");
+    expect(normalize("woven.local:4000")).toBe("https://woven.local:4000");
+
+    // Somebody being exact. Appending a port here breaks an address that was
+    // already right: a public host answers on 443, and the demonstration Core
+    // is reached through a path on this site rather than at a port of its own.
+    expect(normalize("http://localhost:4002")).toBe("http://localhost:4002");
+    expect(normalize("https://demo.woventechnology.com")).toBe("https://demo.woventechnology.com");
+    expect(normalize("https://woventechnology.com/demo-core")).toBe("https://woventechnology.com/demo-core");
+    expect(normalize("https://woventechnology.com/demo-core/")).toBe("https://woventechnology.com/demo-core");
+  });
+});

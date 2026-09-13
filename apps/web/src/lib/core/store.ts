@@ -169,12 +169,29 @@ function attach(url: string, version: string, remote?: RemoteTunnel) {
     };
   }
 
+  // A Core reached through a path on another site is behind an HTTP proxy,
+  // and an HTTP proxy does not carry a WebSocket upgrade. Rather than open a
+  // socket that can only fail and retry, such a Core is polled for its ledger
+  // as well as its status: a few seconds behind instead of live, which is the
+  // truth about that connection rather than a pretence of streaming.
+  const streams = (() => {
+    try {
+      return new URL(client.base).pathname === "/";
+    } catch {
+      return true;
+    }
+  })();
+
   const refresh = async () => {
     if (!client || gen !== generation) return;
     try {
       const [status, gate] = await Promise.all([client.status(), client.gate().catch(() => null)]);
       if (gen !== generation || state.phase !== "connected") return;
       set({ ...state, status, gate: gate ?? state.gate });
+      if (!streams) {
+        const rows = await client.recent(60).catch(() => null);
+        if (rows && gen === generation && state.phase === "connected") set({ ...state, rows: mergeRows(rows, state.rows) });
+      }
     } catch (err) {
       if (gen !== generation) return;
       // Not signed in on this device: still connected, just nothing to show until sign-in.
@@ -202,6 +219,7 @@ function attach(url: string, version: string, remote?: RemoteTunnel) {
     remoteUnsubscribe = unsubscribe;
     return;
   }
+  if (!streams) return;
   try {
     socket = new WebSocket(client.eventsUrl());
     socket.onmessage = (ev) => {

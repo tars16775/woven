@@ -30,11 +30,17 @@ export function defaultCandidates(): string[] {
 }
 
 export function normalize(url: string): string {
-  let u = url.trim();
-  if (!/^https?:\/\//i.test(u)) u = `https://${u}`;
-  if (!/:\d+(\/|$)/.test(u.replace(/^https?:\/\//, ""))) u = u.replace(/\/?$/, ":4000");
-  return u.replace(/\/+$/, "");
+  const raw = url.trim();
+  // Two different things arrive here. A bare name or address is somebody
+  // naming their box: it speaks HTTPS on 4000, so say so for them. A full URL
+  // is somebody being exact — a Core on another port, or one reached through
+  // a proxy on another site's path — and the one thing that must not happen
+  // is helpfully appending a port to an address that was already complete.
+  if (/^https?:\/\//i.test(raw)) return raw.replace(/\/+$/, "");
+  const host = raw.replace(/\/+$/, "");
+  return /:\d+$/.test(host) || host.includes("/") ? `https://${host}` : `https://${host}:4000`;
 }
+
 
 export function remembered(): string | null {
   try {
