@@ -4,8 +4,8 @@
 #
 # Schema changes are files in migrations/. CI applies every one of them to a
 # fresh database on each pull request, and merging to main applies them to
-# the live project through Supabase's GitHub integration. Nobody edits the
-# live database by hand. See CONTRIBUTING.md.
+# the live project through a one-shot Railway job (supabase/Dockerfile).
+# Nobody edits the live database by hand. See CONTRIBUTING.md.
 #
 # Everything below project_id describes the *local* stack the CLI starts for
 # development and CI; it is not pushed to the hosted project.

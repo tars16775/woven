@@ -45,7 +45,7 @@ relay                   300  IN  CNAME  pnfom1f8.up.railway.app.
 ; and reseeded on every start. It must be a subdomain of the site: the
 ; dashboard at woventechnology.com sends the session cookie only to the same
 ; site, and Safari sends it nowhere else at all.
-demo                    300  IN  CNAME  1vk8p0e2.up.railway.app.
+demo                    300  IN  CNAME  2wbh1dec.up.railway.app.
 
 ; --- proving the domain is ours ---------------------------------------------
 ; Railway's ownership check. It can usually verify from the CNAME alone, but

@@ -16,7 +16,7 @@ sitting at `VALIDATING_OWNERSHIP`, waiting for DNS. The CNAME targets in
 | `www.woventechnology.com` | `site` | `w4um6z2s.up.railway.app` |
 | `api.woventechnology.com` | `site-api` | `yxc9ldh5.up.railway.app` |
 | `relay.woventechnology.com` | `relay` | `pnfom1f8.up.railway.app` |
-| `demo.woventechnology.com` | `demo-core` | `1vk8p0e2.up.railway.app` |
+| `demo.woventechnology.com` | `demo-core` | `2wbh1dec.up.railway.app` |
 
 **Import the zone.** Cloudflare > your zone > DNS > Records > Import and
 Export > Import, and pick `woventechnology.com.zone`. Records arrive

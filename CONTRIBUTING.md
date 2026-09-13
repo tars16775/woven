@@ -44,7 +44,7 @@ they go through the same checks as anyone's.
 | --- | --- | --- |
 | `apps/web` | https://woventechnology.com | every merge to `main` |
 | `apps/site-api` | https://api.woventechnology.com | every merge to `main` |
-| `supabase/migrations` | the Supabase project | every merge to `main`, by Supabase's integration |
+| `supabase/migrations` | the Supabase project | every merge to `main` that touches `supabase/`, by the `migrations` job on Railway |
 | `apps/relay` | wss://relay.woventechnology.com | every merge to `main` |
 | `apps/core` | a household's own machine | when *they* update, via a signed release |
 | `apps/core` (as `demo-core`) | https://demo.woventechnology.com | every merge to `main`. The example house: the same Core, `WOVEN_DEMO=on`, wiped and reseeded on every start. Nobody's data, ever |
@@ -95,8 +95,10 @@ The public site keeps accounts, reservations, applications and contact notes
 in Supabase. Its schema is `supabase/migrations/`, one timestamped SQL file per
 change. Every pull request applies all of them, in order, to a fresh database
 in CI, so a migration that would break the live project fails the check
-instead. Merging to `main` applies them to the live project through
-Supabase's GitHub integration. Nobody edits the live database by hand.
+instead. Merging to `main` applies them to the live project: Railway runs
+`supabase/Dockerfile`, a one-shot job that pushes the migrations and exits,
+with the database URL held as a Railway variable. Nobody edits the live
+database by hand, and nothing in GitHub can.
 
 To add one:
 
