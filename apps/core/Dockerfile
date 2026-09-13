@@ -14,8 +14,10 @@ RUN pnpm install --frozen-lockfile --filter "./packages/*" --filter "./apps/core
 RUN pnpm --filter "./packages/*" build 2>/dev/null || true
 RUN cd apps/core && pnpm build
 # A self-contained copy with real node_modules (no workspace symlinks), which
-# is what the runtime image needs and what pnpm deploy is for.
-RUN pnpm --filter "./apps/core" --prod deploy /out
+# is what the runtime image needs and what pnpm deploy is for. --legacy because
+# the workspace packages are already bundled into dist by tsup; pnpm 10 would
+# otherwise insist on injecting them, which there is nothing left to inject.
+RUN pnpm --filter "./apps/core" --prod deploy --legacy /out
 
 FROM node:22-bookworm-slim
 ENV NODE_ENV=production WOVEN_DATA=/data WOVEN_KEY=file WOVEN_TLS=off WOVEN_MDNS=off WOVEN_PROXY=on WOVEN_DEMO=on WOVEN_HOST=0.0.0.0 WOVEN_PORT=4000 PORT=4000
